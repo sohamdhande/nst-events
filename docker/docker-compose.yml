@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: quay.io/tembo/pg16-pgmq:latest
+    container_name: nst-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: nst_events
+    ports:
+      - '5432:5432'
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./init-pgmq.sql:/docker-entrypoint-initdb.d/init-pgmq.sql
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d nst_events']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pgdata:
+    name: nst_events_pgdata

@@ -1,0 +1,18 @@
+{
+  "name": "@nst/config",
+  "version": "0.0.0",
+  "private": true,
+  "main": "eslint.config.js",
+  "files": [
+    "tsconfig.base.json",
+    "eslint.config.js",
+    "prettier.config.js"
+  ],
+  "devDependencies": {
+    "eslint": "^8.57.0",
+    "@typescript-eslint/eslint-plugin": "^7.0.0",
+    "@typescript-eslint/parser": "^7.0.0",
+    "prettier": "^3.3.3",
+    "typescript": "^5.5.0"
+  }
+}

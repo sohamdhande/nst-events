@@ -1,0 +1,31 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nst-worker
+  namespace: default
+  labels:
+    app: nst-worker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nst-worker
+  template:
+    metadata:
+      labels:
+        app: nst-worker
+    spec:
+      containers:
+        - name: worker
+          image: nst-worker:latest
+          ports:
+            - containerPort: 3002
+          envFrom:
+            - secretRef:
+                name: nst-secrets
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 3002
+            initialDelaySeconds: 5
+            periodSeconds: 10

@@ -1,0 +1,27 @@
+{
+  "name": "@nst/api",
+  "version": "0.0.0",
+  "private": true,
+  "main": "src/index.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "ts-node src/index.ts",
+    "lint": "echo 'No lint rules yet'",
+    "typecheck": "tsc --noEmit",
+    "test": "echo 'No API tests yet'"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "@nst/database": "workspace:*",
+    "@nst/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "@nst/config": "workspace:*",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/node": "^20.14.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.5.0"
+  }
+}

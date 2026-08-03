@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: nst-postgres
+  namespace: default
+spec:
+  serviceName: nst-postgres-service
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nst-postgres
+  template:
+    metadata:
+      labels:
+        app: nst-postgres
+    spec:
+      containers:
+        - name: postgres
+          image: quay.io/tembo/pg16-pgmq:latest
+          ports:
+            - containerPort: 5432
+          envFrom:
+            - secretRef:
+                name: nst-secrets
+          volumeMounts:
+            - name: postgres-data
+              mountPath: /var/lib/postgresql/data
+  volumeClaimTemplates:
+    - metadata:
+        name: postgres-data
+      spec:
+        accessModes: ['ReadWriteOnce']
+        resources:
+          requests:
+            storage: 10Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nst-postgres-service
+  namespace: default
+spec:
+  type: ClusterIP
+  selector:
+    app: nst-postgres
+  ports:
+    - port: 5432
+      targetPort: 5432

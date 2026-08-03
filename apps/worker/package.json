@@ -1,0 +1,23 @@
+{
+  "name": "@nst/worker",
+  "version": "0.0.0",
+  "private": true,
+  "main": "src/index.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "ts-node src/index.ts",
+    "lint": "echo 'No lint rules yet'",
+    "typecheck": "tsc --noEmit",
+    "test": "echo 'No worker tests yet'"
+  },
+  "dependencies": {
+    "@nst/database": "workspace:*",
+    "@nst/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "@nst/config": "workspace:*",
+    "@types/node": "^20.14.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.5.0"
+  }
+}
