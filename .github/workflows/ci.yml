@@ -1,13 +1,30 @@
 name: CI
 
 on:
+  push:
+    branches: [main]
   pull_request:
     branches: [main]
 
 jobs:
-  ci:
-    name: CI Pipeline (lint, typecheck, test)
+  validate:
+    name: Continuous Integration (Lint, Typecheck, Test, Validate, Build)
     runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgis/postgis:16-3.4
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: nst_events
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d nst_events"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
 
     steps:
       - name: Checkout repository
@@ -27,6 +44,26 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Validate Prisma Schema
+        run: pnpm --filter @nst/database db:validate
+        env:
+          DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/nst_events"
+
+      - name: Generate Prisma Client
+        run: pnpm --filter @nst/database db:generate
+        env:
+          DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/nst_events"
+
+      - name: Apply Database Migrations
+        run: pnpm --filter @nst/database db:migrate:deploy
+        env:
+          DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/nst_events"
+
+      - name: Run Database Seed
+        run: pnpm --filter @nst/database db:seed
+        env:
+          DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/nst_events"
+
       - name: Lint across workspaces
         run: pnpm lint
 
@@ -35,3 +72,6 @@ jobs:
 
       - name: Run tests across workspaces
         run: pnpm test
+
+      - name: Build workspaces
+        run: pnpm build

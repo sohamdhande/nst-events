@@ -1,0 +1,15 @@
+# Global Codeowners
+* @sohamdhande @nst-events-core
+
+# Core Package Ownership
+/packages/database/ @sohamdhande @nst-events-backend
+/packages/shared/ @sohamdhande @nst-events-core
+/apps/api/ @nst-events-backend
+/apps/worker/ @nst-events-backend
+/apps/dashboard/ @nst-events-frontend
+/apps/mobile/ @nst-events-mobile
+
+# Security & DevOps Ownership
+/.github/ @nst-events-devops
+/docker/ @nst-events-devops
+/SECURITY.md @nst-events-security
