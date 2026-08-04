@@ -1,3 +1,6 @@
+-- Enable PostGIS extension (required for geography type used by events.location_geofence)
+CREATE EXTENSION IF NOT EXISTS postgis CASCADE;
+
 -- CreateEnum
 CREATE TYPE "GlobalRole" AS ENUM ('STUDENT', 'FACULTY_ADMIN', 'PLATFORM_ADMIN');
 
@@ -109,12 +112,7 @@ CREATE TABLE "events" (
     "start_time" TIMESTAMPTZ NOT NULL,
     "end_time" TIMESTAMPTZ NOT NULL,
     "location_name" TEXT,
-    -- TODO Phase 2 (PostGIS): After CREATE EXTENSION postgis, run:
-    --   ALTER TABLE events ALTER COLUMN location_geofence TYPE geography(Point,4326)
-    --   USING ST_GeomFromText(location_geofence, 4326);
-    --   CREATE INDEX ON events USING gist(location_geofence);
-    -- For now, stored as TEXT (NULL-safe placeholder for V1 without PostGIS).
-    "location_geofence" TEXT,
+    "location_geofence" geography(Point,4326),
     "event_type" "EventType" NOT NULL,
     "state" "EventState" NOT NULL DEFAULT 'DRAFT',
     "visibility" "EventVisibility" NOT NULL DEFAULT 'PUBLIC',

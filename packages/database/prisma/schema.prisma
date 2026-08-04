@@ -291,13 +291,10 @@ model Event {
   startTime         DateTime    @map("start_time") @db.Timestamptz
   endTime           DateTime    @map("end_time") @db.Timestamptz
   locationName      String?     @map("location_name")
-  /// PostGIS geography point — stored as TEXT placeholder in V1 migration.
-  /// TODO Phase 2: Install PostGIS extension, then:
-  ///   ALTER TABLE events ALTER COLUMN location_geofence TYPE geography(Point,4326);
-  ///   CREATE INDEX ON events USING gist(location_geofence);
-  /// After PostGIS is installed, change this back to Unsupported("geography(Point,4326)")
-  /// and update via $queryRaw / $executeRaw with ST_ functions.
-  locationGeofence  String?    @map("location_geofence")
+  /// PostGIS geography point for geofence validation.
+  /// PostGIS extension is enabled via docker/init-pgmq.sql on container init.
+  /// Access via $queryRaw / $executeRaw with ST_ functions (not via Prisma Client).
+  locationGeofence  Unsupported("geography(Point,4326)")? @map("location_geofence")
   eventType         EventType   @map("event_type")
   state             EventState  @default(DRAFT)
   visibility        EventVisibility @default(PUBLIC)
