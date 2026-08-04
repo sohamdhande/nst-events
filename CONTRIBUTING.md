@@ -81,6 +81,7 @@ Keep commits small and focused — one logical change per commit. Don't bundle u
    - Anything you found ambiguous in the docs and how you resolved it
    - How you tested it (commands run, what you verified manually)
 4. Keep PRs scoped to one phase or one module. A Phase 1 schema PR should not also touch `apps/api` routes — if you notice unrelated issues while working, open a separate PR or note them as a follow-up instead of scope-creeping the current one.
+5. **Check lockfiles and auto-generated files for spurious diffs**: When running `npx prisma migrate dev`, Prisma may re-render `prisma/migrations/migration_lock.toml` if your local Prisma CLI version differs from the one that last generated it (for example, changing template header comments from `(e.g., Git)` to `(i.e. Git)`). Before committing, check `git diff prisma/migrations/migration_lock.toml` — if the diff is only template or formatting noise, revert it (`git checkout prisma/migrations/migration_lock.toml`) so it doesn't add noise to your PR.
 
 ### PR checklist (put this in the PR description, check off what applies)
 
@@ -88,6 +89,7 @@ Keep commits small and focused — one logical change per commit. Don't bundle u
 - [ ] `pnpm run lint` passes
 - [ ] `pnpm run test` passes (if tests exist for this area yet)
 - [ ] Verified against local `docker compose` environment, not just "it compiles"
+- [ ] Checked `migration_lock.toml` and auto-generated files for spurious template/formatting diffs and reverted any noise
 - [ ] No `SELECT FOR UPDATE` introduced for capacity/concurrency logic (see `docs/database/19-scalability-review.md`) unless explicitly discussed
 - [ ] Role checks use the two-tier `global_role` / `club_role` model, not a flat hierarchy
 - [ ] Didn't touch files outside my assigned app/package without flagging it in the PR description

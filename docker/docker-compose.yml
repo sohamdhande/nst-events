@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   postgres:
-    image: quay.io/tembo/pg16-pgmq:latest
+    image: postgis/postgis:16-3.4
     container_name: nst-postgres
     restart: always
     environment:

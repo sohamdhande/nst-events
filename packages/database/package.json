@@ -11,13 +11,17 @@
     }
   },
   "scripts": {
-    "build": "echo 'Prisma generate stub - run pnpm prisma generate when schema added'",
+    "build": "prisma generate",
     "dev": "echo 'Prisma dev stub'",
+    "test": "ts-node --project tsconfig.seed.json tests/schema.test.ts",
     "lint": "echo 'No lint rules yet'",
     "typecheck": "tsc --noEmit",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
-    "db:seed": "ts-node prisma/seed.ts"
+    "db:migrate": "prisma migrate dev",
+    "db:migrate:deploy": "prisma migrate deploy",
+    "db:seed": "ts-node --project tsconfig.seed.json prisma/seed.ts",
+    "db:validate": "prisma validate"
   },
   "dependencies": {
     "@prisma/client": "^5.15.0"
@@ -28,5 +32,8 @@
     "prisma": "^5.15.0",
     "ts-node": "^10.9.2",
     "typescript": "^5.5.0"
+  },
+  "prisma": {
+    "seed": "ts-node --project tsconfig.seed.json prisma/seed.ts"
   }
 }
