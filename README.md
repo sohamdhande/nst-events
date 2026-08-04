@@ -48,14 +48,14 @@ The goal is a centralized event ecosystem where every club and campus activity r
 
 ## Multi-Club Architecture
 
-NST-Events supports multiple clubs operating independently within the same campus ecosystem — each with its own membership, events, and announcements, while sharing the same underlying platform and attendance/leaderboard infrastructure.
+NST-Events supports multiple clubs operating independently within the same campus ecosystem each with its own membership, events, and announcements, while sharing the same underlying platform and attendance/leaderboard infrastructure.
 
 ## Role System
 
 NST-Events uses a **two-tier role model**, not a single flat hierarchy:
 
-- **Global role** (`global_role`) — one per user, platform-wide: `STUDENT`, `FACULTY_ADMIN`, `PLATFORM_ADMIN`
-- **Club role** (`club_role`) — scoped per club membership: `FACULTY_MENTOR`, `CLUB_ADMIN`, `CORE_MEMBER`, `MEMBER`
+- **Global role** (`global_role`) one per user, platform-wide: `STUDENT`, `FACULTY_ADMIN`, `PLATFORM_ADMIN`
+- **Club role** (`club_role`) scoped per club membership: `FACULTY_MENTOR`, `CLUB_ADMIN`, `CORE_MEMBER`, `MEMBER`
 
 A user can hold different club roles across different clubs simultaneously (e.g., `CLUB_ADMIN` in one club, `MEMBER` in another) while holding a single global role. Authorization is enforced by two independent layers that must both agree: Express RBAC (primary) and PostgreSQL Row-Level Security (defense-in-depth).
 
@@ -76,7 +76,7 @@ Login is restricted to institutional email domains only:
 
 ## Attendance System
 
-NST-Events uses **dynamic, cryptographically rotating QR codes** — not static QR codes — specifically to defeat screenshot sharing and proxy attendance.
+NST-Events uses **dynamic, cryptographically rotating QR codes** not static QR codes specifically to defeat screenshot sharing and proxy attendance.
 
 **Flow:**
 1. Organizer projects a TOTP-seeded QR code that rotates every 15 seconds
@@ -119,20 +119,20 @@ NST-Events follows a clean, high-density institutional design system, built for 
 
 ## Future Expansion (Not in V1)
 
-The following are explicitly deferred, with architecture left ready to support them later:
+The following are explicitly deferred. File uploads have partial schema groundwork already in place (see below); the others have no architecture or schema work done yet.
 
-- File uploads (avatars, banners, media) — V1 uses default/generated fallback assets
+- File uploads (avatars, banners, media) V1 uses default/generated fallback assets
 - Certificate generation and verification
 - Club recruitment workflows
 - Event media galleries
-- Multi-campus deployment (`tenant_id` groundwork exists in schema)
+- Multi-campus deployment stated as a long-term goal in the docs, but no schema or design work has been done yet. Docs are inconsistent on naming (`tenant_id` vs `active_campus_id`) and no ADR has resolved this; treat as unplanned until a real decision is made.
 
-Guest event passes and optimistic-UI registration were explicitly evaluated and **rejected** for V1 — not just deferred.
+Guest event passes and optimistic-UI registration were explicitly evaluated and **rejected** for V1 not just deferred.
 
 ## Repository
 
-Architecture, ADRs, and the full implementation blueprint live in the companion **[NST-Events Docs](https://github.com/sohamdhande/nst-events-docs)** repository — the single source of truth for all technical decisions. Start with `MASTER_CONTEXT.md` there before making any change here.
+Architecture, ADRs, and the full implementation blueprint live in the companion **[NST-Events Docs](https://github.com/sohamdhande/nst-events-docs)** repository the single source of truth for all technical decisions. Start with `MASTER_CONTEXT.md` there before making any change here.
 
 ## Long-Term Vision
 
-NST-Events is intended to become the campus operating layer for NST — where events, clubs, participation, and communication are all managed through one scalable, trustworthy digital system.
+NST-Events is intended to become the campus operating layer for NST where events, clubs, participation, and communication are all managed through one scalable, trustworthy digital system.
