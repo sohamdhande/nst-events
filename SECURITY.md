@@ -12,7 +12,7 @@
 The NST Events team takes security issues seriously. If you discover a security vulnerability in this project, please follow these steps:
 
 1. **Do NOT open a public GitHub issue.**
-2. Report the vulnerability privately via email to `security@newtonschool.co` or via GitHub Private Vulnerability Reporting.
+2. Report the vulnerability privately via GitHub Private Vulnerability Reporting.
 3. Include the following details in your report:
    - Type of issue (e.g. SQL injection, privilege escalation, CORS bypass, TOTP manipulation)
    - Step-by-step instructions to reproduce the vulnerability
