@@ -2,6 +2,7 @@ import { NextFunction, Request, Response } from 'express';
 import { ForbiddenError, UnauthorizedError } from '../lib/errors';
 import { verifyJwt } from '../lib/jwt';
 import { prisma } from '../lib/prisma';
+import { withUserContext } from '@nst/database';
 
 export async function authenticate(
   req: Request,
@@ -26,9 +27,11 @@ export async function authenticate(
       throw new UnauthorizedError('Invalid or expired access token');
     }
 
-    const user = await prisma.user.findUnique({
-      where: { id: payload.sub },
-      select: { id: true, deletedAt: true },
+    const user = await withUserContext(payload.sub, async (tx) => {
+      return tx.user.findUnique({
+        where: { id: payload.sub },
+        select: { id: true, deletedAt: true },
+      });
     });
 
     if (!user || user.deletedAt !== null) {

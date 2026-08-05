@@ -12,8 +12,11 @@ import { googleCallbackQuerySchema } from './auth.schema';
 import { authService } from './auth.service';
 import { googleOAuth } from './google.oauth';
 import { authenticate } from '../../middleware/authenticate';
+import { prisma } from '../../lib/prisma';
 
 export const authRouter: Router = Router();
+
+
 
 authRouter.get(
   '/google',

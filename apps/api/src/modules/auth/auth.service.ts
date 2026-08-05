@@ -38,18 +38,14 @@ export async function loginWithGoogle(
   // 3. Upsert user by googleSub with P2002 race-condition handling
   let user;
   try {
-    user = await prisma.user.upsert({
-      where: { googleSub: sub },
-      create: {
-        googleSub: sub,
-        email: email.toLowerCase(),
-        fullName: name,
-      },
-      update: {
-        email: email.toLowerCase(),
-        fullName: name,
-      },
-    });
+    const result = await prisma.$queryRaw<User[]>`
+      SELECT * FROM upsert_oauth_user(${sub}, ${email.toLowerCase()}, ${name})
+    `;
+    
+    if (!result || result.length === 0) {
+      throw new ForbiddenError('Account deactivated');
+    }
+    user = result[0];
   } catch (err: unknown) {
     if (
       err instanceof Prisma.PrismaClientKnownRequestError &&
@@ -59,20 +55,30 @@ export async function loginWithGoogle(
         where: { email: email.toLowerCase() },
       });
       if (!user) {
-        throw err;
+        throw new Error('Race condition during user creation: user not found');
       }
     } else {
       throw err;
     }
   }
 
+  // Map raw row back to camelCase for the rest of the function if it came from queryRaw
+  const mappedUser = {
+    id: user.id,
+    googleSub: user.google_sub || user.googleSub,
+    email: user.email,
+    fullName: user.full_name || user.fullName,
+    globalRole: user.global_role || user.globalRole,
+    deletedAt: user.deleted_at ?? user.deletedAt ?? null,
+  };
+
   // 4. Reject if soft-deleted
-  if (user.deletedAt !== null) {
+  if (mappedUser.deletedAt !== null) {
     throw new ForbiddenError('Account deactivated');
   }
 
   // 5. Issue access JWT & refresh token
-  const accessToken = signJwt(user.id);
+  const accessToken = signJwt(mappedUser.id);
   const rawRefreshToken = generateRefreshToken();
   const tokenHash = hashToken(rawRefreshToken);
   const familyId = crypto.randomUUID();
@@ -80,7 +86,7 @@ export async function loginWithGoogle(
 
   await prisma.refreshToken.create({
     data: {
-      userId: user.id,
+      userId: mappedUser.id,
       tokenHash,
       familyId,
       expiresAt,
@@ -93,10 +99,10 @@ export async function loginWithGoogle(
     access_token: accessToken,
     expires_in: 900,
     user: {
-      id: user.id,
-      email: user.email,
-      full_name: user.fullName,
-      global_role: user.globalRole,
+      id: mappedUser.id,
+      email: mappedUser.email,
+      full_name: mappedUser.fullName,
+      global_role: mappedUser.globalRole,
     },
     refreshToken: rawRefreshToken,
   };
@@ -162,6 +168,7 @@ export async function refreshTokens(
     }
 
     // 4. Check user soft-delete
+    await tx.$executeRaw`SELECT set_config('app.user_id', ${existingToken.user_id}, true)`;
     const user = await tx.user.findUnique({
       where: { id: existingToken.user_id },
     });

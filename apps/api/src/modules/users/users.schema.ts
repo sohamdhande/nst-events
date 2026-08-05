@@ -1,2 +1,7 @@
-// TODO: Placeholder schema for users (Phase 0, no logic)
-export const usersSchemaStub = {};
+import { z } from 'zod';
+
+export const UpdateProfileSchema = z.object({
+  body: z.object({
+    full_name: z.string().min(1).optional(),
+  }),
+});

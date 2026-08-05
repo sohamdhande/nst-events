@@ -47,3 +47,6 @@ out/
 
 # MacOS
 .DS_Store
+apps/api/run-smoke.ts
+apps/api/start-test-server.ts
+final-security-report.md
