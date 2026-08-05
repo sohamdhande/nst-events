@@ -53,6 +53,8 @@ enum EventType {
   COMPETITION
   MEETUP
   HACKATHON
+  CULTURAL
+  SPORTS
   OTHER
 }
 

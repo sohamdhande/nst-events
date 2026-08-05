@@ -41,7 +41,7 @@ export const requireRole = (roles: GlobalRole[]) => {
  * Live resolution via withUserContext.
  */
 export const requireClubRole = (
-  getClubId: (req: Request) => string,
+  getClubId: (req: Request) => string | Promise<string>,
   roles: ClubRole[]
 ) => {
   return async (req: Request, _res: Response, next: NextFunction) => {
@@ -50,7 +50,7 @@ export const requireClubRole = (
         throw new ForbiddenError('Unauthorized access');
       }
 
-      const clubId = getClubId(req);
+      const clubId = await getClubId(req);
       if (!clubId) {
         throw new ForbiddenError('Club ID is required for this operation');
       }
@@ -85,6 +85,50 @@ export const requireClubRole = (
         }
       });
 
+      next();
+    } catch (error) {
+      next(error);
+    }
+  };
+};
+
+/**
+ * Ensures the authenticated user has one of the specified club roles in ANY club attached to the event.
+ */
+export const requireEventRole = (
+  getEventId: (req: Request) => string | Promise<string>,
+  roles: ClubRole[]
+) => {
+  return async (req: Request, _res: Response, next: NextFunction) => {
+    try {
+      if (!req.user?.id) throw new ForbiddenError('Unauthorized access');
+      const eventId = await getEventId(req);
+      if (!eventId) throw new ForbiddenError('Event ID is required');
+
+      await withUserContext(req.user.id, async (tx) => {
+        const user = await tx.user.findUnique({
+          where: { id: req.user!.id },
+          select: { globalRole: true },
+        });
+        if (!user) throw new ForbiddenError('User not found');
+        if (GLOBAL_ADMIN_ROLES.includes(user.globalRole)) return;
+
+        const hasRole = await tx.eventClub.findFirst({
+          where: {
+            eventId,
+            club: {
+              memberships: {
+                some: {
+                  userId: req.user!.id,
+                  deletedAt: null,
+                  role: { in: roles },
+                },
+              },
+            },
+          },
+        });
+        if (!hasRole) throw new ForbiddenError('Insufficient club role for this event');
+      });
       next();
     } catch (error) {
       next(error);

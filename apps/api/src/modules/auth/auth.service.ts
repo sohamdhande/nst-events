@@ -1,5 +1,5 @@
 import crypto from 'crypto';
-import { Prisma } from '@nst/database';
+import { Prisma, User } from '@nst/database';
 import { prisma } from '../../lib/prisma';
 import { env } from '../../config/env';
 import { ForbiddenError, UnauthorizedError } from '../../lib/errors';
@@ -38,7 +38,7 @@ export async function loginWithGoogle(
   // 3. Upsert user by googleSub with P2002 race-condition handling
   let user;
   try {
-    const result = await prisma.$queryRaw<User[]>`
+    const result = await prisma.$queryRaw<any[]>`
       SELECT * FROM upsert_oauth_user(${sub}, ${email.toLowerCase()}, ${name})
     `;
     

@@ -5,6 +5,7 @@ import { env } from './config/env';
 import { authRouter } from './modules/auth/auth.router';
 import { usersRouter } from './modules/users/users.router';
 import { clubsRouter } from './modules/clubs/clubs.router';
+import { eventsRouter } from './modules/events/events.router';
 import { errorHandler } from './middleware/error-handler';
 
 export function createApp(): Express {
@@ -22,6 +23,7 @@ export function createApp(): Express {
   app.use('/auth', authRouter);
   app.use('/users', usersRouter);
   app.use('/clubs', clubsRouter);
+  app.use('/v1/events', eventsRouter);
 
   app.get('/health', (_req, res) => {
     res.json({ status: 'ok' });
