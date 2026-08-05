@@ -218,6 +218,7 @@ model RefreshToken {
 
   @@index([userId])
   @@index([expiresAt])
+  @@index([familyId])
   @@map("refresh_tokens")
 }
 

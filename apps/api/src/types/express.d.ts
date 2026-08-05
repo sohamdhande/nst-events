@@ -1,9 +1,9 @@
-// TODO: Express request type augmentation stub (Phase 0)
-declare namespace Express {
-  export interface Request {
+import 'express';
+
+declare module 'express-serve-static-core' {
+  interface Request {
     user?: {
       id: string;
-      role: string;
     };
   }
 }

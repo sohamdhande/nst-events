@@ -5,6 +5,26 @@ All notable changes to the **NST Events** platform will be documented in this fi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - 2026-08-05
+
+### Added
+- Google OAuth login flow (`GET /auth/google`, `GET /auth/google/callback`) with domain restriction to `@adypu.edu.in` and `@newtonschool.co`
+- JWT access tokens (HS256, 15-minute expiry, `sub`-only payload)
+- Opaque refresh tokens with SHA-256 hashing, 30-day expiry, HttpOnly/Secure/SameSite=Strict cookies
+- Refresh token rotation (`POST /auth/refresh`) with family-based theft detection and a 5-second grace window to prevent false positives on concurrent requests
+- Logout endpoint (`POST /auth/logout`) with token revocation and cookie clearing
+- `authenticate` middleware for protected routes
+- `withUserContext(userId, fn)` Prisma transaction wrapper for RLS session variable injection
+- OAuth CSRF protection via signed `state` cookie
+- Index on `refresh_tokens.family_id` for efficient family-wide revocation queries
+
+### Fixed
+- Concurrent OAuth signup race condition (P2002 on `email` unique constraint) now recovers by re-fetching instead of failing
+- `COOKIE_SECRET` isolated from `JWT_SECRET` (previously conflated)
+
+### Security
+- Soft-deleted users (`deletedAt IS NOT NULL`) rejected at both login and refresh
+
 ## [0.1.0] - 2026-08-04
 
 ### Added

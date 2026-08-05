@@ -3,6 +3,7 @@
  * Allowed deps: @nst/database, @nst/shared only.
  * NEVER import from apps/mobile or apps/dashboard.
  */
+/// <reference path="./types/express.d.ts" />
 import { createApp } from './app';
 
 const PORT = process.env.PORT || 3001;
