@@ -1,2 +1,266 @@
-// TODO: Placeholder service for attendance (Phase 0, no logic)
-export const attendanceServiceStub = {};
+import { prisma } from '@nst/database';
+import { generateQrPayload, verifyQrPayload } from './totp.utils';
+import { UnprocessableEntityError } from '../../lib/errors';
+import { SCORE_RULES } from '../../config/score-rules';
+
+export class AttendanceService {
+  /**
+   * Generates a new TOTP QR payload.
+   */
+  async generateQr(sessionId: string) {
+    const qr_payload = generateQrPayload(sessionId);
+    // Expires at the end of the current 15-second window.
+    const expires_at = new Date(Math.ceil(Date.now() / 15000) * 15000).toISOString();
+    return { qr_payload, expires_at };
+  }
+
+  /**
+   * Cryptographically validates the QR, then calls the database RPC.
+   */
+  async markAttendance(
+    userId: string,
+    payload: {
+      session_id: string;
+      totp_token: string;
+      latitude: number;
+      longitude: number;
+      device_id: string;
+      device_os: string;
+      gps_accuracy: number;
+      mock_location_detected: boolean;
+      app_version: string;
+    }
+  ) {
+    // 1. Cryptographic Validation (Express level)
+    const isValid = verifyQrPayload(payload.session_id, payload.totp_token);
+    if (!isValid) {
+      throw new UnprocessableEntityError('QR_EXPIRED');
+    }
+
+    // 2. Database RPC Invocation (with transaction)
+    try {
+      // Prisma $queryRaw cannot return a single typed row out-of-the-box perfectly without mapping,
+      // but we can type-cast the result.
+      const result = await prisma.$transaction(async (tx) => {
+        // Set the current user context for RLS
+        await tx.$executeRaw`SELECT set_config('app.user_id', ${userId}, true)`;
+        
+        return await tx.$queryRaw<any[]>`
+          WITH rpc AS (
+            SELECT * FROM mark_attendance(
+              ${payload.session_id}::uuid,
+              ${payload.totp_token},
+              ${payload.latitude}::float,
+              ${payload.longitude}::float,
+              ${payload.device_id},
+              ${payload.device_os},
+              ${payload.gps_accuracy}::float,
+              ${payload.mock_location_detected}::boolean,
+              ${payload.app_version}
+            )
+          )
+          SELECT rpc.*, current_setting('app.attendance_is_new', true) as is_new
+          FROM rpc
+        `;
+      });
+
+      if (!result || result.length === 0) {
+        throw new Error('Failed to mark attendance');
+      }
+
+      const attendanceRecord = result[0];
+
+      // 3. Derive Service-Level Presentation Fields
+      const flagged = attendanceRecord.audit_metadata?.device_collision_detected === true;
+      const points_awarded = SCORE_RULES.ATTENDANCE;
+
+      const is_new = attendanceRecord.is_new === 'true';
+
+      return {
+        attendance_id: attendanceRecord.id,
+        status: attendanceRecord.status,
+        points_awarded,
+        flagged,
+        is_new,
+      };
+    } catch (error: any) {
+      // Map PostgreSQL RAISE EXCEPTION errors to HTTP 422
+      const msg = error.message || '';
+      if (msg.includes('MOCK_LOCATION_REJECTED')) throw new UnprocessableEntityError('MOCK_LOCATION_REJECTED');
+      if (msg.includes('SESSION_CLOSED')) throw new UnprocessableEntityError('SESSION_CLOSED');
+      if (msg.includes('EVENT_LOCKED')) throw new UnprocessableEntityError('EVENT_LOCKED');
+      if (msg.includes('OUTSIDE_GEOFENCE')) throw new UnprocessableEntityError('OUTSIDE_GEOFENCE');
+      if (msg.includes('NOT_REGISTERED')) throw new UnprocessableEntityError('NOT_REGISTERED');
+      if (msg.includes('UNAUTHORIZED')) throw new UnprocessableEntityError('UNAUTHORIZED');
+      
+      throw error;
+    }
+  }
+
+  /**
+   * Syncs offline attendance records via batch RPC.
+   */
+  async syncOffline(
+    userId: string,
+    payload: {
+      records: Array<{
+        user_id: string;
+        session_id: string;
+        scanned_token: string;
+        scan_timestamp: string;
+        device_id: string;
+        gps_lat: number;
+        gps_lng: number;
+        offline_seq: number;
+      }>;
+    }
+  ) {
+    const result = await prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT set_config('app.user_id', ${userId}, true)`;
+      const recordsJson = JSON.stringify(payload.records);
+      
+      return await tx.$queryRaw<any[]>`
+        SELECT sync_offline_attendance(${recordsJson}::jsonb) as result
+      `;
+    });
+
+    return result[0].result;
+  }
+
+  async getEventAttendance(eventId: string, query: any): Promise<{ data: any[]; nextCursor?: string }> {
+    const { cursor, limit, filter_session_id, filter_status, filter_flagged } = query;
+    const where: any = { session: { eventId } };
+    if (filter_session_id) where.sessionId = filter_session_id;
+    if (filter_status) where.status = filter_status;
+    if (filter_flagged !== undefined) {
+      if (filter_flagged) {
+        where.auditMetadata = { path: ['device_collision_detected'], equals: true };
+      } else {
+        where.auditMetadata = { not: { path: ['device_collision_detected'], equals: true } };
+      }
+    }
+    const records = await prisma.attendanceRecord.findMany({
+      where,
+      take: limit + 1,
+      ...(cursor && { cursor: { id: cursor }, skip: 1 }),
+      orderBy: { markedAt: 'desc' },
+      include: { user: { select: { id: true, fullName: true, email: true } } },
+    });
+    let nextCursor = undefined;
+    if (records.length > limit) {
+      const nextItem = records.pop();
+      nextCursor = nextItem!.id;
+    }
+    return { data: records, nextCursor };
+  }
+
+  async getMyAttendance(userId: string, query: any): Promise<{ data: any[]; nextCursor?: string }> {
+    const { cursor, limit } = query;
+    const records = await prisma.attendanceRecord.findMany({
+      where: { userId },
+      take: limit + 1,
+      ...(cursor && { cursor: { id: cursor }, skip: 1 }),
+      orderBy: { markedAt: 'desc' },
+      include: { session: { include: { event: { select: { title: true } } } } },
+    });
+    let nextCursor = undefined;
+    if (records.length > limit) {
+      const nextItem = records.pop();
+      nextCursor = nextItem!.id;
+    }
+    return { data: records, nextCursor };
+  }
+
+  async manualMarkAttendance(userId: string, payload: { session_id: string; user_id: string }) {
+    try {
+      const result = await prisma.$transaction(async (tx) => {
+        await tx.$executeRaw`SELECT set_config('app.user_id', ${userId}, true)`;
+        return await tx.$queryRaw<any[]>`
+          WITH rpc AS (
+            SELECT * FROM manual_mark_attendance(${payload.session_id}::uuid, ${payload.user_id}::uuid)
+          )
+          SELECT rpc.*, current_setting('app.attendance_is_new', true) as is_new
+          FROM rpc
+        `;
+      });
+      if (!result || result.length === 0) throw new Error('Failed to manually mark attendance');
+      const attendanceRecord = result[0];
+      const is_new = attendanceRecord.is_new === 'true';
+      return { attendance_record: attendanceRecord, is_new };
+    } catch (error: any) {
+      const msg = error.message || '';
+      if (msg.includes('UNAUTHORIZED')) throw new UnprocessableEntityError('UNAUTHORIZED');
+      if (msg.includes('SESSION_CLOSED')) throw new UnprocessableEntityError('SESSION_CLOSED');
+      if (msg.includes('EVENT_LOCKED')) throw new UnprocessableEntityError('EVENT_LOCKED');
+      if (msg.includes('NOT_REGISTERED')) throw new UnprocessableEntityError('NOT_REGISTERED');
+      throw error;
+    }
+  }
+
+  async submitAttendanceDispute(userId: string, payload: { session_id: string; reason: string; evidence_urls?: string[] }) {
+    try {
+      const result = await prisma.$transaction(async (tx) => {
+        await tx.$executeRaw`SELECT set_config('app.user_id', ${userId}, true)`;
+        return await tx.$queryRaw<any[]>`
+          SELECT * FROM submit_attendance_dispute(
+            ${payload.session_id}::uuid, 
+            ${payload.reason}, 
+            ${payload.evidence_urls ? payload.evidence_urls : null}::text[]
+          )
+        `;
+      });
+      if (!result || result.length === 0) throw new Error('Failed to submit dispute');
+      return result[0];
+    } catch (error: any) {
+      const msg = error.message || '';
+      if (msg.includes('DISPUTE_WINDOW_EXPIRED')) throw new UnprocessableEntityError('DISPUTE_WINDOW_EXPIRED');
+      if (msg.includes('SESSION_CLOSED')) throw new UnprocessableEntityError('SESSION_CLOSED');
+      throw error;
+    }
+  }
+
+  async getAttendanceDisputes(eventId: string | undefined, query: any): Promise<{ data: any[]; nextCursor?: string }> {
+    const { cursor, limit, filter_status } = query;
+    const where: any = {};
+    if (eventId) where.eventId = eventId;
+    if (filter_status) where.status = filter_status;
+    const disputes = await prisma.attendanceDispute.findMany({
+      where,
+      take: limit + 1,
+      ...(cursor && { cursor: { id: cursor }, skip: 1 }),
+      orderBy: { createdAt: 'desc' },
+      include: { user: { select: { id: true, fullName: true } } },
+    });
+    let nextCursor = undefined;
+    if (disputes.length > limit) {
+      const nextItem = disputes.pop();
+      nextCursor = nextItem!.id;
+    }
+    return { data: disputes, nextCursor };
+  }
+
+  async resolveAttendanceDispute(userId: string, disputeId: string, payload: { resolution: string; review_notes?: string }) {
+    try {
+      const result = await prisma.$transaction(async (tx) => {
+        await tx.$executeRaw`SELECT set_config('app.user_id', ${userId}, true)`;
+        return await tx.$queryRaw<any[]>`
+          SELECT * FROM resolve_attendance_dispute(
+            ${disputeId}::uuid, 
+            ${payload.resolution}, 
+            ${payload.review_notes || null}
+          )
+        `;
+      });
+      if (!result || result.length === 0) throw new Error('Failed to resolve dispute');
+      return result[0];
+    } catch (error: any) {
+      const msg = error.message || '';
+      if (msg.includes('DISPUTE_NOT_FOUND')) throw new UnprocessableEntityError('DISPUTE_NOT_FOUND');
+      if (msg.includes('DISPUTE_ALREADY_RESOLVED')) throw new UnprocessableEntityError('DISPUTE_ALREADY_RESOLVED');
+      if (msg.includes('INVALID_RESOLUTION')) throw new UnprocessableEntityError('INVALID_RESOLUTION');
+      throw error;
+    }
+  }
+}
+
+export const attendanceService = new AttendanceService();

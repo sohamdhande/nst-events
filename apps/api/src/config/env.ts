@@ -7,6 +7,7 @@ const envSchema = z.object({
   DATABASE_URL: z.string().default('postgresql://postgres:postgres@localhost:5432/nst_events?schema=public'),
   JWT_SECRET: z.string().min(32, 'JWT_SECRET must be at least 32 characters long'),
   COOKIE_SECRET: z.string().min(32, 'COOKIE_SECRET must be at least 32 characters long'),
+  ATTENDANCE_QR_SECRET: z.string().min(32, 'ATTENDANCE_QR_SECRET must be at least 32 characters long'),
   GOOGLE_CLIENT_ID: z.string().default('placeholder-google-client-id'),
   GOOGLE_CLIENT_SECRET: z.string().default('placeholder-google-client-secret'),
   GOOGLE_CALLBACK_URL: z.string().url('GOOGLE_CALLBACK_URL must be a valid URL'),
