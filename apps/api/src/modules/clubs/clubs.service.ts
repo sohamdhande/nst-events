@@ -1,5 +1,6 @@
 import { ClubRole, ClubStatus, withUserContext, Prisma, prisma } from '@nst/database';
 import { ForbiddenError } from '../../lib/errors';
+import { enqueueNotification } from '../notifications/notifications.producer';
 
 export const createClub = async (
   callerId: string,
@@ -160,6 +161,28 @@ export const updateMemberRole = async (
         where: { id: membership.id },
         data: { role },
       });
+
+      const club = await tx.club.findUnique({
+        where: { id: clubId },
+        select: { name: true },
+      });
+
+      await enqueueNotification({
+        tx,
+        userId,
+        type: 'ROLE_CHANGED',
+        title: 'Your role has been updated',
+        body: `You are now a ${role} in ${club?.name || 'the club'}.`,
+        metadata: {
+          schema_version: 1,
+          routing: { target: `/clubs/${clubId}`, fallback: '/clubs', params: { club_id: clubId } },
+          entity_ids: { club_id: clubId },
+          action_payload: { role },
+        },
+        preferenceGate: 'push_enabled',
+        idempotencyString: `ROLE_CHANGED${userId}${clubId}${role}`,
+      });
+
       return { id: updated.id, user_id: updated.userId, role: updated.role };
     } catch (err: any) {
       if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2025') {

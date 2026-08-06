@@ -1,0 +1,2 @@
+-- AlterEnum
+ALTER TYPE "NotificationJobStatus" ADD VALUE 'WAITING_FOR_RECEIPTS' AFTER 'PROCESSING';

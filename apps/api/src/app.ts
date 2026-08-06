@@ -8,6 +8,8 @@ import { clubsRouter } from './modules/clubs/clubs.router';
 import { eventsRouter } from './modules/events/events.router';
 import { attendanceRouter } from './modules/attendance/attendance.router';
 import { leaderboardRouter, adminLeaderboardRouter } from './modules/leaderboard/leaderboard.router';
+import { notificationsRouter } from './modules/notifications/notifications.router';
+import { adminQueueRouter } from './modules/admin/queue.router';
 import { errorHandler } from './middleware/error-handler';
 
 export function createApp(): Express {
@@ -29,6 +31,8 @@ export function createApp(): Express {
   app.use('/v1', attendanceRouter);
   app.use('/v1/leaderboard', leaderboardRouter);
   app.use('/v1/admin/leaderboard', adminLeaderboardRouter);
+  app.use('/v1/admin', adminQueueRouter);
+  app.use('/v1/notifications', notificationsRouter);
 
   app.get('/health', (_req, res) => {
     res.json({ status: 'ok' });

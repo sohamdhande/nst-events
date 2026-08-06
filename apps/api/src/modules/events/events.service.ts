@@ -9,6 +9,7 @@ import {
   CreateSessionInput,
   UpdateSessionInput,
 } from './events.schema';
+import { enqueueNotification } from '../notifications/notifications.producer';
 
 export const createEvent = async (callerId: string, data: CreateEventInput): Promise<any> => {
   return withUserContext(callerId, async (tx) => {
@@ -207,35 +208,142 @@ export const deleteEvent = async (callerId: string, eventId: string) => {
 
 export const submitForApproval = async (callerId: string, eventId: string) => {
   return withUserContext(callerId, async (tx) => {
-    await tx.$queryRaw`SELECT * FROM submit_event_for_approval(${eventId}::uuid)`;
+    const event = await tx.event.findUnique({
+      where: { id: eventId },
+      include: { eventClubs: { include: { club: true } } },
+    });
+    if (!event) throw new NotFoundError('Event not found');
+
+    await tx.$queryRaw`SELECT id FROM submit_event_for_approval(${eventId}::uuid)`;
+
+    // Notify Faculty Mentor and Platform Admins
+    const clubName = event.eventClubs.find(c => c.isPrimary)?.club.name || 'A club';
+    const mentors = await tx.clubMembership.findMany({
+      where: { clubId: { in: event.eventClubs.map(c => c.clubId) }, role: 'FACULTY_MENTOR', deletedAt: null },
+      select: { userId: true },
+    });
+    const platformAdmins = await tx.user.findMany({
+      where: { globalRole: 'PLATFORM_ADMIN', deletedAt: null },
+      select: { id: true },
+    });
+    
+    const recipients = new Set([...mentors.map(m => m.userId), ...platformAdmins.map(a => a.id)]);
+    
+    for (const userId of recipients) {
+      await enqueueNotification({
+        tx,
+        userId,
+        type: 'APPROVAL_REQUEST',
+        title: 'Action Required: Event Approval',
+        body: `${clubName} has requested approval for ${event.title}.`,
+        metadata: {
+          schema_version: 1,
+          routing: { target: `/approvals/${eventId}`, fallback: '/approvals', params: { event_id: eventId } },
+          entity_ids: { event_id: eventId, club_id: event.eventClubs[0]?.clubId },
+          action_payload: { status: 'PENDING_APPROVAL' },
+        },
+        preferenceGate: 'push_enabled',
+        priority: 'HIGH',
+        idempotencyString: `APPROVAL_REQUEST${userId}${eventId}pending_approval`,
+      });
+    }
+
     return { state: 'PENDING_APPROVAL' };
   });
 };
 
 export const approveEvent = async (callerId: string, eventId: string) => {
   return withUserContext(callerId, async (tx) => {
-    await tx.$queryRaw`SELECT * FROM approve_event(${eventId}::uuid)`;
+    const event = await tx.event.findUnique({
+      where: { id: eventId },
+      include: { eventClubs: { include: { club: true } } },
+    });
+    if (!event) throw new NotFoundError('Event not found');
+
+    await tx.$queryRaw`SELECT id FROM approve_event(${eventId}::uuid)`;
+
+    const clubName = event.eventClubs.find(c => c.isPrimary)?.club.name || 'A club';
+    
+    // Notify Club Members (as eligible students)
+    const members = await tx.clubMembership.findMany({
+      where: { clubId: { in: event.eventClubs.map(c => c.clubId) }, deletedAt: null },
+      select: { userId: true },
+    });
+
+    const recipients = new Set(members.map(m => m.userId));
+
+    for (const userId of recipients) {
+      await enqueueNotification({
+        tx,
+        userId,
+        type: 'EVENT_APPROVED',
+        title: `New Event: ${event.title}`,
+        body: `${clubName} just published a new event!`,
+        metadata: {
+          schema_version: 1,
+          routing: { target: `/events/${eventId}`, fallback: '/events', params: { event_id: eventId } },
+          entity_ids: { event_id: eventId, club_id: event.eventClubs[0]?.clubId },
+          action_payload: { status: 'PUBLISHED' },
+        },
+        preferenceGate: 'club_announcements',
+        idempotencyString: `EVENT_APPROVED${userId}${eventId}published`,
+      });
+    }
+
     return { state: 'PUBLISHED' };
   });
 };
 
 export const rejectEvent = async (callerId: string, eventId: string, reason: string) => {
   return withUserContext(callerId, async (tx) => {
-    await tx.$queryRaw`SELECT * FROM reject_event(${eventId}::uuid, ${reason})`;
+    const event = await tx.event.findUnique({
+      where: { id: eventId },
+      include: { eventClubs: true },
+    });
+    if (!event) throw new NotFoundError('Event not found');
+
+    await tx.$queryRaw`SELECT id FROM reject_event(${eventId}::uuid, ${reason})`;
+
+    const admins = await tx.clubMembership.findMany({
+      where: { clubId: { in: event.eventClubs.map(c => c.clubId) }, role: 'CLUB_ADMIN', deletedAt: null },
+      select: { userId: true },
+    });
+
+    const recipients = new Set([...admins.map(a => a.userId), event.createdBy]);
+
+    for (const userId of recipients) {
+      await enqueueNotification({
+        tx,
+        userId,
+        type: 'EVENT_REJECTED',
+        title: `Event Rejected: ${event.title}`,
+        body: `Your event was rejected. Feedback: ${reason}`,
+        metadata: {
+          schema_version: 1,
+          routing: { target: `/events/${eventId}/edit`, fallback: '/dashboard', params: { event_id: eventId } },
+          entity_ids: { event_id: eventId },
+          action_payload: { status: 'REJECTED' },
+        },
+        preferenceGate: 'push_enabled',
+        priority: 'HIGH',
+        idempotencyString: `EVENT_REJECTED${userId}${eventId}rejected`,
+      });
+    }
+
     return { state: 'DRAFT' };
   });
 };
 
 export const lockEvent = async (callerId: string, eventId: string) => {
   return withUserContext(callerId, async (tx) => {
-    await tx.$queryRaw`SELECT * FROM lock_event(${eventId}::uuid)`;
+    await tx.$queryRaw`SELECT id FROM lock_event(${eventId}::uuid)`;
     return { is_locked: true };
   });
 };
 
 export const unlockEvent = async (callerId: string, eventId: string) => {
   return withUserContext(callerId, async (tx) => {
-    await tx.$queryRaw`SELECT * FROM unlock_event(${eventId}::uuid)`;
+    await tx.$queryRaw`SELECT id FROM unlock_event(${eventId}::uuid)`;
     return { is_locked: false };
   });
 };

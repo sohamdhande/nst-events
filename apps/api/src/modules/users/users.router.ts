@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { authenticate } from '../../middleware/authenticate';
 import { validate } from '../../middleware/validate';
-import { UpdateProfileSchema } from './users.schema';
+import { RegisterPushTokenSchema, UpdateProfileSchema } from './users.schema';
 import * as usersService from './users.service';
 
 const router = Router();
@@ -43,5 +43,19 @@ router.get('/:id/profile', authenticate, async (req, res, next) => {
     next(err);
   }
 });
+
+router.post(
+  '/me/push-token',
+  authenticate,
+  validate(RegisterPushTokenSchema),
+  async (req, res, next) => {
+    try {
+      const result = await usersService.registerPushToken(req.user!.id, req.body);
+      res.status(200).json(result);
+    } catch (err) {
+      next(err);
+    }
+  }
+);
 
 export const usersRouter: Router = router;

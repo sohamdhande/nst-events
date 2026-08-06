@@ -101,3 +101,35 @@ export const getPublicProfile = async (callerId: string, profileId: string) => {
     };
   });
 };
+
+export const registerPushToken = async (
+  userId: string,
+  data: { device_id: string; expo_token: string; platform: string }
+) => {
+  return withUserContext(userId, async (tx) => {
+    const token = await tx.pushToken.upsert({
+      where: {
+        deviceId: data.device_id,
+      },
+      update: {
+        userId,
+        expoToken: data.expo_token,
+        platform: data.platform,
+        lastSeenAt: new Date(),
+      },
+      create: {
+        userId,
+        deviceId: data.device_id,
+        expoToken: data.expo_token,
+        platform: data.platform,
+        lastSeenAt: new Date(),
+      },
+    });
+
+    return {
+      device_id: token.deviceId,
+      expo_token: token.expoToken,
+      platform: token.platform,
+    };
+  });
+};

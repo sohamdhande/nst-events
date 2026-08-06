@@ -2,6 +2,7 @@ import { prisma } from '@nst/database';
 import { generateQrPayload, verifyQrPayload } from './totp.utils';
 import { UnprocessableEntityError } from '../../lib/errors';
 import { SCORE_RULES } from '../../config/score-rules';
+import { enqueueNotification } from '../notifications/notifications.producer';
 
 export class AttendanceService {
   /**
@@ -243,16 +244,42 @@ export class AttendanceService {
     try {
       const result = await prisma.$transaction(async (tx) => {
         await tx.$executeRaw`SELECT set_config('app.user_id', ${userId}, true)`;
-        return await tx.$queryRaw<any[]>`
+        const rpcResult = await tx.$queryRaw<any[]>`
           SELECT * FROM resolve_attendance_dispute(
             ${disputeId}::uuid, 
             ${payload.resolution}, 
             ${payload.review_notes || null}
           )
         `;
+        
+        if (!rpcResult || rpcResult.length === 0) throw new Error('Failed to resolve dispute');
+
+        const dispute = await tx.attendanceDispute.findUnique({
+          where: { id: disputeId },
+          include: { event: { select: { title: true } } },
+        });
+
+        if (dispute) {
+          await enqueueNotification({
+            tx,
+            userId: dispute.userId,
+            type: 'ATTENDANCE_DISPUTE_RESOLVED',
+            title: `Attendance Dispute ${payload.resolution}`,
+            body: `Your dispute for ${dispute.event.title} has been ${payload.resolution}.`,
+            metadata: {
+              schema_version: 1,
+              routing: { target: `/attendance/disputes/${disputeId}`, fallback: '/attendance/disputes', params: { dispute_id: disputeId } },
+              entity_ids: { event_id: dispute.eventId, dispute_id: disputeId },
+              action_payload: { status: payload.resolution },
+            },
+            preferenceGate: 'attendance_alerts',
+            idempotencyString: `ATTENDANCE_DISPUTE_RESOLVED${dispute.userId}${disputeId}${payload.resolution}`,
+          });
+        }
+
+        return rpcResult[0];
       });
-      if (!result || result.length === 0) throw new Error('Failed to resolve dispute');
-      return result[0];
+      return result;
     } catch (error: any) {
       const msg = error.message || '';
       if (msg.includes('DISPUTE_NOT_FOUND')) throw new UnprocessableEntityError('DISPUTE_NOT_FOUND');

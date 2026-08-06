@@ -11,5 +11,5 @@
     "files": true,
     "transpileOnly": true
   },
-  "include": ["src/**/*", "tests/**/*"]
+  "include": ["src/**/*"]
 }

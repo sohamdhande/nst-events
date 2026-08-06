@@ -1,4 +1,5 @@
 import http from 'http';
+import { logger } from './lib/logger';
 
 export function startHealthServer(port = 3002) {
   const server = http.createServer((req, res) => {
@@ -12,7 +13,7 @@ export function startHealthServer(port = 3002) {
   });
 
   server.listen(port, () => {
-    console.log(`[nst-worker] Health server listening on port ${port}`);
+    logger.info(`[nst-worker] Health server listening on port ${port}`);
   });
 
   return server;

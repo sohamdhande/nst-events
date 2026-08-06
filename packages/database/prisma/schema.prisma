@@ -139,6 +139,18 @@ enum HandoverStatus {
   REJECTED
 }
 
+/// State of a background job in the native PostgreSQL queue.
+enum NotificationJobStatus {
+  PENDING
+  PROCESSING
+  WAITING_FOR_RECEIPTS
+  COMPLETED
+  RETRY_PENDING
+  FAILED
+  DEAD_LETTER
+  ARCHIVED
+}
+
 // ============================================================
 // MODELS — in dependency order (parents before children)
 // ============================================================
@@ -614,6 +626,34 @@ model PushToken {
 
   @@index([userId])
   @@map("push_tokens")
+}
+
+// ------------------------------------------------------------
+// 15b. notification_jobs
+// Native PostgreSQL job queue for background push delivery.
+// ------------------------------------------------------------
+model NotificationJob {
+  id              String                @id @default(uuid()) @db.Uuid
+  status          NotificationJobStatus @default(PENDING)
+  payload         Json                  @db.JsonB
+  priority        String                @default("NORMAL")
+  attemptCount    Int                   @default(0) @map("attempt_count")
+  maxAttempts     Int                   @default(4) @map("max_attempts")
+  availableAt     DateTime              @default(now()) @map("available_at") @db.Timestamptz
+  lockedAt        DateTime?             @map("locked_at") @db.Timestamptz
+  workerId        String?               @map("worker_id")
+  idempotencyKey  String                @unique @map("idempotency_key")
+  ticketIds       Json?                 @map("ticket_ids") @db.JsonB
+  lastError       String?               @map("last_error") @db.Text
+  createdAt       DateTime              @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime              @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  // TODO: SQL migration - Polling index: CREATE INDEX idx_notification_jobs_poll ON notification_jobs (status, available_at) WHERE status IN ('PENDING', 'RETRY_PENDING');
+  // TODO: SQL migration - Enqueue logic: ON CONFLICT (idempotency_key) DO NOTHING
+  // TODO: SQL migration - RLS: None (Client/Express). worker role only. Clients can INSERT via RPC.
+  // NO FOREIGN KEYS (intentionally decoupled for performance)
+
+  @@map("notification_jobs")
 }
 
 // ------------------------------------------------------------
