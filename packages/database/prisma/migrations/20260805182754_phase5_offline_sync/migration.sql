@@ -161,9 +161,9 @@ BEGIN
       IF FOUND THEN
         -- Insert Leaderboard Score
         INSERT INTO leaderboard_scores (
-          user_id, club_id, points, reason, source_id, created_at
+          id, user_id, club_id, points, reason, source_id, created_at
         ) VALUES (
-          v_user_id, NULL, 5, 'ATTENDANCE', v_new_record.id, now()
+          gen_random_uuid(), v_user_id, NULL, 5, 'ATTENDANCE', v_new_record.id, now()
         );
         v_processed := v_processed + 1;
       ELSE

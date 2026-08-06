@@ -137,9 +137,9 @@ BEGIN
     
     -- 9. Insert Leaderboard Score (Assuming 5 points for attendance as standard)
     INSERT INTO leaderboard_scores (
-      user_id, club_id, points, reason, source_id, created_at
+      id, user_id, club_id, points, reason, source_id, created_at
     ) VALUES (
-      v_user_id, NULL, 5, 'ATTENDANCE', v_new_record.id, now()
+      gen_random_uuid(), v_user_id, NULL, 5, 'ATTENDANCE', v_new_record.id, now()
     );
 
     RETURN v_new_record;

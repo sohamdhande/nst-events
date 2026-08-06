@@ -56,9 +56,9 @@ BEGIN
   END IF;
 
   INSERT INTO attendance_records (
-    session_id, user_id, marked_by, marked_at, method, status, audit_metadata
+    id, session_id, user_id, marked_by, marked_at, method, status, audit_metadata
   ) VALUES (
-    p_session_id, p_user_id, v_admin_id, now(), 'MANUAL', 'PRESENT', jsonb_build_object('method', 'MANUAL')
+    gen_random_uuid(), p_session_id, p_user_id, v_admin_id, now(), 'MANUAL', 'PRESENT', jsonb_build_object('method', 'MANUAL')
   ) 
   ON CONFLICT (session_id, user_id) DO NOTHING
   RETURNING * INTO v_new_record;
@@ -67,9 +67,9 @@ BEGIN
     PERFORM set_config('app.attendance_is_new', 'true', true);
     
     INSERT INTO leaderboard_scores (
-      user_id, club_id, points, reason, source_id, created_at
+      id, user_id, club_id, points, reason, source_id, created_at
     ) VALUES (
-      p_user_id, NULL, 5, 'ATTENDANCE', v_new_record.id, now()
+      gen_random_uuid(), p_user_id, NULL, 5, 'ATTENDANCE', v_new_record.id, now()
     );
 
     INSERT INTO audit_logs (actor_id, action, entity_type, entity_id, new_state, created_at)
@@ -184,19 +184,18 @@ BEGIN
   END IF;
 
   UPDATE attendance_disputes
-  SET status = p_resolution::attendance_dispute_status_enum,
+  SET status = p_resolution::"DisputeStatus",
       review_notes = p_review_notes,
       reviewed_by = v_admin_id,
-      reviewed_at = now(),
-      updated_at = now()
+      reviewed_at = now()
   WHERE id = p_dispute_id
   RETURNING * INTO v_updated_dispute;
 
   IF p_resolution = 'APPROVED' THEN
     INSERT INTO attendance_records (
-      session_id, user_id, marked_by, marked_at, method, status, audit_metadata
+      id, session_id, user_id, marked_by, marked_at, method, status, audit_metadata
     ) VALUES (
-      v_dispute.session_id, v_dispute.user_id, v_admin_id, now(), 'SYSTEM', 'EXCUSED', jsonb_build_object('method', 'SYSTEM', 'dispute_id', p_dispute_id)
+      gen_random_uuid(), v_dispute.session_id, v_dispute.user_id, v_admin_id, now(), 'SYSTEM', 'EXCUSED', jsonb_build_object('method', 'SYSTEM', 'dispute_id', p_dispute_id)
     )
     ON CONFLICT (session_id, user_id) DO UPDATE 
     SET status = 'EXCUSED',
@@ -207,9 +206,9 @@ BEGIN
     RETURNING * INTO v_new_record;
 
     INSERT INTO leaderboard_scores (
-      user_id, club_id, points, reason, source_id, created_at
+      id, user_id, club_id, points, reason, source_id, created_at
     ) VALUES (
-      v_dispute.user_id, NULL, 5, 'ATTENDANCE', v_new_record.id, now()
+      gen_random_uuid(), v_dispute.user_id, NULL, 5, 'ATTENDANCE', v_new_record.id, now()
     );
 
     INSERT INTO audit_logs (actor_id, action, entity_type, entity_id, new_state, created_at)

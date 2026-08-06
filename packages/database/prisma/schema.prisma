@@ -696,6 +696,7 @@ model LeaderboardScore {
 
   @@index([userId])
   @@index([clubId])
+  @@index([createdAt], map: "leaderboard_scores_created_at_brin_idx", type: Brin)
   @@map("leaderboard_scores")
 }
 
