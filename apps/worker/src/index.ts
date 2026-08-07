@@ -97,8 +97,8 @@ async function startup() {
 
   logger.info({ correlation_id }, '✅ Worker runtime components loaded');
 
-  server = app.listen(8080, () => {
-    logger.info({ correlation_id }, '🏥 Health, Readiness & Metrics server listening on port 8080');
+  server = app.listen(3002, () => {
+    logger.info({ correlation_id }, '🏥 Health, Readiness & Metrics server listening on port 3002');
   });
 
   isInitialized = true;

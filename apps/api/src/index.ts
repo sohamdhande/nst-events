@@ -5,17 +5,18 @@
  */
 /// <reference path="./types/express.d.ts" />
 import { createApp } from './app';
+import { logger } from './lib/logger';
 
 const PORT = process.env.PORT || 3001;
 
 async function bootstrap() {
   const app = createApp();
   app.listen(PORT, () => {
-    console.log(`[nst-api] Server running on port ${PORT}`);
+    logger.info(`[nst-api] Server running on port ${PORT}`);
   });
 }
 
 bootstrap().catch((err) => {
-  console.error('[nst-api] Failed to start server:', err);
+  logger.error({ err }, '[nst-api] Failed to start server');
   process.exit(1);
 });
