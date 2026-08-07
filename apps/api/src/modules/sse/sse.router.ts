@@ -1,2 +1,51 @@
-// TODO: Placeholder router for sse (Phase 0, no logic)
-export const sseRouterStub = {};
+import { Router } from 'express';
+import { sseEventBus } from './event-bus';
+import { sseConnectionManager } from './sse-connection-manager';
+import { authenticate } from '../../middleware/authenticate';
+
+export const sseRouter: Router = Router();
+
+// Middleware to support query param 'token' as Bearer token for EventSource
+const sseAuthMiddleware = (req: any, res: any, next: any) => {
+  if (req.query.token && !req.headers.authorization) {
+    req.headers.authorization = `Bearer ${req.query.token}`;
+  }
+  return authenticate(req, res, next);
+};
+
+sseRouter.get('/:id/live', sseAuthMiddleware, async (req, res, next) => {
+  try {
+    const eventId = req.params.id;
+    const channel = `event_${eventId}_live`;
+    
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache, no-transform');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('X-Accel-Buffering', 'no');
+    res.flushHeaders();
+
+    // Subscribe to DB notifications via manager
+    await sseConnectionManager.subscribe(eventId);
+
+    const onEvent = (payload: any) => {
+      res.write(`data: ${JSON.stringify(payload)}\n\n`);
+    };
+
+    sseEventBus.on(channel, onEvent);
+
+    // 30s Heartbeat as per documentation contract
+    const heartbeatInterval = setInterval(() => {
+      res.write(`data: ${JSON.stringify({ type: 'heartbeat', payload: { timestamp: new Date().toISOString() } })}\n\n`);
+    }, 30000);
+
+    // Strict connection cleanup
+    req.on('close', async () => {
+      clearInterval(heartbeatInterval);
+      sseEventBus.off(channel, onEvent);
+      await sseConnectionManager.unsubscribe(eventId);
+    });
+
+  } catch (err) {
+    next(err);
+  }
+});
