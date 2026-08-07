@@ -2,8 +2,67 @@
 
 All notable changes to the **NST Events** platform will be documented in this file.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [1.0.0] - 2026-08-07
+
+### Changed
+- Transitioned API and background worker output to structured JSON logging.
+
+### Removed
+- Cleared legacy scaffolding, unused stubs, and development artifacts from the repository.
+- Dropped external messaging queue extensions from local Docker environments in favor of native solutions.
+
+### Infrastructure
+- Added explicit CPU and memory resource constraints to Kubernetes deployment manifests.
+- Added HTTP liveness probes to API and Worker deployment configurations for readiness verification.
+- Aligned worker service ports across local and containerized environments.
+
+## [0.7.0] - 2026-08-07
+
+### Added
+- React Native mobile application structure and routing foundation.
+- Mobile registration and live event integration hooks communicating with the API.
+- Device push token registration hooks for mobile clients.
+- Client-side Server-Sent Events (SSE) connection manager maintaining resilient realtime subscriptions.
+
+## [0.6.0] - 2026-08-07
+
+### Added
+- Server-Sent Events (SSE) transport layer API for streaming realtime state changes.
+- PostgreSQL `LISTEN/NOTIFY` triggers broadcasting database row updates to connected API clients.
+
+## [0.5.0] - 2026-08-07
+
+### Added
+- Registration API supporting capacity validation and enrollment workflows.
+- Teams API enabling team creation and roster management.
+
+## [0.4.0] - 2026-08-07
+
+### Added
+- Push notification dispatch service leveraging Expo Server SDK.
+- Dedicated background worker process for asynchronous task execution.
+- Dead-letter queue endpoints for monitoring and replaying failed background tasks.
+
+## [0.3.0] - 2026-08-06
+
+### Added
+- Role-Based Access Control (RBAC) authorization middleware.
+- Users and Clubs APIs for account and membership management.
+- Event system API for scheduling and metadata management.
+- Attendance API supporting TOTP-based QR code generation and validation.
+- GPS coordinate and accuracy validation for physical check-ins.
+- Offline synchronization endpoints for batched attendance records.
+- Dispute resolution and manual override endpoints for attendance anomalies.
+- Leaderboard API calculating points from event participation.
+
+### Fixed
+- Corrected database schema drift and enforced Row-Level Security (RLS) policies on core tables.
+
+### Security
+- Added `nst_app` database role and audit triggers restricting direct schema access.
 
 ## [0.2.0] - 2026-08-05
 

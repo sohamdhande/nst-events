@@ -129,9 +129,57 @@ The following are explicitly deferred. File uploads have partial schema groundwo
 
 Guest event passes and optimistic-UI registration were explicitly evaluated and **rejected** for V1 not just deferred.
 
-## Repository
+## Repository Constitution
 
-Architecture, ADRs, and the full implementation blueprint live in the companion **[NST-Events Docs](https://github.com/sohamdhande/nst-events-docs)** repository the single source of truth for all technical decisions. Start with `MASTER_CONTEXT.md` there before making any change here.
+### nst-events
+
+Purpose:
+- Source code
+- Build system
+- Infrastructure
+- Deployment
+- CI/CD
+- Tests
+- Operational documentation
+
+Must NOT contain:
+- Product specifications
+- ADRs
+- Engineering handbook
+- Governance
+- Planning
+- Research
+- Meeting notes
+- Long-form architecture documentation
+
+---
+
+### nst-events-docs
+
+Purpose:
+- Canonical documentation repository
+
+Contains:
+- Engineering Handbook
+- ADRs
+- Product Specifications
+- Architecture
+- API Documentation
+- Backend Documentation
+- Mobile Documentation
+- Dashboard Documentation
+- Database Documentation
+- Security Documentation
+- Design System
+- Operations
+- Planning
+- Research
+- Assets
+- Historical Records
+
+This repository is the single source of truth for documentation.
+
+Before making structural or architectural changes, please review the [PROJECT_CONTEXT.md](https://github.com/sohamdhande/nst-events-docs) and the [Engineering Handbook](https://github.com/sohamdhande/nst-events-docs/tree/main/docs/engineering).
 
 ## Long-Term Vision
 
