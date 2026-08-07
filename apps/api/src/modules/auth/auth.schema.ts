@@ -7,5 +7,4 @@ export const googleCallbackQuerySchema = z.object({
 
 export type GoogleCallbackQuery = z.infer<typeof googleCallbackQuerySchema>;
 
-export const authSchemaStub = {};
 
