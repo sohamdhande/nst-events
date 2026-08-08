@@ -42,34 +42,14 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Validate Prisma Schema
-        run: pnpm --filter @nst/database db:validate
+      - name: CI Environment Setup (Database Preparation)
+        run: |
+          pnpm --filter @nst/database db:validate
+          pnpm --filter @nst/database db:generate
+          pnpm --filter @nst/database db:migrate:deploy
+          pnpm --filter @nst/database db:seed
         env:
           DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/nst_events"
 
-      - name: Generate Prisma Client
-        run: pnpm --filter @nst/database db:generate
-        env:
-          DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/nst_events"
-
-      - name: Apply Database Migrations
-        run: pnpm --filter @nst/database db:migrate:deploy
-        env:
-          DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/nst_events"
-
-      - name: Run Database Seed
-        run: pnpm --filter @nst/database db:seed
-        env:
-          DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/nst_events"
-
-      - name: Lint across workspaces
-        run: pnpm lint
-
-      - name: Typecheck across workspaces
-        run: pnpm typecheck
-
-      - name: Run tests across workspaces
-        run: pnpm test
-
-      - name: Build workspaces
-        run: pnpm build
+      - name: Run CI Validation
+        run: pnpm validate:ci

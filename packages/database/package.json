@@ -13,15 +13,14 @@
   "scripts": {
     "build": "prisma generate",
     "dev": "echo 'Prisma dev stub'",
-    "test": "ts-node --project tsconfig.seed.json tests/schema.test.ts",
-    "lint": "echo 'No lint rules yet'",
     "typecheck": "tsc --noEmit",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
     "db:migrate:deploy": "prisma migrate deploy",
     "db:seed": "ts-node --project tsconfig.seed.json prisma/seed.ts",
-    "db:validate": "prisma validate"
+    "db:validate": "prisma validate",
+    "test:e2e": "ts-node --project tsconfig.seed.json tests/schema.test.ts"
   },
   "dependencies": {
     "@prisma/client": "^5.15.0"

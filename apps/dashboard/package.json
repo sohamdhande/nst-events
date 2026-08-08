@@ -7,8 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint app/",
-    "typecheck": "tsc --noEmit",
-    "test": "echo 'No dashboard tests yet'"
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "next": "16.2.12",

@@ -30,9 +30,7 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "build": "echo 'Expo build stub'",
-    "lint": "echo 'No lint rules yet'",
-    "typecheck": "tsc --noEmit",
-    "test": "echo 'No mobile tests yet'"
+    "typecheck": "tsc --noEmit"
   },
   "private": true
 }

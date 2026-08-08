@@ -8,12 +8,16 @@
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
-    "format": "prettier --write \"**/*.{ts,tsx,md}\""
+    "format": "prettier --write \"**/*.{ts,tsx,md}\"",
+    "prepare": "husky",
+    "validate:local": "turbo run lint typecheck",
+    "validate:ci": "turbo run lint typecheck test test:e2e build"
   },
   "devDependencies": {
     "@nst/config": "workspace:*",
-    "turbo": "^2.3.0",
-    "prettier": "^3.3.3"
+    "husky": "^9.1.7",
+    "prettier": "^3.3.3",
+    "turbo": "^2.3.0"
   },
   "packageManager": "pnpm@9.0.0",
   "workspaces": [

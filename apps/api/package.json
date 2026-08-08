@@ -6,9 +6,8 @@
   "scripts": {
     "build": "tsc",
     "dev": "ts-node src/index.ts",
-    "lint": "echo 'No lint rules yet'",
     "typecheck": "tsc --noEmit",
-    "test": "ts-node tests/notification-e2e.test.ts"
+    "test:e2e": "ts-node tests/notification-e2e.test.ts"
   },
   "dependencies": {
     "@nst/database": "workspace:*",
