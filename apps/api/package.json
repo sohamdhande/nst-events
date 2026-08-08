@@ -7,7 +7,7 @@
     "build": "tsc",
     "dev": "ts-node src/index.ts",
     "typecheck": "tsc --noEmit",
-    "test:e2e": "ts-node tests/notification-e2e.test.ts"
+    "test:e2e": "EXPO_ACCESS_TOKEN=mock_token_for_tests ts-node tests/notification-e2e.test.ts"
   },
   "dependencies": {
     "@nst/database": "workspace:*",
