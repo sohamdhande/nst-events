@@ -1,4 +1,4 @@
-import { withUserContext } from '@nst/database/src/context';
+import { withUserContext } from '@nst/database';
 import { enqueueNotification } from '../notifications/notifications.producer';
 import { prisma } from '../../lib/prisma';
 import { NotFoundError } from '../../lib/errors';

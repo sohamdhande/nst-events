@@ -1,4 +1,4 @@
-import { prisma } from '@nst/database/src/client';
+import { prisma } from '@nst/database';
 import { NotFoundError, UnprocessableEntityError } from '../../lib/errors';
 
 export async function getQueueMonitoringStats() {

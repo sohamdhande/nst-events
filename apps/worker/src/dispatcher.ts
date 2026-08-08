@@ -17,6 +17,7 @@ export async function dispatchJob(tx: any, job: any) {
         switch (job.status) {
           case 'PENDING':
           case 'RETRY_PENDING':
+          case 'PROCESSING':
             await executePush(tx, job);
             break;
           case 'WAITING_FOR_RECEIPTS':

@@ -7,16 +7,66 @@
 import { createApp } from './app';
 import { logger } from './lib/logger';
 
+import { Server } from 'http';
+import { prisma } from './lib/prisma';
+import { pgListener } from './modules/sse/pg-listener';
+
 const PORT = process.env.PORT || 3001;
 
-async function bootstrap() {
+let server: Server | null = null;
+let isShuttingDown = false;
+
+export async function bootstrap(): Promise<Server> {
   const app = createApp();
-  app.listen(PORT, () => {
-    logger.info(`[nst-api] Server running on port ${PORT}`);
+  return new Promise((resolve) => {
+    server = app.listen(PORT, () => {
+      logger.info(`[nst-api] Server running on port ${PORT}`);
+      resolve(server!);
+    });
   });
 }
 
-bootstrap().catch((err) => {
-  logger.error({ err }, '[nst-api] Failed to start server');
-  process.exit(1);
-});
+export async function gracefulShutdown(signal: string, shouldExit = true) {
+  if (isShuttingDown) return;
+  isShuttingDown = true;
+  logger.info(`[nst-api] Received ${signal}, starting graceful shutdown...`);
+
+  const timeout = setTimeout(() => {
+    logger.error('[nst-api] Shutdown timed out. Forcing exit.');
+    if (shouldExit) process.exit(1);
+  }, 10000);
+
+  try {
+    if (server) {
+      await new Promise<void>((resolve, reject) => {
+        server!.close((err) => (err ? reject(err) : resolve()));
+      });
+      logger.info('[nst-api] HTTP server closed');
+    }
+
+    await pgListener.disconnect();
+    logger.info('[nst-api] PG listener disconnected');
+
+    await prisma.$disconnect();
+    logger.info('[nst-api] Prisma disconnected');
+
+    clearTimeout(timeout);
+    logger.info('[nst-api] Graceful shutdown completed cleanly');
+    if (shouldExit) process.exit(0);
+  } catch (err) {
+    logger.error({ err }, '[nst-api] Error during graceful shutdown');
+    clearTimeout(timeout);
+    if (shouldExit) process.exit(1);
+  }
+}
+
+// Only start automatically if this file is run directly (not imported in tests)
+if (require.main === module) {
+  bootstrap().catch((err) => {
+    logger.error({ err }, '[nst-api] Failed to start server');
+    process.exit(1);
+  });
+
+  process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+  process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+}
