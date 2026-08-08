@@ -16,4 +16,4 @@ A clear and concise description of what you want to happen.
 A clear and concise description of any alternative solutions or features you've considered.
 
 **Phase / Module Alignment**
-Which phase or module in `docs/backend/05-development-order.md` does this feature belong to?
+Which phase or module in `https://github.com/sohamdhande/nst-events-docs/tree/main/docs/backend/05-development-order.md` does this feature belong to?

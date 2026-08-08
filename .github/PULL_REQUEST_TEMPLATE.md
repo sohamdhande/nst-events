@@ -4,7 +4,7 @@
 
 ## Phase & Related Documentation
 
-<!-- Link the relevant phase or design doc from docs repo, e.g. docs/backend/03-prisma-schema-plan.md -->
+<!-- Link the relevant phase or design doc from docs repo, e.g. https://github.com/sohamdhande/nst-events-docs/tree/main/docs/backend/03-prisma-schema-plan.md -->
 
 ## Type of Change
 
@@ -26,6 +26,6 @@
 ## PR Checklist
 
 - [ ] Scoped to single app/package or single phase module
-- [ ] No direct `SELECT FOR UPDATE` introduced for capacity logic (see `docs/database/19-scalability-review.md`)
+- [ ] No direct `SELECT FOR UPDATE` introduced for capacity logic (see `https://github.com/sohamdhande/nst-events-docs/tree/main/docs/database/19-scalability-review.md`)
 - [ ] Roles adhere to two-tier `GlobalRole` / `ClubRole` separation
 - [ ] Any doc ambiguities flagged and noted above

@@ -131,55 +131,17 @@ Guest event passes and optimistic-UI registration were explicitly evaluated and 
 
 ## Repository Constitution
 
-### nst-events
+NST Events Code Repository
+    Repository: nst-events
 
-Purpose:
-- Source code
-- Build system
-- Infrastructure
-- Deployment
-- CI/CD
-- Tests
-- Operational documentation
+Canonical Documentation
+    Repository: nst-events-docs
 
-Must NOT contain:
-- Product specifications
-- ADRs
-- Engineering handbook
-- Governance
-- Planning
-- Research
-- Meeting notes
-- Long-form architecture documentation
+All architecture decisions, engineering handbooks, product specifications, API documentation, and other project documentation are housed in the canonical documentation repository. 
 
----
+**Documentation Repository URL:** [https://github.com/sohamdhande/nst-events-docs](https://github.com/sohamdhande/nst-events-docs)
 
-### nst-events-docs
-
-Purpose:
-- Canonical documentation repository
-
-Contains:
-- Engineering Handbook
-- ADRs
-- Product Specifications
-- Architecture
-- API Documentation
-- Backend Documentation
-- Mobile Documentation
-- Dashboard Documentation
-- Database Documentation
-- Security Documentation
-- Design System
-- Operations
-- Planning
-- Research
-- Assets
-- Historical Records
-
-This repository is the single source of truth for documentation.
-
-Before making structural or architectural changes, please review the [PROJECT_CONTEXT.md](https://github.com/sohamdhande/nst-events-docs) and the [Engineering Handbook](https://github.com/sohamdhande/nst-events-docs/tree/main/docs/engineering).
+Please consult the documentation repository before making any structural or architectural changes.
 
 ## Long-Term Vision
 

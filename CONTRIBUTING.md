@@ -6,7 +6,7 @@ Architecture and product decisions live in the companion **[NST-Events Docs](htt
 
 ## Before You Start Coding
 
-1. Confirm which **phase** your task belongs to (see `docs/backend/05-development-order.md` in the docs repo). Don't start work that depends on a phase that hasn't merged yet.
+1. Confirm which **phase** your task belongs to (see `https://github.com/sohamdhande/nst-events-docs/tree/main/docs/backend/05-development-order.md` in the docs repo). Don't start work that depends on a phase that hasn't merged yet.
 2. Read the relevant doc(s) for your task fully before writing code. If something in the doc is ambiguous or seems to contradict another doc, **flag it before you guess** — ping the team, don't silently pick an interpretation.
 3. Make sure your local environment is current: pull `main`, run `pnpm install`, confirm `docker compose up` and `pnpm run typecheck` pass clean before branching.
 
@@ -32,7 +32,7 @@ feat/mobile-qr-scanner
 feat/dashboard-approval-workflow
 fix/api-attendance-totp-window
 chore/repo-ci-pipeline
-docs/db-schema-notes
+https://github.com/sohamdhande/nst-events-docs/tree/main/docs/db-schema-notes
 ```
 
 Keep it short and specific enough that someone can guess what the branch does without opening it.
@@ -63,7 +63,7 @@ feat(db): add users, clubs, club_memberships tables
 
 feat(api): implement register_event RPC with atomic capacity increment
 
-Uses lock-free UPDATE...RETURNING pattern per docs/database/19-scalability-review.md,
+Uses lock-free UPDATE...RETURNING pattern per https://github.com/sohamdhande/nst-events-docs/tree/main/docs/database/19-scalability-review.md,
 not SELECT FOR UPDATE, to avoid lock contention at 500+ concurrent registrations.
 
 fix(api): correct TOTP window validation to 15 seconds
@@ -77,7 +77,7 @@ Keep commits small and focused — one logical change per commit. Don't bundle u
 2. **PR title**: same convention as commits — `feat(db): Phase 1 schema and migrations`
 3. **PR description must include:**
    - What this PR does (1–3 sentences)
-   - Which phase/doc section this implements (link the doc file, e.g. `docs/backend/03-prisma-schema-plan.md`)
+   - Which phase/doc section this implements (link the doc file, e.g. `https://github.com/sohamdhande/nst-events-docs/tree/main/docs/backend/03-prisma-schema-plan.md`)
    - Anything you found ambiguous in the docs and how you resolved it
    - How you tested it (commands run, what you verified manually)
 4. Keep PRs scoped to one phase or one module. A Phase 1 schema PR should not also touch `apps/api` routes — if you notice unrelated issues while working, open a separate PR or note them as a follow-up instead of scope-creeping the current one.
@@ -90,7 +90,7 @@ Keep commits small and focused — one logical change per commit. Don't bundle u
 - [ ] `pnpm run test` passes (if tests exist for this area yet)
 - [ ] Verified against local `docker compose` environment, not just "it compiles"
 - [ ] Checked `migration_lock.toml` and auto-generated files for spurious template/formatting diffs and reverted any noise
-- [ ] No `SELECT FOR UPDATE` introduced for capacity/concurrency logic (see `docs/database/19-scalability-review.md`) unless explicitly discussed
+- [ ] No `SELECT FOR UPDATE` introduced for capacity/concurrency logic (see `https://github.com/sohamdhande/nst-events-docs/tree/main/docs/database/19-scalability-review.md`) unless explicitly discussed
 - [ ] Role checks use the two-tier `global_role` / `club_role` model, not a flat hierarchy
 - [ ] Didn't touch files outside my assigned app/package without flagging it in the PR description
 
@@ -102,7 +102,7 @@ Keep commits small and focused — one logical change per commit. Don't bundle u
   - Attendance TOTP / HMAC / geofence validation (Phase 6)
   - RLS policies and RBAC middleware (Phase 3, Phase 10)
   - JWT / OAuth / refresh token logic (Phase 2)
-- Reviewers: check the PR against the referenced doc, not just "does the code look reasonable." If the PR claims to implement `docs/database/12-registration-data-model.md`, actually open that doc and compare.
+- Reviewers: check the PR against the referenced doc, not just "does the code look reasonable." If the PR claims to implement `https://github.com/sohamdhande/nst-events-docs/tree/main/docs/database/12-registration-data-model.md`, actually open that doc and compare.
 - If you disagree with feedback, discuss it in the PR thread — don't just force-push around it.
 
 ## Merging

@@ -1,8 +1,8 @@
 // ============================================================
 // NST Events — Prisma Schema
-// Authority: docs/backend/03-prisma-schema-plan.md
-//            docs/database/04-enums.md
-//            docs/database/20-database-freeze-v1.md
+// Authority: https://github.com/sohamdhande/nst-events-docs/tree/main/docs/backend/03-prisma-schema-plan.md
+//            https://github.com/sohamdhande/nst-events-docs/tree/main/docs/database/04-enums.md
+//            https://github.com/sohamdhande/nst-events-docs/tree/main/docs/database/20-database-freeze-v1.md
 // Version: 1.0 | Date: 2026-08-03
 // ============================================================
 
@@ -17,7 +17,7 @@ generator client {
 
 // ============================================================
 // ENUMS
-// Canonical source: docs/database/04-enums.md
+// Canonical source: https://github.com/sohamdhande/nst-events-docs/tree/main/docs/database/04-enums.md
 // IMPORTANT: GlobalRole and ClubRole are two SEPARATE enums.
 // ============================================================
 
