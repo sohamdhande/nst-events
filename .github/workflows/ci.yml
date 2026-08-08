@@ -11,6 +11,9 @@ jobs:
     name: Continuous Integration (Lint, Typecheck, Test, Validate, Build)
     runs-on: ubuntu-latest
 
+    env:
+      DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/nst_events"
+
     services:
       postgres:
         image: postgis/postgis:16-3.4
@@ -48,8 +51,6 @@ jobs:
           pnpm --filter @nst/database db:generate
           pnpm --filter @nst/database db:migrate:deploy
           pnpm --filter @nst/database db:seed
-        env:
-          DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/nst_events"
 
       - name: Run CI Validation
         run: pnpm validate:ci
