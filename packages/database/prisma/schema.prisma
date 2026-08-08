@@ -330,6 +330,7 @@ model Event {
   // TODO: SQL migration — CHECK(start_time < end_time)
   // TODO: SQL migration — GIN index on metadata
   // TODO: SQL migration — GIN index on search_vector generated column
+  searchVector      Unsupported("tsvector")? @map("search_vector")
   // TODO: SQL migration — Audit trigger: state transitions → audit_logs
   // TODO: SQL migration — Soft-delete cascade trigger → event_registrations, attendance_sessions, teams
   // TODO: SQL migration — RLS: SELECT (PUBLISHED+PUBLIC all; DRAFT/PENDING organizers only)

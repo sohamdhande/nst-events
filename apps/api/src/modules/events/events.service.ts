@@ -100,7 +100,7 @@ export const listEvents = async (callerId: string, query: ListEventsQuery): Prom
       const geo = await tx.$queryRaw<{ id: string; geojson: string }[]>`
         SELECT id, ST_AsGeoJSON(location_geofence) as geojson 
         FROM events 
-        WHERE id IN (${Prisma.join(ids)})
+        WHERE id IN (${Prisma.join(ids.map(id => Prisma.sql`${id}::uuid`))})
       `;
       const geoMap = new Map(geo.map((g) => [g.id, g.geojson ? JSON.parse(g.geojson) : null]));
       for (const item of items) {

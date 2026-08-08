@@ -3,6 +3,8 @@ import { sseEventBus } from './event-bus';
 import { sseConnectionManager } from './sse-connection-manager';
 import { authenticate } from '../../middleware/authenticate';
 
+import { buildEventChannel } from './sse.utils';
+
 export const sseRouter: Router = Router();
 
 // Middleware to support query param 'token' as Bearer token for EventSource
@@ -16,7 +18,7 @@ const sseAuthMiddleware = (req: any, res: any, next: any) => {
 sseRouter.get('/:id/live', sseAuthMiddleware, async (req, res, next) => {
   try {
     const eventId = req.params.id;
-    const channel = `event_${eventId}_live`;
+    const channel = buildEventChannel(eventId);
     
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache, no-transform');

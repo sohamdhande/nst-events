@@ -3,6 +3,8 @@ import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import { env } from './config/env';
+import rateLimit from 'express-rate-limit';
+import { prisma } from './lib/prisma';
 import { authRouter } from './modules/auth/auth.router';
 import { usersRouter } from './modules/users/users.router';
 import { clubsRouter } from './modules/clubs/clubs.router';
@@ -34,7 +36,31 @@ export function createApp(): Express {
   app.use(express.json());
   app.use(cookieParser(env.COOKIE_SECRET));
 
-  app.use('/auth', authRouter);
+  const globalLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 100,
+    message: { error: 'Too many requests, please try again later.' },
+    standardHeaders: true,
+    legacyHeaders: false,
+    skip: (req) => {
+      // Exclude SSE, health, and ready endpoints
+      if (req.path === '/health' || req.path === '/ready') return true;
+      if (req.path.match(/^\/v1\/events\/[^\/]+\/live$/)) return true;
+      return false;
+    },
+  });
+
+  const authLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 10,
+    message: { error: 'Too many authentication attempts, please try again later.' },
+    standardHeaders: true,
+    legacyHeaders: false,
+  });
+
+  app.use(globalLimiter);
+
+  app.use('/auth', authLimiter, authRouter);
   app.use('/users', usersRouter);
   app.use('/clubs', clubsRouter);
   app.use('/v1/events', sseRouter); // Mounted precisely at GET /events/:id/live
@@ -49,6 +75,15 @@ export function createApp(): Express {
 
   app.get('/health', (_req, res) => {
     res.json({ status: 'ok' });
+  });
+
+  app.get('/ready', async (_req, res) => {
+    try {
+      await prisma.$queryRaw`SELECT 1`;
+      res.json({ status: 'ready' });
+    } catch (err) {
+      res.status(503).json({ status: 'error', message: 'Database connection failed' });
+    }
   });
 
   app.use(errorHandler);

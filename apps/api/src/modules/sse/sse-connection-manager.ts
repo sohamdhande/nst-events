@@ -1,10 +1,11 @@
 import { pgListener } from './pg-listener';
+import { buildEventChannel } from './sse.utils';
 
 class SSEConnectionManager {
   private channelReferences: Map<string, number> = new Map();
 
   async subscribe(eventId: string) {
-    const channel = `event_${eventId}_live`;
+    const channel = buildEventChannel(eventId);
     const count = this.channelReferences.get(channel) || 0;
     
     // Subscribe if first connection for this event
@@ -16,7 +17,7 @@ class SSEConnectionManager {
   }
 
   async unsubscribe(eventId: string) {
-    const channel = `event_${eventId}_live`;
+    const channel = buildEventChannel(eventId);
     const count = this.channelReferences.get(channel) || 0;
 
     if (count <= 1) {
