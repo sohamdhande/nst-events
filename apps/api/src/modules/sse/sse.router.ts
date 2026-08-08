@@ -35,6 +35,11 @@ sseRouter.get('/:id/live', sseAuthMiddleware, async (req, res, next) => {
 
     sseEventBus.on(channel, onEvent);
 
+    const onSystemDisconnect = () => {
+      res.end(); // Closes the stream, forcing the EventSource client to reconnect and resync
+    };
+    sseEventBus.on('system:disconnect', onSystemDisconnect);
+
     // 30s Heartbeat as per documentation contract
     const heartbeatInterval = setInterval(() => {
       res.write(`data: ${JSON.stringify({ type: 'heartbeat', payload: { timestamp: new Date().toISOString() } })}\n\n`);
@@ -44,6 +49,7 @@ sseRouter.get('/:id/live', sseAuthMiddleware, async (req, res, next) => {
     req.on('close', async () => {
       clearInterval(heartbeatInterval);
       sseEventBus.off(channel, onEvent);
+      sseEventBus.off('system:disconnect', onSystemDisconnect);
       await sseConnectionManager.unsubscribe(eventId);
     });
 

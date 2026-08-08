@@ -69,6 +69,7 @@ test('Worker Reliability and Crash Recovery', async (t) => {
         status: 'PENDING',
         payload,
         idempotencyKey: crypto.randomBytes(16).toString('hex'),
+        availableAt: new Date(Date.now() - 1000 * 60),
       }
     });
     jobIds.push(job.id);
@@ -100,6 +101,7 @@ test('Worker Reliability and Crash Recovery', async (t) => {
       payload,
       idempotencyKey: crypto.randomBytes(16).toString('hex'),
       attemptCount: 4, // Max attempts is 4, so this attempt should transition it to DEAD_LETTER
+      availableAt: new Date(Date.now() - 1000 * 60),
     }
   });
 

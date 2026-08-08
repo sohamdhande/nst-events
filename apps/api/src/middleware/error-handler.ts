@@ -2,6 +2,7 @@ import { NextFunction, Request, Response } from 'express';
 import { z } from 'zod';
 import { env } from '../config/env';
 import { AppError } from '../lib/errors';
+import { logger } from '../lib/logger';
 
 export function errorHandler(
   err: unknown,
@@ -11,14 +12,19 @@ export function errorHandler(
   _next: NextFunction
 ): void {
   const instance = req.originalUrl || req.url;
+  const requestId = req.id;
 
   if (err instanceof AppError) {
+    if (err.statusCode >= 500) {
+      logger.error({ err, request_id: requestId, instance }, err.message);
+    }
     res.status(err.statusCode).json({
       type: err.type,
       title: err.title,
       status: err.statusCode,
       detail: err.message,
       instance,
+      request_id: requestId,
     });
     return;
   }
@@ -31,6 +37,7 @@ export function errorHandler(
       status: 400,
       detail,
       instance,
+      request_id: requestId,
     });
     return;
   }
@@ -42,12 +49,16 @@ export function errorHandler(
       ? 'An unexpected error occurred'
       : message;
 
+  // Log unhandled exceptions as critical
+  logger.error({ err, request_id: requestId, instance }, message);
+
   res.status(500).json({
     type: 'https://api.nstsdc.org/errors/internal-server-error',
     title: 'Internal Server Error',
     status: 500,
     detail,
     instance,
+    request_id: requestId,
   });
 }
 

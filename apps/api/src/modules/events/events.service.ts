@@ -86,8 +86,12 @@ export const listEvents = async (callerId: string, query: ListEventsQuery): Prom
     const items = await tx.event.findMany({
       where,
       take: query.limit + 1,
+      skip: query.cursor ? 1 : undefined,
       cursor: query.cursor ? { id: query.cursor } : undefined,
-      orderBy: query.sort === 'created_at' ? { createdAt: query.order } : { startTime: query.order },
+      orderBy: [
+        query.sort === 'created_at' ? { createdAt: query.order } : { startTime: query.order },
+        { id: 'asc' }
+      ],
       include: { eventClubs: { include: { club: true } } },
     });
 

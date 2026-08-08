@@ -53,7 +53,10 @@ export const getEventRegistrations = async (userId: string, eventId: string, lim
     skip: cursor ? 1 : 0,
     cursor: cursor ? { id: cursor } : undefined,
     include: { user: { select: { id: true, fullName: true, email: true, globalRole: true } } },
-    orderBy: { registeredAt: 'desc' }
+    orderBy: [
+      { registeredAt: 'desc' },
+      { id: 'asc' }
+    ]
   });
 
   const has_more = registrations.length > limit;

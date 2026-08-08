@@ -53,9 +53,11 @@ class PGListener {
   }
 
   private handleDisconnect() {
+    sseEventBus.emit('system:disconnect', {});
     if (this.reconnectTimeout) clearTimeout(this.reconnectTimeout);
     this.client = null;
     this.reconnectTimeout = setTimeout(() => this.connect(), 5000);
+    this.reconnectTimeout.unref();
   }
 
   async listen(channel: string) {

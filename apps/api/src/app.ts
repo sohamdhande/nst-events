@@ -16,13 +16,12 @@ import { adminQueueRouter } from './modules/admin/queue.router';
 import { teamsRouter } from './modules/teams/teams.router';
 import { registrationsRouter } from './modules/registrations/registrations.router';
 import { errorHandler } from './middleware/error-handler';
+import { requestIdMiddleware } from './middleware/request-id';
+import { requestLogger } from './middleware/request-logger';
 import { sseRouter } from './modules/sse/sse.router';
 import { pgListener } from './modules/sse/pg-listener';
 
-// Initialize the standalone Postgres listener bridge
-pgListener.connect().catch((err) => {
-  console.error('Failed to initialize Postgres SSE listener bridge:', err);
-});
+
 export function createApp(): Express {
   const app = express();
   
@@ -35,6 +34,9 @@ export function createApp(): Express {
   );
   app.use(express.json());
   app.use(cookieParser(env.COOKIE_SECRET));
+  app.use(requestIdMiddleware);
+  app.use(requestLogger);
+
 
   const globalLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,

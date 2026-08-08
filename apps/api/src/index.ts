@@ -17,6 +17,13 @@ let server: Server | null = null;
 let isShuttingDown = false;
 
 export async function bootstrap(): Promise<Server> {
+  await prisma.$connect();
+  logger.info('[nst-api] Database connected successfully');
+
+  pgListener.connect().catch((err) => {
+    logger.error({ err }, '[nst-api] Failed to initialize Postgres SSE listener bridge');
+  });
+
   const app = createApp();
   return new Promise((resolve) => {
     server = app.listen(PORT, () => {

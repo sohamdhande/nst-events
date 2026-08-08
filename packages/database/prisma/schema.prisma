@@ -649,7 +649,6 @@ model NotificationJob {
   createdAt       DateTime              @default(now()) @map("created_at") @db.Timestamptz
   updatedAt       DateTime              @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
 
-  // TODO: SQL migration - Polling index: CREATE INDEX idx_notification_jobs_poll ON notification_jobs (status, available_at) WHERE status IN ('PENDING', 'RETRY_PENDING');
   // TODO: SQL migration - Enqueue logic: ON CONFLICT (idempotency_key) DO NOTHING
   // TODO: SQL migration - RLS: None (Client/Express). worker role only. Clients can INSERT via RPC.
   // NO FOREIGN KEYS (intentionally decoupled for performance)

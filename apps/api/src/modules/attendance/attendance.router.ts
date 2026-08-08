@@ -18,7 +18,7 @@ const generateQrRateLimit = rateLimit({
   windowMs: 60 * 1000,
   max: 10,
   message: 'Too many QR generation requests. Please try again later.',
-  keyGenerator: (req: any) => req.user?.id || req.ip,
+  keyGenerator: (req: any) => req.user?.id || 'unknown',
 });
 
 // Rate limiter: 5 requests per minute
@@ -26,7 +26,7 @@ const markAttendanceRateLimit = rateLimit({
   windowMs: 60 * 1000,
   max: 5,
   message: 'Too many attendance marking requests. Please try again later.',
-  keyGenerator: (req: any) => req.user?.id || req.ip,
+  keyGenerator: (req: any) => req.user?.id || 'unknown',
 });
 
 // Rate limiter: 10 requests per minute
@@ -34,7 +34,7 @@ const syncOfflineRateLimit = rateLimit({
   windowMs: 60 * 1000,
   max: 10,
   message: 'Too many offline sync requests. Please try again later.',
-  keyGenerator: (req: any) => req.user?.id || req.ip,
+  keyGenerator: (req: any) => req.user?.id || 'unknown',
 });
 
 /**
