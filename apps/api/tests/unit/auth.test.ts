@@ -41,4 +41,33 @@ describe('Auth Utils', () => {
     const differentHash = crypto.createHash('sha256').update(differentToken).digest('hex');
     assert.notStrictEqual(hash1, differentHash);
   });
+
+  // Phase D: Hostile Audit JWT attacks
+  it('should reject a JWT with an invalid signature (payload tampering)', () => {
+    const token = jwt.sign({ sub: userId }, testSecret, { expiresIn: '15m' });
+    const parts = token.split('.');
+    
+    // Tamper with the payload (middle part)
+    const originalPayloadStr = Buffer.from(parts[1], 'base64').toString('utf8');
+    const maliciousPayload = JSON.parse(originalPayloadStr);
+    maliciousPayload.sub = 'malicious-uuid-0000';
+    const tamperedPayloadB64 = Buffer.from(JSON.stringify(maliciousPayload)).toString('base64').replace(/=/g, '');
+    
+    const tamperedToken = `${parts[0]}.${tamperedPayloadB64}.${parts[2]}`;
+    
+    assert.throws(() => {
+      jwt.verify(tamperedToken, testSecret);
+    }, jwt.JsonWebTokenError);
+  });
+
+  it('should reject the none algorithm', () => {
+    // Construct a token with alg: 'none'
+    const header = Buffer.from(JSON.stringify({ alg: 'none', typ: 'JWT' })).toString('base64').replace(/=/g, '');
+    const payload = Buffer.from(JSON.stringify({ sub: userId })).toString('base64').replace(/=/g, '');
+    const maliciousToken = `${header}.${payload}.`; // Empty signature
+
+    assert.throws(() => {
+      jwt.verify(maliciousToken, testSecret);
+    }, jwt.JsonWebTokenError);
+  });
 });
