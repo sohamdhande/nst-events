@@ -13,6 +13,7 @@ datasource db {
 
 generator client {
   provider = "prisma-client-js"
+  previewFeatures = ["views"]
 }
 
 // ============================================================
@@ -792,3 +793,19 @@ model AuditLog {
   @@map("audit_logs")
 }
 
+
+/// ----------------------------------------------------------------------
+/// PUBLIC PROFILE VIEW
+/// Exposes non-sensitive user data for general lookup (omits email/google_sub)
+/// ----------------------------------------------------------------------
+view PublicProfile {
+  id          String     @id @db.Uuid
+  fullName    String     @map("full_name")
+  avatarUrl   String?    @map("avatar_url")
+  globalRole  GlobalRole @map("global_role")
+  createdAt   DateTime   @map("created_at") @db.Timestamptz
+  updatedAt   DateTime?  @map("updated_at") @db.Timestamptz
+  deletedAt   DateTime?  @map("deleted_at") @db.Timestamptz
+
+  @@map("public_profiles")
+}

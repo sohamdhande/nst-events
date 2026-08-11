@@ -88,7 +88,6 @@ export const getClub = async (callerId: string, clubId: string) => {
       include: {
         memberships: {
           where: { deletedAt: null },
-          include: { user: { select: { fullName: true, avatarUrl: true } } },
         },
         _count: {
           select: { eventClubs: true },
@@ -98,6 +97,13 @@ export const getClub = async (callerId: string, clubId: string) => {
 
     if (!club || club.deletedAt) return null;
 
+    const userIds = club.memberships.map((m) => m.userId);
+    const profiles = await tx.publicProfile.findMany({
+      where: { id: { in: userIds } },
+      select: { id: true, fullName: true, avatarUrl: true },
+    });
+    const profileMap = new Map(profiles.map((p) => [p.id, p]));
+
     return {
       id: club.id,
       name: club.name,
@@ -105,12 +111,15 @@ export const getClub = async (callerId: string, clubId: string) => {
       banner_url: club.bannerUrl,
       status: club.status,
       event_count: club._count.eventClubs,
-      members: club.memberships.map((m) => ({
-        user_id: m.userId,
-        role: m.role,
-        full_name: m.user.fullName,
-        avatar_url: m.user.avatarUrl,
-      })),
+      members: club.memberships.map((m) => {
+        const profile = profileMap.get(m.userId) || { fullName: 'Unknown', avatarUrl: null };
+        return {
+          user_id: m.userId,
+          role: m.role,
+          full_name: profile.fullName,
+          avatar_url: profile.avatarUrl,
+        };
+      }),
     };
   });
 };

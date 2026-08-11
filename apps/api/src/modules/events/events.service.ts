@@ -264,7 +264,7 @@ export const submitForApproval = async (callerId: string, eventId: string) => {
       where: { clubId: { in: event.eventClubs.map(c => c.clubId) }, role: 'FACULTY_MENTOR', deletedAt: null },
       select: { userId: true },
     });
-    const platformAdmins = await tx.user.findMany({
+    const platformAdmins = await tx.publicProfile.findMany({
       where: { globalRole: 'PLATFORM_ADMIN', deletedAt: null },
       select: { id: true },
     });
