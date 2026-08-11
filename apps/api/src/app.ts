@@ -25,8 +25,13 @@ import { pgListener } from './modules/sse/pg-listener';
 export function createApp(): Express {
   const app = express();
   
-  // NGINX Ingress configuration implies exactly one trusted proxy hop.
-  app.set('trust proxy', 1);
+  // SECURITY [TRUST PROXY]: Trust internal K3s cluster overlay networks (cloudflared tunnels, NGINX ingress).
+  // This explicitly prevents IP spoofing in our multi-hop Cloudflare -> K3s topology.
+  // Express will strip these trusted internal IPs from X-Forwarded-For right-to-left
+  // to resolve the true public client IP.
+  // Do NOT simplify this to `trust proxy: 1` or `trust proxy: true`, as that will
+  // either rate-limit Cloudflare's own IPs or allow attackers to spoof client IPs.
+  app.set('trust proxy', ['loopback', 'linklocal', 'uniquelocal', '10.0.0.0/8', '172.16.0.0/12', '192.168.0.0/16']);
   
   app.use(helmet());
   app.use(
