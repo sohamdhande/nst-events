@@ -420,6 +420,7 @@ export const createSession = async (
         openAt: data.open_at,
         closeAt: data.close_at,
         geofenceRadius: data.geofence_radius,
+        createdBy: callerId,
         qrSecret,
       },
     });

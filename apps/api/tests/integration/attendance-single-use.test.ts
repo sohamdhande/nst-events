@@ -47,8 +47,9 @@ test('Attendance Single-Use QR validation', async (t) => {
       openAt: new Date(Date.now() - 3600000),
       closeAt: new Date(Date.now() + 3600000),
       geofenceRadius: 10000,
-      qrSecret: crypto.randomBytes(32).toString('hex'),
-    }
+      qrSecret: '9b42087e1a62900258529abe27c561377298aadb6e14b640b4e0ffdff9259ff4',
+      createdBy: user1.id,
+    },
   });
 
   // 3. Register both users for the event

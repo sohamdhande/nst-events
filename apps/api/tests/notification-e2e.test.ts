@@ -103,9 +103,11 @@ async function setupTestData() {
       title: 'Session 1',
       startTime: new Date(Date.now() + 86400000),
       endTime: new Date(Date.now() + 86400000 + 3600000),
-      openAt: new Date(),
-      closeAt: new Date(Date.now() + 86400000 + 3600000),
-      qrSecret: 'dummy_qr_secret_e2e'
+      openAt: new Date(Date.now() - 3600000),
+      closeAt: new Date(Date.now() + 3600000),
+      geofenceRadius: 10000,
+      qrSecret: 'dummy-qr-secret',
+      createdBy: testUserId,
     }
   });
   testSessionId = session.id;

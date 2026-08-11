@@ -362,7 +362,7 @@ async function main() {
     const existing = await prisma.attendanceSession.findFirst({ where: { eventId, title, deletedAt: null } });
     if (!existing) {
       return prisma.attendanceSession.create({
-        data: { eventId, title, startTime, endTime, openAt, closeAt, geofenceRadius, qrSecret: crypto.randomBytes(32).toString('hex') },
+        data: { eventId, title, startTime, endTime, openAt, closeAt, geofenceRadius, qrSecret: crypto.randomBytes(32).toString('hex'), createdBy: userPlatformAdmin.id },
       });
     }
     return existing;

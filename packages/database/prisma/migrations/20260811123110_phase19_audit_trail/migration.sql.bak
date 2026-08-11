@@ -1,0 +1,20 @@
+/*
+  Warnings:
+
+  - Added the required column `created_by` to the `attendance_sessions` table without a default value. This is not possible if the table is not empty.
+
+*/
+-- DropForeignKey
+ALTER TABLE "event_registrations" DROP CONSTRAINT "fk_team_event";
+
+-- DropIndex
+DROP INDEX "events_search_vector_idx";
+
+-- AlterTable
+ALTER TABLE "attendance_sessions" ADD COLUMN     "created_by" UUID NOT NULL;
+
+-- AlterTable
+ALTER TABLE "events" ALTER COLUMN "search_vector" DROP DEFAULT;
+
+-- AddForeignKey
+ALTER TABLE "attendance_sessions" ADD CONSTRAINT "attendance_sessions_created_by_fkey" FOREIGN KEY ("created_by") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

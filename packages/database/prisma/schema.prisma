@@ -189,6 +189,7 @@ model User {
   teamLeaderships            Team[]
   eventResults               EventResult[]              @relation("EventResultUser")
   eventResultsCreated        EventResult[]              @relation("EventResultCreatedBy")
+  sessionsCreated            AttendanceSession[]        @relation("SessionCreatedBy")
   notifications              Notification[]
   notificationPreferences    NotificationPreference?
   pushTokens                 PushToken[]
@@ -449,6 +450,7 @@ model AttendanceSession {
   geofenceRadius Float     @default(50) @map("geofence_radius")
   /// Cryptographic secret used to generate TOTP QR codes for this session
   qrSecret       String    @map("qr_secret")
+  createdBy      String    @map("created_by") @db.Uuid
   createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz
   updatedAt      DateTime? @updatedAt @map("updated_at") @db.Timestamptz
   deletedAt      DateTime? @map("deleted_at") @db.Timestamptz
@@ -458,6 +460,7 @@ model AttendanceSession {
   // TODO: SQL migration — RLS: Same read policies as parent event; INSERT/UPDATE organizers
 
   event             Event              @relation(fields: [eventId], references: [id])
+  creator           User               @relation("SessionCreatedBy", fields: [createdBy], references: [id])
   attendanceRecords AttendanceRecord[]
   attendanceDisputes AttendanceDispute[]
   consumedQrSignatures ConsumedQrSignature[]
