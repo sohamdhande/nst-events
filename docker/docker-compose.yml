@@ -9,7 +9,7 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: nst_events
     ports:
-      - '5440:5432'
+      - '127.0.0.1:5440:5432'
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:

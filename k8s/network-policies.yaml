@@ -1,0 +1,22 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: postgres-network-policy
+  namespace: default
+spec:
+  podSelector:
+    matchLabels:
+      app: nst-postgres
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: nst-api
+        - podSelector:
+            matchLabels:
+              app: nst-worker
+      ports:
+        - protocol: TCP
+          port: 5432

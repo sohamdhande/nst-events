@@ -15,6 +15,10 @@ spec:
       labels:
         app: nst-api
     spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
       containers:
         - name: api
           image: nst-api:latest
