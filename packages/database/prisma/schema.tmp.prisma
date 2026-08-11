@@ -1,0 +1,577 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                        String                      @id @default(uuid()) @db.Uuid
+  googleSub                 String                      @unique @map("google_sub")
+  email                     String                      @unique
+  fullName                  String                      @map("full_name")
+  /// NULL in V1 — file uploads deferred (see database-freeze-v1.md)
+  avatarUrl                 String?                     @map("avatar_url")
+  globalRole                GlobalRole                  @default(STUDENT) @map("global_role")
+  createdAt                 DateTime                    @default(now()) @map("created_at") @db.Timestamptz(6)
+  /// Managed by PostgreSQL trigger (TODO: add updated_at trigger in SQL migration)
+  updatedAt                 DateTime?                   @updatedAt @map("updated_at") @db.Timestamptz(6)
+  /// Soft delete — NULL means active
+  deletedAt                 DateTime?                   @map("deleted_at") @db.Timestamptz(6)
+  announcements             Announcement[]
+  disputesReviewed          AttendanceDispute[]         @relation("DisputeReviewedBy")
+  disputesFiled             AttendanceDispute[]         @relation("DisputeUser")
+  attendanceRecordsAsMarker AttendanceRecord[]          @relation("AttendanceMarkedBy")
+  attendanceRecordsAsUser   AttendanceRecord[]          @relation("AttendanceUser")
+  auditLogs                 AuditLog[]
+  clubMemberships           ClubMembership[]
+  eventRegistrations        EventRegistration[]
+  eventResultsCreated       EventResult[]               @relation("EventResultCreatedBy")
+  eventResults              EventResult[]               @relation("EventResultUser")
+  createdEvents             Event[]                     @relation("EventCreatedBy")
+  leaderboardScores         LeaderboardScore[]
+  handoverFacultyMentor     LeadershipHandoverRequest[] @relation("HandoverFacultyMentor")
+  handoverInitiated         LeadershipHandoverRequest[] @relation("HandoverInitiatedBy")
+  handoverSuccessor         LeadershipHandoverRequest[] @relation("HandoverSuccessor")
+  notificationPreferences   NotificationPreference?
+  notifications             Notification[]
+  pushTokens                PushToken[]
+  refreshTokens             RefreshToken[]
+  teamLeaderships           Team[]
+
+  @@index([email])
+  @@index([googleSub])
+  @@map("users")
+}
+
+model RefreshToken {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  /// SHA-256 hash of raw refresh token. Raw token is never stored.
+  tokenHash String    @unique @map("token_hash")
+  /// Links rotated tokens together for family-wide revocation.
+  familyId  String    @map("family_id") @db.Uuid
+  expiresAt DateTime  @map("expires_at") @db.Timestamptz(6)
+  /// NULL means active. Set on logout or compromise.
+  revokedAt DateTime? @map("revoked_at") @db.Timestamptz(6)
+  userAgent String?   @map("user_agent")
+  ipAddress String?   @map("ip_address")
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@index([familyId])
+  @@map("refresh_tokens")
+}
+
+model Club {
+  id                String                      @id @default(uuid()) @db.Uuid
+  name              String                      @unique
+  description       String?
+  /// NULL in V1 — file uploads deferred (see database-freeze-v1.md)
+  bannerUrl         String?                     @map("banner_url")
+  status            ClubStatus                  @default(ACTIVE)
+  createdAt         DateTime                    @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime?                   @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt         DateTime?                   @map("deleted_at") @db.Timestamptz(6)
+  announcements     Announcement[]
+  memberships       ClubMembership[]
+  eventClubs        EventClub[]
+  leaderboardScores LeaderboardScore[]
+  handoverRequests  LeadershipHandoverRequest[]
+
+  @@index([name])
+  @@map("clubs")
+}
+
+model ClubMembership {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  clubId    String    @map("club_id") @db.Uuid
+  role      ClubRole
+  joinedAt  DateTime  @default(now()) @map("joined_at") @db.Timestamptz(6)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime? @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
+  club      Club      @relation(fields: [clubId], references: [id])
+  user      User      @relation(fields: [userId], references: [id])
+
+  @@index([clubId, userId])
+  @@index([userId])
+  @@map("club_memberships")
+}
+
+model Event {
+  id                 String                    @id @default(uuid()) @db.Uuid
+  title              String
+  description        String?
+  startTime          DateTime                  @map("start_time") @db.Timestamptz(6)
+  endTime            DateTime                  @map("end_time") @db.Timestamptz(6)
+  locationName       String?                   @map("location_name")
+  /// PostGIS geography point for geofence validation.
+  /// PostGIS extension is enabled via docker/init-pgmq.sql on container init.
+  /// Access via $queryRaw / $executeRaw with ST_ functions (not via Prisma Client).
+  locationGeofence   Unsupported("geography")? @map("location_geofence")
+  eventType          EventType                 @map("event_type")
+  state              EventState                @default(DRAFT)
+  visibility         EventVisibility           @default(PUBLIC)
+  registrationType   RegistrationType          @default(INDIVIDUAL) @map("registration_type")
+  attendanceType     AttendanceType            @default(SINGLE) @map("attendance_type")
+  isLocked           Boolean                   @default(false) @map("is_locked")
+  /// NULL means unlimited capacity
+  maxCapacity        Int?                      @map("max_capacity")
+  /// Atomically incremented by register_event RPC
+  registrationCount  Int                       @default(0) @map("registration_count")
+  /// Flexible type-specific metadata (see 08-jsonb-governance.md)
+  metadata           Json                      @default("{}")
+  createdBy          String                    @map("created_by") @db.Uuid
+  createdAt          DateTime                  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime?                 @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt          DateTime?                 @map("deleted_at") @db.Timestamptz(6)
+  searchVector       Unsupported("tsvector")?  @default(dbgenerated("to_tsvector('english'::regconfig, ((COALESCE(title, ''::text) || ' '::text) || COALESCE(description, ''::text)))")) @map("search_vector")
+  attendanceDisputes AttendanceDispute[]
+  attendanceSessions AttendanceSession[]
+  eventClubs         EventClub[]
+  eventRegistrations EventRegistration[]
+  eventResults       EventResult[]
+  creator            User                      @relation("EventCreatedBy", fields: [createdBy], references: [id])
+  teams              Team[]
+
+  @@index([startTime])
+  @@index([state])
+  @@index([searchVector], type: Gin)
+  @@map("events")
+}
+
+model EventClub {
+  eventId   String  @map("event_id") @db.Uuid
+  clubId    String  @map("club_id") @db.Uuid
+  /// True for the club that holds primary admin rights for the event
+  isPrimary Boolean @default(false) @map("is_primary")
+  club      Club    @relation(fields: [clubId], references: [id])
+  event     Event   @relation(fields: [eventId], references: [id])
+
+  @@id([eventId, clubId])
+  @@map("event_clubs")
+}
+
+model Team {
+  id                                                              String              @id @default(uuid()) @db.Uuid
+  eventId                                                         String              @map("event_id") @db.Uuid
+  name                                                            String
+  leaderId                                                        String              @map("leader_id") @db.Uuid
+  createdAt                                                       DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
+  deletedAt                                                       DateTime?           @map("deleted_at") @db.Timestamptz(6)
+  eventRegistrations                                              EventRegistration[]
+  event_registrations_event_registrations_team_id_event_idToteams EventRegistration[] @relation("event_registrations_team_id_event_idToteams")
+  event                                                           Event               @relation(fields: [eventId], references: [id])
+  leader                                                          User                @relation(fields: [leaderId], references: [id])
+
+  @@unique([id, eventId])
+  @@unique([eventId, name])
+  @@map("teams")
+}
+
+model EventRegistration {
+  id                                                String             @id @default(uuid()) @db.Uuid
+  eventId                                           String             @map("event_id") @db.Uuid
+  userId                                            String             @map("user_id") @db.Uuid
+  teamId                                            String?            @map("team_id") @db.Uuid
+  registrationStatus                                RegistrationStatus @default(REGISTERED) @map("registration_status")
+  participationRole                                 ParticipationRole  @default(ATTENDEE) @map("participation_role")
+  registeredAt                                      DateTime           @default(now()) @map("registered_at") @db.Timestamptz(6)
+  deletedAt                                         DateTime?          @map("deleted_at") @db.Timestamptz(6)
+  event                                             Event              @relation(fields: [eventId], references: [id])
+  team                                              Team?              @relation(fields: [teamId], references: [id])
+  user                                              User               @relation(fields: [userId], references: [id])
+  teams_event_registrations_team_id_event_idToteams Team?              @relation("event_registrations_team_id_event_idToteams", fields: [teamId, eventId], references: [id, eventId], onDelete: NoAction, onUpdate: NoAction, map: "fk_team_event")
+
+  @@index([eventId, userId])
+  @@index([userId])
+  @@index([teamId, eventId])
+  @@map("event_registrations")
+}
+
+model AttendanceSession {
+  id                   String                @id @default(uuid()) @db.Uuid
+  eventId              String                @map("event_id") @db.Uuid
+  title                String
+  startTime            DateTime              @map("start_time") @db.Timestamptz(6)
+  endTime              DateTime              @map("end_time") @db.Timestamptz(6)
+  /// Scan window opens at this time
+  openAt               DateTime              @map("open_at") @db.Timestamptz(6)
+  /// Scan window closes at this time
+  closeAt              DateTime              @map("close_at") @db.Timestamptz(6)
+  /// Geofence radius in metres (default 50m)
+  geofenceRadius       Float                 @default(50) @map("geofence_radius")
+  createdAt            DateTime              @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt            DateTime?             @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt            DateTime?             @map("deleted_at") @db.Timestamptz(6)
+  /// Cryptographic secret used to generate TOTP QR codes for this session
+  qrSecret             String                @map("qr_secret")
+  attendanceDisputes   AttendanceDispute[]
+  attendanceRecords    AttendanceRecord[]
+  event                Event                 @relation(fields: [eventId], references: [id])
+  consumedQrSignatures ConsumedQrSignature[]
+
+  @@index([eventId])
+  @@map("attendance_sessions")
+}
+
+model AttendanceRecord {
+  id                 String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sessionId          String              @map("session_id") @db.Uuid
+  userId             String              @map("user_id") @db.Uuid
+  /// NULL if method = QR (self-scan). Set for MANUAL/SYSTEM marks.
+  markedBy           String?             @map("marked_by") @db.Uuid
+  markedAt           DateTime            @default(now()) @map("marked_at") @db.Timestamptz(6)
+  method             AttendanceMethod
+  status             AttendanceStatus
+  /// Forensic data for fraud prevention (ADR-030).
+  /// Fields: device_id, device_os, gps_accuracy, mock_location_detected, app_version, flagged, flag_reason
+  auditMetadata      Json                @default("{}") @map("audit_metadata")
+  attendanceDisputes AttendanceDispute[]
+  marker             User?               @relation("AttendanceMarkedBy", fields: [markedBy], references: [id])
+  session            AttendanceSession   @relation(fields: [sessionId], references: [id])
+  user               User                @relation("AttendanceUser", fields: [userId], references: [id])
+
+  @@unique([sessionId, userId])
+  @@map("attendance_records")
+}
+
+model AttendanceDispute {
+  id                     String            @id @default(uuid()) @db.Uuid
+  /// NULL if the student has no attendance record (never scanned)
+  attendanceRecordId     String?           @map("attendance_record_id") @db.Uuid
+  sessionId              String            @map("session_id") @db.Uuid
+  eventId                String            @map("event_id") @db.Uuid
+  userId                 String            @map("user_id") @db.Uuid
+  reason                 String
+  evidenceUrls           String[]          @map("evidence_urls")
+  status                 DisputeStatus     @default(PENDING)
+  disputeWindowExpiresAt DateTime          @map("dispute_window_expires_at") @db.Timestamptz(6)
+  submittedAt            DateTime          @default(now()) @map("submitted_at") @db.Timestamptz(6)
+  reviewedAt             DateTime?         @map("reviewed_at") @db.Timestamptz(6)
+  reviewedBy             String?           @map("reviewed_by") @db.Uuid
+  reviewNotes            String?           @map("review_notes")
+  createdAt              DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  attendanceRecord       AttendanceRecord? @relation(fields: [attendanceRecordId], references: [id])
+  event                  Event             @relation(fields: [eventId], references: [id])
+  reviewer               User?             @relation("DisputeReviewedBy", fields: [reviewedBy], references: [id])
+  session                AttendanceSession @relation(fields: [sessionId], references: [id])
+  user                   User              @relation("DisputeUser", fields: [userId], references: [id])
+
+  @@unique([sessionId, userId])
+  @@map("attendance_disputes")
+}
+
+model ConsumedQrSignature {
+  sessionId  String            @map("session_id") @db.Uuid
+  signature  String
+  consumedAt DateTime          @default(now()) @map("consumed_at") @db.Timestamptz(6)
+  session    AttendanceSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@id([sessionId, signature])
+  @@map("consumed_qr_signatures")
+}
+
+model EventResult {
+  id         String            @id @default(uuid()) @db.Uuid
+  eventId    String            @map("event_id") @db.Uuid
+  userId     String            @map("user_id") @db.Uuid
+  resultType CompetitionResult @map("result_type")
+  createdBy  String            @map("created_by") @db.Uuid
+  createdAt  DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  creator    User              @relation("EventResultCreatedBy", fields: [createdBy], references: [id])
+  event      Event             @relation(fields: [eventId], references: [id])
+  user       User              @relation("EventResultUser", fields: [userId], references: [id])
+
+  @@unique([eventId, userId])
+  @@map("event_results")
+}
+
+model Notification {
+  id               String    @id @default(uuid()) @db.Uuid
+  userId           String    @map("user_id") @db.Uuid
+  title            String
+  body             String
+  /// Notification category type (e.g., "EVENT_REMINDER", "CLUB_ANNOUNCEMENT")
+  type             String
+  readAt           DateTime? @map("read_at") @db.Timestamptz(6)
+  /// Routing payload for mobile app (e.g., {screen: "EventDetails", event_id: "..."})
+  metadata         Json      @default("{}")
+  deliveredAt      DateTime? @map("delivered_at") @db.Timestamptz(6)
+  deliveryFailedAt DateTime? @map("delivery_failed_at") @db.Timestamptz(6)
+  deliveryError    String?   @map("delivery_error")
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  user             User      @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([userId, readAt])
+  @@map("notifications")
+}
+
+model NotificationPreference {
+  id                String  @id @default(uuid()) @db.Uuid
+  userId            String  @unique @map("user_id") @db.Uuid
+  pushEnabled       Boolean @default(true) @map("push_enabled")
+  eventReminders    Boolean @default(true) @map("event_reminders")
+  clubAnnouncements Boolean @default(true) @map("club_announcements")
+  attendanceAlerts  Boolean @default(true) @map("attendance_alerts")
+  user              User    @relation(fields: [userId], references: [id])
+
+  @@map("notification_preferences")
+}
+
+model PushToken {
+  id         String    @id @default(uuid()) @db.Uuid
+  userId     String    @map("user_id") @db.Uuid
+  /// Client-generated device identifier. Same value used in attendance_records.audit_metadata.
+  deviceId   String    @unique @map("device_id")
+  /// Expo push token of the form ExponentPushToken[...]
+  expoToken  String    @map("expo_token")
+  /// 'ios' or 'android'
+  platform   String
+  /// Updated on each authenticated request to detect stale tokens
+  lastSeenAt DateTime  @default(now()) @map("last_seen_at") @db.Timestamptz(6)
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt  DateTime? @updatedAt @map("updated_at") @db.Timestamptz(6)
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("push_tokens")
+}
+
+model NotificationJob {
+  id             String                @id @default(uuid()) @db.Uuid
+  status         NotificationJobStatus @default(PENDING)
+  payload        Json
+  priority       String                @default("NORMAL")
+  attemptCount   Int                   @default(0) @map("attempt_count")
+  maxAttempts    Int                   @default(4) @map("max_attempts")
+  availableAt    DateTime              @default(now()) @map("available_at") @db.Timestamptz(6)
+  lockedAt       DateTime?             @map("locked_at") @db.Timestamptz(6)
+  workerId       String?               @map("worker_id")
+  idempotencyKey String                @unique @map("idempotency_key")
+  lastError      String?               @map("last_error")
+  createdAt      DateTime              @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime              @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  ticketIds      Json?                 @map("ticket_ids")
+
+  @@map("notification_jobs")
+}
+
+model Announcement {
+  id        String   @id @default(uuid()) @db.Uuid
+  /// NULL for global announcements (Platform Admin only)
+  clubId    String?  @map("club_id") @db.Uuid
+  title     String
+  content   String
+  createdBy String   @map("created_by") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  club      Club?    @relation(fields: [clubId], references: [id])
+  creator   User     @relation(fields: [createdBy], references: [id])
+
+  @@map("announcements")
+}
+
+model LeadershipHandoverRequest {
+  id              String         @id @default(uuid()) @db.Uuid
+  clubId          String         @map("club_id") @db.Uuid
+  initiatedBy     String         @map("initiated_by") @db.Uuid
+  successorId     String         @map("successor_id") @db.Uuid
+  /// NULL if no faculty mentor assigned to the club
+  facultyMentorId String?        @map("faculty_mentor_id") @db.Uuid
+  status          HandoverStatus @default(PENDING)
+  initiatedAt     DateTime       @default(now()) @map("initiated_at") @db.Timestamptz(6)
+  reviewedAt      DateTime?      @map("reviewed_at") @db.Timestamptz(6)
+  reviewNotes     String?        @map("review_notes")
+  createdAt       DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  club            Club           @relation(fields: [clubId], references: [id])
+  facultyMentor   User?          @relation("HandoverFacultyMentor", fields: [facultyMentorId], references: [id])
+  initiator       User           @relation("HandoverInitiatedBy", fields: [initiatedBy], references: [id])
+  successor       User           @relation("HandoverSuccessor", fields: [successorId], references: [id])
+
+  @@index([clubId])
+  @@map("leadership_handover_requests")
+}
+
+model LeaderboardScore {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  /// NULL for user-level scores not tied to a specific club
+  clubId    String?  @map("club_id") @db.Uuid
+  points    Int
+  reason    String
+  /// Reference to the source entity (attendance_record id, event_result id, etc.)
+  sourceId  String   @map("source_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  club      Club?    @relation(fields: [clubId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([clubId])
+  @@index([createdAt], map: "leaderboard_scores_created_at_brin_idx", type: Brin)
+  @@map("leaderboard_scores")
+}
+
+model AuditLog {
+  id            BigInt   @id @default(autoincrement())
+  /// NULL indicates a system-level action. Populated by current_user_id() reading app.user_id.
+  actorId       String?  @map("actor_id") @db.Uuid
+  action        String
+  entityType    String   @map("entity_type")
+  entityId      String?  @map("entity_id") @db.Uuid
+  previousState Json?    @map("previous_state")
+  newState      Json?    @map("new_state")
+  ipAddress     String?  @map("ip_address")
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  actor         User?    @relation(fields: [actorId], references: [id])
+
+  @@index([entityId])
+  @@index([actorId])
+  @@map("audit_logs")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model spatial_ref_sys {
+  srid      Int     @id
+  auth_name String? @db.VarChar(256)
+  auth_srid Int?
+  srtext    String? @db.VarChar(2048)
+  proj4text String? @db.VarChar(2048)
+}
+
+/// Global platform-wide role. Single source of truth for
+/// system-level authorization. Do NOT merge with ClubRole.
+enum GlobalRole {
+  STUDENT
+  FACULTY_ADMIN
+  PLATFORM_ADMIN
+}
+
+/// Per-club contextual RBAC role. Stored in club_memberships.
+/// Do NOT merge with GlobalRole.
+enum ClubRole {
+  MEMBER
+  CORE_MEMBER
+  CLUB_ADMIN
+  FACULTY_MENTOR
+}
+
+/// Operational lifecycle state of a club.
+enum ClubStatus {
+  ACTIVE
+  INACTIVE
+  DISSOLVED
+}
+
+/// Categorizes the type of event.
+/// The metadata JSONB field carries type-specific fields.
+enum EventType {
+  WORKSHOP
+  SEMINAR
+  COMPETITION
+  MEETUP
+  HACKATHON
+  OTHER
+  CULTURAL
+  SPORTS
+}
+
+/// Approval and visibility lifecycle of an event.
+enum EventState {
+  DRAFT
+  PENDING_APPROVAL
+  PUBLISHED
+  ARCHIVED
+}
+
+/// Whether an event is visible to all or restricted.
+enum EventVisibility {
+  PUBLIC
+  PRIVATE
+}
+
+/// Whether an event accepts individual or team registrations.
+enum RegistrationType {
+  INDIVIDUAL
+  TEAM
+}
+
+/// Attendee state within an event registration.
+enum RegistrationStatus {
+  REGISTERED
+  WAITLISTED
+  CANCELLED
+}
+
+/// Formal record of a user's presence for an attendance session.
+/// EXCUSED is written exclusively by the resolve_attendance_dispute
+/// RPC when resolution = 'APPROVED'. Never by the QR scan flow.
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  EXCUSED
+}
+
+/// How attendance was recorded.
+enum AttendanceMethod {
+  QR
+  MANUAL
+  SYSTEM
+}
+
+/// Whether an event requires one check-in or multiple.
+enum AttendanceType {
+  SINGLE
+  MULTI_SESSION
+}
+
+/// Contextual role of a registered participant within an event.
+enum ParticipationRole {
+  ATTENDEE
+  VOLUNTEER
+  ORGANIZER
+  SPEAKER
+  MENTOR
+}
+
+/// Competition placement outcome, stored in event_results.
+enum CompetitionResult {
+  WINNER
+  RUNNER_UP
+  SECOND_RUNNER_UP
+  TOP_10
+  PARTICIPANT
+}
+
+/// State of an attendance dispute request.
+enum DisputeStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+/// State of a club leadership handover request.
+enum HandoverStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+/// State of a background job in the native PostgreSQL queue.
+enum NotificationJobStatus {
+  PENDING
+  PROCESSING
+  WAITING_FOR_RECEIPTS
+  COMPLETED
+  RETRY_PENDING
+  FAILED
+  DEAD_LETTER
+  ARCHIVED
+}

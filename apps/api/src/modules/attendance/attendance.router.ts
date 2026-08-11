@@ -135,7 +135,7 @@ attendanceRouter.get(
   requireEventRole((req) => req.params.id, ['CLUB_ADMIN', 'CORE_MEMBER', 'FACULTY_MENTOR']),
   async (req, res, next) => {
     try {
-      const result = await attendanceService.getEventAttendance(req.params.id, req.query);
+      const result = await attendanceService.getEventAttendance(req.user!.id, req.params.id, req.query);
       res.status(200).json(result);
     } catch (error) {
       next(error);
@@ -206,7 +206,7 @@ attendanceRouter.get(
   // Since we rely on RLS to filter what they can see, we just authenticate.
   async (req, res, next) => {
     try {
-      const result = await attendanceService.getAttendanceDisputes(req.query.filter_event_id as string, req.query);
+      const result = await attendanceService.getAttendanceDisputes(req.user!.id, req.query.filter_event_id as string, req.query);
       res.status(200).json(result);
     } catch (error) {
       next(error);

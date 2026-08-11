@@ -8,20 +8,21 @@ import {
   UpdateClubStatusSchema,
   AddMemberSchema,
   UpdateMemberRoleSchema,
+  ListClubsQuerySchema,
 } from './clubs.schema';
 import * as clubsService from './clubs.service';
 
 const router = Router();
 
 // GET /search is routed here for now, as clubs is the only supported type
-router.get('/search', authenticate, async (req, res, next) => {
+router.get('/search', authenticate, validate(ListClubsQuerySchema), async (req, res, next) => {
   try {
-    const q = req.query.q as string;
-    const type = req.query.type as string;
+    const q = req.query.q as string | undefined;
+    const type = req.query.type as string | undefined;
     const cursor = req.query.cursor as string | undefined;
     const limit = parseInt((req.query.limit as string) || '20', 10);
 
-    if (type !== 'clubs') {
+    if (type && type !== 'clubs') {
       return res.status(400).json({ error: 'Only type=clubs is supported currently' });
     }
 
@@ -36,12 +37,12 @@ router.get('/search', authenticate, async (req, res, next) => {
   }
 });
 
-router.get('/', authenticate, async (req, res, next) => {
+router.get('/', authenticate, validate(ListClubsQuerySchema), async (req, res, next) => {
   try {
     const cursor = req.query.cursor as string | undefined;
     const limit = parseInt((req.query.limit as string) || '20', 10);
-    const sort = (req.query.sort as 'name' | 'created_at') || 'name';
-    const order = (req.query.order as 'asc' | 'desc') || 'asc';
+    const sort = req.query.sort as 'name' | 'created_at';
+    const order = req.query.order as 'asc' | 'desc';
 
     const result = await clubsService.getClubs(req.user!.id, {
       cursor,

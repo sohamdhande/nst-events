@@ -1,7 +1,9 @@
 import { withUserContext } from '@nst/database';
 import { prisma } from '../../lib/prisma';
-import { NotFoundError, UnprocessableEntityError } from '../../lib/errors';
+import { NotFoundError, UnprocessableEntityError, ForbiddenError } from '../../lib/errors';
+import { GLOBAL_ADMIN_ROLES } from '../../middleware/authorize';
 import { Prisma, Event, AttendanceSession } from '@nst/database';
+import crypto from 'crypto';
 import {
   CreateEventInput,
   ListEventsQuery,
@@ -16,6 +18,25 @@ export const createEvent = async (callerId: string, data: CreateEventInput): Pro
     const primaryClubs = data.club_ids.filter((c) => c.is_primary);
     if (primaryClubs.length !== 1) {
       throw new UnprocessableEntityError('Exactly one club must be marked as primary');
+    }
+
+    // 1. Atomic Authorization Check (in same transaction as write)
+    const user = await tx.user.findUnique({
+      where: { id: callerId },
+      select: { globalRole: true },
+    });
+    if (!user) throw new ForbiddenError('User not found');
+
+    if (!GLOBAL_ADMIN_ROLES.includes(user.globalRole)) {
+      for (const club of data.club_ids) {
+        const membership = await tx.clubMembership.findFirst({
+          where: { clubId: club.club_id, userId: callerId, deletedAt: null },
+          select: { role: true },
+        });
+        if (!membership || !['CLUB_ADMIN', 'CORE_MEMBER'].includes(membership.role)) {
+          throw new ForbiddenError(`Insufficient club role for club ${club.club_id}`);
+        }
+      }
     }
 
     const event = await tx.event.create({
@@ -137,6 +158,23 @@ export const getEventById = async (callerId: string, eventId: string): Promise<a
     (event as any).location_geofence = geo[0]?.geojson ? JSON.parse(geo[0].geojson) : null;
 
     return event;
+  });
+};
+
+/**
+ * Validates whether a user has read authorization for a specific event
+ * using the canonical RLS policies (same semantics as getEventById).
+ */
+export const checkEventReadAuthorization = async (callerId: string, eventId: string): Promise<void> => {
+  return withUserContext(callerId, async (tx) => {
+    const event = await tx.event.findUnique({
+      where: { id: eventId },
+      select: { id: true, deletedAt: true },
+    });
+
+    if (!event || event.deletedAt) {
+      throw new NotFoundError('Event not found');
+    }
   });
 };
 
@@ -371,6 +409,8 @@ export const createSession = async (
       throw new UnprocessableEntityError('Cannot add sessions to archived events');
     }
 
+    const qrSecret = crypto.randomBytes(32).toString('hex');
+
     return tx.attendanceSession.create({
       data: {
         eventId,
@@ -380,6 +420,7 @@ export const createSession = async (
         openAt: data.open_at,
         closeAt: data.close_at,
         geofenceRadius: data.geofence_radius,
+        qrSecret,
       },
     });
   });

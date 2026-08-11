@@ -1,6 +1,6 @@
 import { Router, Request } from 'express';
 import { authenticate } from '../../middleware/authenticate';
-import { requireClubRole, requireEventRole } from '../../middleware/authorize';
+import { requireClubRole, requireAllClubRoles, requireEventRole } from '../../middleware/authorize';
 import { validate } from '../../middleware/validate';
 import { prisma } from '../../lib/prisma';
 import { NotFoundError } from '../../lib/errors';
@@ -60,12 +60,6 @@ router.post(
   '/',
   authenticate,
   validate(CreateEventSchema),
-  requireClubRole((req: Request) => {
-    const clubs = req.body.club_ids;
-    if (!Array.isArray(clubs) || clubs.length === 0) return '';
-    const primary = clubs.find((c: any) => c.is_primary);
-    return primary ? primary.club_id : clubs[0].club_id;
-  }, ['CLUB_ADMIN', 'CORE_MEMBER']),
   async (req, res, next) => {
     try {
       const event = await eventsService.createEvent(req.user!.id, req.body);

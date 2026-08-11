@@ -446,6 +446,8 @@ model AttendanceSession {
   closeAt        DateTime  @map("close_at") @db.Timestamptz
   /// Geofence radius in metres (default 50m)
   geofenceRadius Float     @default(50) @map("geofence_radius")
+  /// Cryptographic secret used to generate TOTP QR codes for this session
+  qrSecret       String    @map("qr_secret")
   createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz
   updatedAt      DateTime? @updatedAt @map("updated_at") @db.Timestamptz
   deletedAt      DateTime? @map("deleted_at") @db.Timestamptz
@@ -457,6 +459,7 @@ model AttendanceSession {
   event             Event              @relation(fields: [eventId], references: [id])
   attendanceRecords AttendanceRecord[]
   attendanceDisputes AttendanceDispute[]
+  consumedQrSignatures ConsumedQrSignature[]
 
   @@index([eventId])
   @@map("attendance_sessions")
@@ -468,7 +471,7 @@ model AttendanceSession {
 // All writes trigger audit log.
 // ------------------------------------------------------------
 model AttendanceRecord {
-  id            String            @id @default(uuid()) @db.Uuid
+  id            String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   sessionId     String            @map("session_id") @db.Uuid
   userId        String            @map("user_id") @db.Uuid
   /// NULL if method = QR (self-scan). Set for MANUAL/SYSTEM marks.
@@ -525,6 +528,24 @@ model AttendanceDispute {
 
   @@unique([sessionId, userId])
   @@map("attendance_disputes")
+}
+
+// ------------------------------------------------------------
+// 11b. consumed_qr_signatures
+// Tracks used QR code signatures to prevent screenshot-relay attacks.
+// ------------------------------------------------------------
+model ConsumedQrSignature {
+  sessionId  String   @map("session_id") @db.Uuid
+  signature  String   @db.Text
+  consumedAt DateTime @default(now()) @map("consumed_at") @db.Timestamptz
+
+  // TODO: Periodic cleanup job (e.g., pg_cron) can delete rows older than 24 hours,
+  // since QR signatures are only valid for ~45 seconds.
+
+  session AttendanceSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@id([sessionId, signature])
+  @@map("consumed_qr_signatures")
 }
 
 // ------------------------------------------------------------

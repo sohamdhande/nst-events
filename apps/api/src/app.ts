@@ -25,6 +25,9 @@ import { pgListener } from './modules/sse/pg-listener';
 export function createApp(): Express {
   const app = express();
   
+  // NGINX Ingress configuration implies exactly one trusted proxy hop.
+  app.set('trust proxy', 1);
+  
   app.use(helmet());
   app.use(
     cors({

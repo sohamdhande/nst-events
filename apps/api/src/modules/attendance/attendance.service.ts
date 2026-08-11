@@ -1,6 +1,6 @@
-import { prisma } from '@nst/database';
+import { prisma, withUserContext } from '@nst/database';
 import { generateQrPayload, verifyQrPayload } from './totp.utils';
-import { UnprocessableEntityError } from '../../lib/errors';
+import { UnprocessableEntityError, ConflictError } from '../../lib/errors';
 import { SCORE_RULES } from '../../config/score-rules';
 import { enqueueNotification } from '../notifications/notifications.producer';
 
@@ -9,7 +9,16 @@ export class AttendanceService {
    * Generates a new TOTP QR payload.
    */
   async generateQr(sessionId: string) {
-    const qr_payload = generateQrPayload(sessionId);
+    const session = await prisma.attendanceSession.findUnique({
+      where: { id: sessionId },
+      select: { qrSecret: true },
+    });
+    
+    if (!session) {
+      throw new Error('Session not found');
+    }
+
+    const qr_payload = generateQrPayload(sessionId, session.qrSecret);
     // Expires at the end of the current 15-second window.
     const expires_at = new Date(Math.ceil(Date.now() / 15000) * 15000).toISOString();
     return { qr_payload, expires_at };
@@ -33,16 +42,45 @@ export class AttendanceService {
     }
   ) {
     // 1. Cryptographic Validation (Express level)
-    const isValid = verifyQrPayload(payload.session_id, payload.totp_token);
+    const session = await prisma.attendanceSession.findUnique({
+      where: { id: payload.session_id },
+      select: { qrSecret: true },
+    });
+
+    if (!session) {
+      throw new UnprocessableEntityError('SESSION_CLOSED');
+    }
+
+    const isValid = verifyQrPayload(payload.session_id, payload.totp_token, session.qrSecret);
     if (!isValid) {
       throw new UnprocessableEntityError('QR_EXPIRED');
     }
 
     // 2. Database RPC Invocation (with transaction)
     try {
+      // Extract signature for single-use verification
+      const parts = payload.totp_token.split(':');
+      const signature = parts[2];
+
       // Prisma $queryRaw cannot return a single typed row out-of-the-box perfectly without mapping,
       // but we can type-cast the result.
       const result = await prisma.$transaction(async (tx) => {
+        // 2a. Guard against QR relay attacks by making the signature single-use.
+        // This MUST be the first operation in the transaction so we fail fast.
+        try {
+          await tx.consumedQrSignature.create({
+            data: {
+              sessionId: payload.session_id,
+              signature,
+            },
+          });
+        } catch (e: any) {
+          if (e.code === 'P2002') {
+            throw new ConflictError('This QR code has already been used');
+          }
+          throw e;
+        }
+
         // Set the current user context for RLS
         await tx.$executeRaw`SELECT set_config('app.user_id', ${userId}, true)`;
         
@@ -128,48 +166,52 @@ export class AttendanceService {
     return result[0].result;
   }
 
-  async getEventAttendance(eventId: string, query: any): Promise<{ data: any[]; nextCursor?: string }> {
-    const { cursor, limit, filter_session_id, filter_status, filter_flagged } = query;
-    const where: any = { session: { eventId } };
-    if (filter_session_id) where.sessionId = filter_session_id;
-    if (filter_status) where.status = filter_status;
-    if (filter_flagged !== undefined) {
-      if (filter_flagged) {
-        where.auditMetadata = { path: ['device_collision_detected'], equals: true };
-      } else {
-        where.auditMetadata = { not: { path: ['device_collision_detected'], equals: true } };
+  async getEventAttendance(userId: string, eventId: string, query: any): Promise<{ data: any[]; nextCursor?: string }> {
+    return withUserContext(userId, async (tx) => {
+      const { cursor, limit, filter_session_id, filter_status, filter_flagged } = query;
+      const where: any = { session: { eventId } };
+      if (filter_session_id) where.sessionId = filter_session_id;
+      if (filter_status) where.status = filter_status;
+      if (filter_flagged !== undefined) {
+        if (filter_flagged) {
+          where.auditMetadata = { path: ['device_collision_detected'], equals: true };
+        } else {
+          where.auditMetadata = { not: { path: ['device_collision_detected'], equals: true } };
+        }
       }
-    }
-    const records = await prisma.attendanceRecord.findMany({
-      where,
-      take: limit + 1,
-      ...(cursor && { cursor: { id: cursor }, skip: 1 }),
-      orderBy: { markedAt: 'desc' },
-      include: { user: { select: { id: true, fullName: true, email: true } } },
+      const records = await tx.attendanceRecord.findMany({
+        where,
+        take: limit + 1,
+        ...(cursor && { cursor: { id: cursor }, skip: 1 }),
+        orderBy: { markedAt: 'desc' },
+        include: { user: { select: { id: true, fullName: true, email: true } } },
+      });
+      let nextCursor = undefined;
+      if (records.length > limit) {
+        const nextItem = records.pop();
+        nextCursor = nextItem!.id;
+      }
+      return { data: records, nextCursor };
     });
-    let nextCursor = undefined;
-    if (records.length > limit) {
-      const nextItem = records.pop();
-      nextCursor = nextItem!.id;
-    }
-    return { data: records, nextCursor };
   }
 
   async getMyAttendance(userId: string, query: any): Promise<{ data: any[]; nextCursor?: string }> {
-    const { cursor, limit } = query;
-    const records = await prisma.attendanceRecord.findMany({
-      where: { userId },
-      take: limit + 1,
-      ...(cursor && { cursor: { id: cursor }, skip: 1 }),
-      orderBy: { markedAt: 'desc' },
-      include: { session: { include: { event: { select: { title: true } } } } },
+    return withUserContext(userId, async (tx) => {
+      const { cursor, limit } = query;
+      const records = await tx.attendanceRecord.findMany({
+        where: { userId },
+        take: limit + 1,
+        ...(cursor && { cursor: { id: cursor }, skip: 1 }),
+        orderBy: { markedAt: 'desc' },
+        include: { session: { include: { event: { select: { title: true } } } } },
+      });
+      let nextCursor = undefined;
+      if (records.length > limit) {
+        const nextItem = records.pop();
+        nextCursor = nextItem!.id;
+      }
+      return { data: records, nextCursor };
     });
-    let nextCursor = undefined;
-    if (records.length > limit) {
-      const nextItem = records.pop();
-      nextCursor = nextItem!.id;
-    }
-    return { data: records, nextCursor };
   }
 
   async manualMarkAttendance(userId: string, payload: { session_id: string; user_id: string }) {
@@ -220,24 +262,26 @@ export class AttendanceService {
     }
   }
 
-  async getAttendanceDisputes(eventId: string | undefined, query: any): Promise<{ data: any[]; nextCursor?: string }> {
-    const { cursor, limit, filter_status } = query;
-    const where: any = {};
-    if (eventId) where.eventId = eventId;
-    if (filter_status) where.status = filter_status;
-    const disputes = await prisma.attendanceDispute.findMany({
-      where,
-      take: limit + 1,
-      ...(cursor && { cursor: { id: cursor }, skip: 1 }),
-      orderBy: { createdAt: 'desc' },
-      include: { user: { select: { id: true, fullName: true } } },
+  async getAttendanceDisputes(userId: string, eventId: string | undefined, query: any): Promise<{ data: any[]; nextCursor?: string }> {
+    return withUserContext(userId, async (tx) => {
+      const { cursor, limit, filter_status } = query;
+      const where: any = {};
+      if (eventId) where.eventId = eventId;
+      if (filter_status) where.status = filter_status;
+      const disputes = await tx.attendanceDispute.findMany({
+        where,
+        take: limit + 1,
+        ...(cursor && { cursor: { id: cursor }, skip: 1 }),
+        orderBy: { createdAt: 'desc' },
+        include: { user: { select: { id: true, fullName: true } } },
+      });
+      let nextCursor = undefined;
+      if (disputes.length > limit) {
+        const nextItem = disputes.pop();
+        nextCursor = nextItem!.id;
+      }
+      return { data: disputes, nextCursor };
     });
-    let nextCursor = undefined;
-    if (disputes.length > limit) {
-      const nextItem = disputes.pop();
-      nextCursor = nextItem!.id;
-    }
-    return { data: disputes, nextCursor };
   }
 
   async resolveAttendanceDispute(userId: string, disputeId: string, payload: { resolution: string; review_notes?: string }) {

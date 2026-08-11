@@ -43,39 +43,43 @@ export const cancelRegistration = async (userId: string, eventId: string) => {
 };
 
 export const getEventRegistrations = async (userId: string, eventId: string, limit: number, cursor?: string, filter_status?: string) => {
-  const where: any = { eventId, deletedAt: null };
-  if (filter_status) where.registrationStatus = filter_status;
-  
-  const take = limit + 1;
-  const registrations = await prisma.eventRegistration.findMany({
-    where,
-    take,
-    skip: cursor ? 1 : 0,
-    cursor: cursor ? { id: cursor } : undefined,
-    include: { user: { select: { id: true, fullName: true, email: true, globalRole: true } } },
-    orderBy: [
-      { registeredAt: 'desc' },
-      { id: 'asc' }
-    ]
-  });
+  return withUserContext(userId, async (tx) => {
+    const where: any = { eventId, deletedAt: null };
+    if (filter_status) where.registrationStatus = filter_status;
+    
+    const take = limit + 1;
+    const registrations = await tx.eventRegistration.findMany({
+      where,
+      take,
+      skip: cursor ? 1 : 0,
+      cursor: cursor ? { id: cursor } : undefined,
+      include: { user: { select: { id: true, fullName: true, email: true, globalRole: true } } },
+      orderBy: [
+        { registeredAt: 'desc' },
+        { id: 'asc' }
+      ]
+    });
 
-  const has_more = registrations.length > limit;
-  if (has_more) registrations.pop();
-  
-  return {
-    data: registrations,
-    pagination: {
-      next_cursor: has_more ? registrations[registrations.length - 1].id : null,
-      has_more
-    }
-  };
+    const has_more = registrations.length > limit;
+    if (has_more) registrations.pop();
+    
+    return {
+      data: registrations,
+      pagination: {
+        next_cursor: has_more ? registrations[registrations.length - 1].id : null,
+        has_more
+      }
+    };
+  });
 };
 
 export const getMyRegistrations = async (userId: string): Promise<any[]> => {
-  const registrations = await prisma.eventRegistration.findMany({
-    where: { userId, deletedAt: null },
-    include: { event: true },
-    orderBy: { registeredAt: 'desc' }
+  return withUserContext(userId, async (tx) => {
+    const registrations = await tx.eventRegistration.findMany({
+      where: { userId, deletedAt: null },
+      include: { event: true },
+      orderBy: { registeredAt: 'desc' }
+    });
+    return registrations;
   });
-  return registrations;
 };

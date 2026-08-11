@@ -93,6 +93,64 @@ export const requireClubRole = (
 };
 
 /**
+ * Ensures the authenticated user has one of the specified club roles in EVERY club attached to the request,
+ * or possesses a global bypass role.
+ * Live resolution via withUserContext.
+ */
+export const requireAllClubRoles = (
+  getClubIds: (req: Request) => string[] | Promise<string[]>,
+  roles: ClubRole[]
+) => {
+  return async (req: Request, _res: Response, next: NextFunction) => {
+    try {
+      if (!req.user?.id) {
+        throw new ForbiddenError('Unauthorized access');
+      }
+
+      const clubIds = await getClubIds(req);
+      if (!clubIds || clubIds.length === 0) {
+        throw new ForbiddenError('Club IDs are required for this operation');
+      }
+
+      await withUserContext(req.user.id, async (tx) => {
+        const user = await tx.user.findUnique({
+          where: { id: req.user!.id },
+          select: { globalRole: true },
+        });
+
+        if (!user) {
+          throw new ForbiddenError('User not found');
+        }
+
+        // 1. Global Bypass Check (Matches RLS exactly)
+        if (GLOBAL_ADMIN_ROLES.includes(user.globalRole)) {
+          return;
+        }
+
+        // 2. Club-Scoped Role Check for ALL clubs
+        for (const clubId of clubIds) {
+          const membership = await tx.clubMembership.findFirst({
+            where: {
+              clubId,
+              userId: req.user!.id,
+              deletedAt: null,
+            },
+            select: { role: true },
+          });
+
+          if (!membership || !roles.includes(membership.role)) {
+            throw new ForbiddenError(`Insufficient club role for club ${clubId}`);
+          }
+        }
+      });
+
+      next();
+    } catch (error) {
+      next(error);
+    }
+  };
+};
+/**
  * Ensures the authenticated user has one of the specified club roles in ANY club attached to the event.
  */
 export const requireEventRole = (

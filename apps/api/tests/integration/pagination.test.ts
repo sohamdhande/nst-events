@@ -4,6 +4,11 @@ import { prisma } from '../../src/lib/prisma';
 import { listEvents } from '../../src/modules/events/events.service';
 import { getEventRegistrations } from '../../src/modules/registrations/registrations.service';
 import { randomUUID } from 'crypto';
+import request from 'supertest';
+import { createApp } from '../../src/app';
+import { signJwt } from '../../src/lib/jwt';
+
+const app = createApp();
 
 describe('Phase 14: Cursor Pagination Stability', () => {
   let userId: string;
@@ -11,20 +16,24 @@ describe('Phase 14: Cursor Pagination Stability', () => {
   const eventIds: string[] = [];
 
   let registrationUserId: string;
+  let token: string;
 
   before(async () => {
+    const googleSub = randomUUID();
     const user = await prisma.user.create({
-      data: { email: 'test_pagination@example.com', googleSub: 'google_test_pagination', fullName: 'Test User' },
+      data: { email: `pagination-user-${googleSub}@test.com`, googleSub, fullName: 'Pagination Test User' },
     });
     userId = user.id;
+    token = signJwt(userId);
 
+    const googleSub2 = randomUUID();
     const user2 = await prisma.user.create({
-      data: { email: 'test_pagination_reg@example.com', googleSub: 'google_test_pagination_reg', fullName: 'Test User 2' },
+      data: { email: `test_pagination_reg_${googleSub2}@example.com`, googleSub: googleSub2, fullName: 'Test User 2' },
     });
     registrationUserId = user2.id;
 
     const club = await prisma.club.create({
-      data: { name: 'Test Pagination Club' },
+      data: { name: `Test Pagination Club ${randomUUID()}` },
     });
     clubId = club.id;
 
@@ -106,5 +115,43 @@ describe('Phase 14: Cursor Pagination Stability', () => {
     const allIds = [...page1.data.map((r: any) => r.id), ...page2.data.map((r: any) => r.id), ...page3.data.map((r: any) => r.id)];
     const uniqueIds = new Set(allIds);
     assert.strictEqual(uniqueIds.size, 5, 'Should have exactly 5 unique registrations with no duplicates');
+  });
+
+  describe('Phase 16A: Pagination DoS Protection', () => {
+    it('GET /clubs rejects limit=999999999', async () => {
+      const res = await request(app)
+        .get('/clubs?limit=999999999')
+        .set('Authorization', `Bearer ${token}`);
+      
+      assert.strictEqual(res.status, 400); // Validation error
+    });
+
+    it('GET /clubs rejects limit=abc', async () => {
+      const res = await request(app)
+        .get('/clubs?limit=abc')
+        .set('Authorization', `Bearer ${token}`);
+      
+      assert.strictEqual(res.status, 400);
+    });
+
+    it('GET /clubs rejects limit=-1', async () => {
+      const res = await request(app)
+        .get('/clubs?limit=-1')
+        .set('Authorization', `Bearer ${token}`);
+      
+      assert.strictEqual(res.status, 400);
+    });
+
+    it('GET /clubs accepts limit=100 and defaults to 20 if omitted', async () => {
+      const resMax = await request(app)
+        .get('/clubs?limit=100')
+        .set('Authorization', `Bearer ${token}`);
+      assert.strictEqual(resMax.status, 200);
+
+      const resDefault = await request(app)
+        .get('/clubs')
+        .set('Authorization', `Bearer ${token}`);
+      assert.strictEqual(resDefault.status, 200);
+    });
   });
 });

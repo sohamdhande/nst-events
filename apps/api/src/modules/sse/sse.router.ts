@@ -4,6 +4,7 @@ import { sseConnectionManager } from './sse-connection-manager';
 import { authenticate } from '../../middleware/authenticate';
 
 import { buildEventChannel } from './sse.utils';
+import * as eventsService from '../events/events.service';
 
 export const sseRouter: Router = Router();
 
@@ -25,6 +26,9 @@ sseRouter.get('/:id/live', sseAuthMiddleware, async (req, res, next) => {
     res.setHeader('Connection', 'keep-alive');
     res.setHeader('X-Accel-Buffering', 'no');
     res.flushHeaders();
+
+    // Enforce Event Read Authorization before subscribing to SSE notifications
+    await eventsService.checkEventReadAuthorization(req.user!.id, eventId);
 
     // Subscribe to DB notifications via manager
     await sseConnectionManager.subscribe(eventId);

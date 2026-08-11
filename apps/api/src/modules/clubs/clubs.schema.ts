@@ -28,3 +28,13 @@ export const UpdateMemberRoleSchema = z.object({
   }),
 });
 
+export const ListClubsQuerySchema = z.object({
+  query: z.object({
+    cursor: z.string().optional(),
+    limit: z.coerce.number().min(1).max(100).default(20),
+    sort: z.enum(['name', 'created_at']).default('name'),
+    order: z.enum(['asc', 'desc']).default('asc'),
+    q: z.string().max(255).optional(),
+    type: z.string().optional(),
+  }),
+});
