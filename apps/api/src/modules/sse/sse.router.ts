@@ -21,14 +21,14 @@ sseRouter.get('/:id/live', sseAuthMiddleware, async (req, res, next) => {
     const eventId = req.params.id;
     const channel = buildEventChannel(eventId);
     
+    // Enforce Event Read Authorization before subscribing to SSE notifications
+    await eventsService.checkEventReadAuthorization(req.user!.id, eventId);
+
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache, no-transform');
     res.setHeader('Connection', 'keep-alive');
     res.setHeader('X-Accel-Buffering', 'no');
     res.flushHeaders();
-
-    // Enforce Event Read Authorization before subscribing to SSE notifications
-    await eventsService.checkEventReadAuthorization(req.user!.id, eventId);
 
     // Subscribe to DB notifications via manager
     await sseConnectionManager.subscribe(eventId);
