@@ -1,15 +1,24 @@
 import { executePush } from './jobs/sendPush';
 import { executeReceiptPolling } from './jobs/receiptPolling';
 import { logger } from './lib/logger';
+import { handleDeadLetter } from './jobs/retry';
+import { z } from 'zod';
+
+const basePayloadSchema = z.object({
+  job_type: z.enum(['SEND_PUSH']),
+  user_id: z.string().uuid(),
+}).passthrough();
 
 export async function dispatchJob(tx: any, job: any) {
-  const jobType = job.payload?.job_type;
-  
-  if (!jobType) {
-    logger.error({ job_id: job.id, status: job.status, error: { failure_reason: 'MissingJobType' } }, `❌ Job ${job.id} missing job_type in payload. Skipping.`);
-    await markJobFailed(tx, job, 'Missing job_type in payload');
+  try {
+    basePayloadSchema.parse(job.payload);
+  } catch (err: any) {
+    logger.error({ job_id: job.id, status: job.status, error: { failure_reason: 'InvalidPayloadSchema', details: err.errors } }, `❌ Job ${job.id} has malformed payload. Routing to DEAD_LETTER.`);
+    await handleDeadLetter(tx, job, `Malformed payload: ${err.message}`);
     return;
   }
+
+  const jobType = job.payload?.job_type;
 
   try {
     switch (jobType) {

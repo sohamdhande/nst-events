@@ -44,16 +44,22 @@ export class AttendanceService {
     try {
       return await withUserContext(userId, async (tx) => {
         // 1. Cryptographic Validation (Express level)
-        const session = await tx.attendanceSession.findUnique({
-          where: { id: payload.session_id },
-          select: { qrSecret: true },
-        });
+        const sessionContext = await tx.$queryRaw<any[]>`
+          SELECT * FROM get_session_qr_context(${payload.session_id}::uuid)
+        `;
 
-        if (!session) {
+        if (!sessionContext || sessionContext.length === 0) {
           throw new UnprocessableEntityError('SESSION_CLOSED');
         }
 
-        const isValid = verifyQrPayload(payload.session_id, payload.totp_token, session.qrSecret);
+        const session = sessionContext[0];
+
+        const now = new Date();
+        if (now < session.open_at || (session.close_at && now > session.close_at)) {
+          throw new UnprocessableEntityError('SESSION_CLOSED');
+        }
+
+        const isValid = verifyQrPayload(payload.session_id, payload.totp_token, session.qr_secret);
         if (!isValid) {
           throw new UnprocessableEntityError('QR_EXPIRED');
         }

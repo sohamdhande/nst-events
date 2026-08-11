@@ -6,6 +6,7 @@ import { processingDuration } from './lib/metrics';
 
 export let isShuttingDown = false;
 let activeBatchPromise: Promise<void> | null = null;
+let consecutiveDbFailures = 0;
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -108,7 +109,13 @@ export async function processBatch() {
       await dispatchJob(prisma, mappedJob);
       endTimer();
     }
+    consecutiveDbFailures = 0;
   } catch (error: any) {
-    logger.error({ error: { failure_reason: 'BatchProcessingError', stack: error.stack } }, '❌ Error processing batch');
+    consecutiveDbFailures++;
+    if (consecutiveDbFailures >= 5) {
+      logger.error({ event: 'WORKER_DB_UNREACHABLE', consecutive_failures: consecutiveDbFailures, error: { failure_reason: 'BatchProcessingError', stack: error.stack } }, '❌ Database unreachable for 5+ consecutive poll cycles');
+    } else {
+      logger.warn({ event: 'WORKER_DB_UNREACHABLE', consecutive_failures: consecutiveDbFailures, error: { failure_reason: 'BatchProcessingError', stack: error.stack } }, '⚠️ Database connection failed during poll cycle');
+    }
   }
 }

@@ -13,6 +13,30 @@ import { authService } from './auth.service';
 import { googleOAuth } from './google.oauth';
 import { authenticate } from '../../middleware/authenticate';
 import { prisma } from '../../lib/prisma';
+import { rateLimit } from 'express-rate-limit';
+
+const callbackLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  keyGenerator: (req) => {
+    const ip = req.ip || req.socket.remoteAddress || 'unknown';
+    // Use state param as an additional identifier to mitigate rotating-IP attacks,
+    // though a dedicated attacker could just rotate the state param too.
+    const state = req.query.state ? String(req.query.state) : 'no_state';
+    return `${ip}_${state}`;
+  },
+  message: { error: 'Too many authentication attempts, please try again later.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const refreshLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 60, // Much higher frequency for legitimate token refresh
+  message: { error: 'Too many refresh attempts, please try again later.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 export const authRouter: Router = Router();
 
@@ -34,6 +58,7 @@ authRouter.get(
 
 authRouter.get(
   '/google/callback',
+  callbackLimiter,
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const query = googleCallbackQuerySchema.parse(req.query);
@@ -70,6 +95,7 @@ authRouter.get(
 
 authRouter.post(
   '/refresh',
+  refreshLimiter,
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const rawRefreshToken =

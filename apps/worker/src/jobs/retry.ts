@@ -19,14 +19,7 @@ export async function handleTransientError(tx: any, job: any, errorMsg: string) 
   const newAttemptCount = job.attemptCount + 1;
 
   if (newAttemptCount > config.WORKER_MAX_RETRIES) {
-    // Transition to DEAD_LETTER
-    logger.error({ job_id: job.id, status: 'DEAD_LETTER', error: { failure_reason: errorMsg } }, `💀 Job ${job.id} reached max retries (${config.WORKER_MAX_RETRIES}). Transitioning to DEAD_LETTER.`);
-    jobsProcessedTotal.labels({ status: 'DEAD_LETTER', notification_type: job.payload?.job_type || 'unknown' }).inc();
-    await tx.$executeRaw`
-      UPDATE notification_jobs
-      SET status = 'DEAD_LETTER', last_error = ${errorMsg}, ticket_ids = NULL, updated_at = now()
-      WHERE id = ${job.id}::uuid
-    `;
+    await handleDeadLetter(tx, job, errorMsg);
   } else {
     // Transition to RETRY_PENDING
     const backoffMs = calculateBackoff(newAttemptCount);
@@ -60,6 +53,16 @@ export async function handleArchived(tx: any, job: any, reason: string) {
   await tx.$executeRaw`
     UPDATE notification_jobs
     SET status = 'ARCHIVED', last_error = ${reason}, ticket_ids = NULL, updated_at = now()
+    WHERE id = ${job.id}::uuid
+  `;
+}
+
+export async function handleDeadLetter(tx: any, job: any, errorMsg: string) {
+  logger.error({ job_id: job.id, status: 'DEAD_LETTER', error: { failure_reason: errorMsg } }, `💀 Job ${job.id} transitioning to DEAD_LETTER.`);
+  jobsProcessedTotal.labels({ status: 'DEAD_LETTER', notification_type: job.payload?.job_type || 'unknown' }).inc();
+  await tx.$executeRaw`
+    UPDATE notification_jobs
+    SET status = 'DEAD_LETTER', last_error = ${errorMsg}, ticket_ids = NULL, updated_at = now()
     WHERE id = ${job.id}::uuid
   `;
 }

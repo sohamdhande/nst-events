@@ -1,5 +1,6 @@
 import { describe, it, before, after } from 'node:test';
 import { prisma } from '../../src/lib/prisma';
+import { adminPrisma } from '../helpers/adminDb';
 import request from 'supertest';
 import assert from 'node:assert';
 import app from '../../src/app';
@@ -15,10 +16,10 @@ describe('Phase 19 Audit Trail: AttendanceSession createdBy', () => {
 
   before(async () => {
     // 1. Create a Platform Admin user
-    const admin = await prisma.user.create({
+    const admin = await adminPrisma.user.create({
       data: {
-        email: `platform_admin_audit_${Date.now()}@adypu.edu.in`,
-        googleSub: `google_audit_${Date.now()}`,
+        email: `admin-${Date.now()}@test.com`,
+        googleSub: `sub-admin-${Date.now()}`,
         fullName: 'Audit Admin',
         globalRole: 'PLATFORM_ADMIN',
       },
@@ -46,13 +47,14 @@ describe('Phase 19 Audit Trail: AttendanceSession createdBy', () => {
       },
     });
 
-    const event = await prisma.event.create({
+    const event = await adminPrisma.event.create({
       data: {
-        title: 'Audit Event',
-        startTime: new Date(Date.now() + 86400000),
-        endTime: new Date(Date.now() + 86400000 * 2),
-        eventType: 'MEETUP',
+        title: 'Audit Test Event',
+        startTime: new Date(Date.now() - 3600000),
+        endTime: new Date(Date.now() + 3600000),
+        eventType: 'GUEST_LECTURE',
         createdBy: adminUserId,
+        state: 'PUBLISHED',
         eventClubs: {
           create: [{ clubId: club.id, isPrimary: true }],
         },
@@ -83,7 +85,7 @@ describe('Phase 19 Audit Trail: AttendanceSession createdBy', () => {
     assert.ok(res.body.data.id);
 
     // 2. Fetch the session directly from DB as a superuser to check createdBy
-    const sessions = await prisma.$queryRaw<any[]>`SELECT id, created_by FROM attendance_sessions WHERE id = ${res.body.data.id}::uuid`;
+    const sessions = await adminPrisma.$queryRaw<any[]>`SELECT id, created_by FROM attendance_sessions WHERE id = ${res.body.data.id}::uuid`;
     const session = sessions[0];
 
     assert.ok(session);
