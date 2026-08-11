@@ -23,14 +23,14 @@
     "test:e2e": "ts-node --project tsconfig.seed.json tests/schema.test.ts"
   },
   "dependencies": {
-    "@prisma/client": "^5.15.0"
+    "@prisma/client": "5.22.0"
   },
   "devDependencies": {
     "@nst/config": "workspace:*",
-    "@types/node": "^20.14.0",
-    "prisma": "^5.15.0",
-    "ts-node": "^10.9.2",
-    "typescript": "^5.5.0"
+    "@types/node": "20.19.43",
+    "prisma": "5.22.0",
+    "ts-node": "10.9.2",
+    "typescript": "5.9.3"
   },
   "prisma": {
     "seed": "ts-node --project tsconfig.seed.json prisma/seed.ts"

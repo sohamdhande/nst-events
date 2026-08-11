@@ -15,9 +15,9 @@
   },
   "devDependencies": {
     "@nst/config": "workspace:*",
-    "husky": "^9.1.7",
-    "prettier": "^3.3.3",
-    "turbo": "^2.3.0"
+    "husky": "9.1.7",
+    "prettier": "3.9.6",
+    "turbo": "2.10.8"
   },
   "packageManager": "pnpm@9.0.0",
   "workspaces": [
