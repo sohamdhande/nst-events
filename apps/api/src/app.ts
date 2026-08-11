@@ -13,6 +13,7 @@ import { attendanceRouter } from './modules/attendance/attendance.router';
 import { leaderboardRouter, adminLeaderboardRouter } from './modules/leaderboard/leaderboard.router';
 import { notificationsRouter } from './modules/notifications/notifications.router';
 import { adminQueueRouter } from './modules/admin/queue.router';
+import { adminUsersRouter } from './modules/admin/users.router';
 import { teamsRouter } from './modules/teams/teams.router';
 import { registrationsRouter } from './modules/registrations/registrations.router';
 import { errorHandler } from './middleware/error-handler';
@@ -60,17 +61,11 @@ export function createApp(): Express {
     },
   });
 
-  const authLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000,
-    max: 10,
-    message: { error: 'Too many authentication attempts, please try again later.' },
-    standardHeaders: true,
-    legacyHeaders: false,
-  });
+
 
   app.use(globalLimiter);
 
-  app.use('/auth', authLimiter, authRouter);
+  app.use('/auth', authRouter);
   app.use('/users', usersRouter);
   app.use('/clubs', clubsRouter);
   app.use('/v1/events', sseRouter); // Mounted precisely at GET /events/:id/live
@@ -80,6 +75,7 @@ export function createApp(): Express {
   app.use('/v1', attendanceRouter);
   app.use('/v1/leaderboard', leaderboardRouter);
   app.use('/v1/admin/leaderboard', adminLeaderboardRouter);
+  app.use('/v1/admin/users', adminUsersRouter);
   app.use('/v1/admin', adminQueueRouter);
   app.use('/v1/notifications', notificationsRouter);
 
