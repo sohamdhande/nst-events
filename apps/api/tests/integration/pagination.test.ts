@@ -1,6 +1,7 @@
 import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert';
 import { prisma } from '../../src/lib/prisma';
+import { adminPrisma } from '../helpers/adminDb';
 import { listEvents } from '../../src/modules/events/events.service';
 import { getEventRegistrations } from '../../src/modules/registrations/registrations.service';
 import { randomUUID } from 'crypto';
@@ -20,27 +21,35 @@ describe('Phase 14: Cursor Pagination Stability', () => {
 
   before(async () => {
     const googleSub = randomUUID();
-    const user = await prisma.user.create({
+    const user = await adminPrisma.user.create({
       data: { email: `pagination-user-${googleSub}@test.com`, googleSub, fullName: 'Pagination Test User' },
     });
     userId = user.id;
     token = signJwt(userId);
 
     const googleSub2 = randomUUID();
-    const user2 = await prisma.user.create({
+    const user2 = await adminPrisma.user.create({
       data: { email: `test_pagination_reg_${googleSub2}@example.com`, googleSub: googleSub2, fullName: 'Test User 2' },
     });
     registrationUserId = user2.id;
 
-    const club = await prisma.club.create({
+    const club = await adminPrisma.club.create({
       data: { name: `Test Pagination Club ${randomUUID()}` },
     });
     clubId = club.id;
 
+    await adminPrisma.clubMembership.create({
+      data: {
+        userId,
+        clubId,
+        role: 'CLUB_ADMIN',
+      }
+    });
+
     const sameTime = new Date('2026-08-01T10:00:00Z');
 
     for (let i = 0; i < 5; i++) {
-      const event = await prisma.event.create({
+      const event = await adminPrisma.event.create({
         data: {
           title: `Pagination Event ${i}`,
           startTime: sameTime, // identical start time for all
@@ -58,10 +67,10 @@ describe('Phase 14: Cursor Pagination Stability', () => {
 
     // Add 5 registrations to event 0 with identical timestamps
     for (let i = 0; i < 5; i++) {
-      const tempUser = await prisma.user.create({
+      const tempUser = await adminPrisma.user.create({
         data: { email: `reg_${i}@example.com`, googleSub: `sub_${i}`, fullName: `Temp ${i}` }
       });
-      await prisma.eventRegistration.create({
+      await adminPrisma.eventRegistration.create({
         data: {
           eventId: eventIds[0],
           userId: tempUser.id,
@@ -72,13 +81,15 @@ describe('Phase 14: Cursor Pagination Stability', () => {
   });
 
   after(async () => {
-    await prisma.eventRegistration.deleteMany({ where: { eventId: eventIds[0] } });
-    await prisma.user.deleteMany({ where: { email: { startsWith: 'reg_' } } });
-    await prisma.eventClub.deleteMany({ where: { clubId } });
-    await prisma.event.deleteMany({ where: { createdBy: userId } });
-    await prisma.club.delete({ where: { id: clubId } });
-    await prisma.user.delete({ where: { id: userId } });
-    await prisma.user.delete({ where: { id: registrationUserId } });
+    // Cleanup
+    await adminPrisma.eventRegistration.deleteMany({ where: { eventId: { in: eventIds } } });
+    await adminPrisma.user.deleteMany({ where: { email: { startsWith: 'reg_' } } });
+    await adminPrisma.eventClub.deleteMany({ where: { clubId } });
+    await adminPrisma.event.deleteMany({ where: { createdBy: userId } });
+    await adminPrisma.clubMembership.deleteMany({ where: { clubId } });
+    await adminPrisma.club.delete({ where: { id: clubId } });
+    await adminPrisma.user.delete({ where: { id: userId } });
+    await adminPrisma.user.delete({ where: { id: registrationUserId } });
   });
 
   it('should not skip events when cursor paginating across identical timestamps', async () => {

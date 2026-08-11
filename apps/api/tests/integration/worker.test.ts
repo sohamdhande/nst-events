@@ -1,10 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert';
 import { prisma } from '../../src/lib/prisma';
+import { adminPrisma } from '../helpers/adminDb';
 import crypto from 'crypto';
 
 // Set mock env vars before importing worker which parses them on load
 process.env.EXPO_ACCESS_TOKEN = 'mock_expo_token_for_tests';
+process.env.WORKER_DATABASE_URL = 'postgresql://nst_worker:worker_password@localhost:5440/nst_events?schema=public';
 
 import { processBatch } from '../../../worker/src/worker';
 import { expo } from '../../../worker/src/index';
@@ -15,7 +17,7 @@ test('Worker Reliability and Crash Recovery', async (t) => {
     return messages.map(m => ({ status: 'ok', id: `mock-ticket-${Date.now()}` }));
   });
 
-  const testUser = await prisma.user.create({
+  const testUser = await adminPrisma.user.create({
     data: {
       email: `worker-test-${Date.now()}@test.com`,
       googleSub: `sub-worker-${Date.now()}`,
@@ -23,7 +25,7 @@ test('Worker Reliability and Crash Recovery', async (t) => {
     }
   });
 
-  await prisma.pushToken.create({
+  await adminPrisma.pushToken.create({
     data: {
       userId: testUser.id,
       deviceId: `device-${Date.now()}`,
@@ -42,7 +44,7 @@ test('Worker Reliability and Crash Recovery', async (t) => {
 
   // 1. Crash Recovery Test (Abandoned Job)
   // Insert a job stuck in PROCESSING with lockedAt older than 5 minutes
-  const stuckJob = await prisma.notificationJob.create({
+  const stuckJob = await adminPrisma.notificationJob.create({
     data: {
       status: 'PROCESSING',
       payload,
@@ -57,14 +59,14 @@ test('Worker Reliability and Crash Recovery', async (t) => {
   await processBatch();
 
   // Verify the job was reclaimed and processed
-  const recoveredJob = await prisma.notificationJob.findUnique({ where: { id: stuckJob.id } });
+  const recoveredJob = await adminPrisma.notificationJob.findUnique({ where: { id: stuckJob.id } });
   assert.strictEqual(recoveredJob?.status, 'WAITING_FOR_RECEIPTS', 'Abandoned job should be reclaimed and processed');
   
   // 2. Claim Concurrency Test
   // Create 5 jobs
   const jobIds = [];
   for (let i = 0; i < 5; i++) {
-    const job = await prisma.notificationJob.create({
+    const job = await adminPrisma.notificationJob.create({
       data: {
         status: 'PENDING',
         payload,
@@ -82,7 +84,7 @@ test('Worker Reliability and Crash Recovery', async (t) => {
     processBatch()
   ]);
 
-  const processedJobs = await prisma.notificationJob.findMany({
+  const processedJobs = await adminPrisma.notificationJob.findMany({
     where: { id: { in: jobIds } }
   });
 
@@ -95,7 +97,7 @@ test('Worker Reliability and Crash Recovery', async (t) => {
     throw new Error('network timeout');
   });
 
-  const failJob = await prisma.notificationJob.create({
+  const failJob = await adminPrisma.notificationJob.create({
     data: {
       status: 'PENDING',
       payload,
@@ -107,11 +109,11 @@ test('Worker Reliability and Crash Recovery', async (t) => {
 
   await processBatch();
 
-  const deadJob = await prisma.notificationJob.findUnique({ where: { id: failJob.id } });
+  const deadJob = await adminPrisma.notificationJob.findUnique({ where: { id: failJob.id } });
   assert.strictEqual(deadJob?.status, 'DEAD_LETTER', 'Job reaching max attempts should transition to DEAD_LETTER');
 
   // Cleanup
-  await prisma.notificationJob.deleteMany({ where: { id: { in: [stuckJob.id, ...jobIds, failJob.id] } } });
-  await prisma.pushToken.deleteMany({ where: { userId: testUser.id } });
-  await prisma.user.delete({ where: { id: testUser.id } });
+  await adminPrisma.notificationJob.deleteMany({ where: { id: { in: [stuckJob.id, ...jobIds, failJob.id] } } });
+  await adminPrisma.pushToken.deleteMany({ where: { userId: testUser.id } });
+  await adminPrisma.user.delete({ where: { id: testUser.id } });
 });

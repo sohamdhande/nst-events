@@ -5,7 +5,7 @@ import * as dotenv from 'dotenv';
 dotenv.config();
 
 const configSchema = z.object({
-  DATABASE_URL: z.string().min(1, "DATABASE_URL is required"),
+  WORKER_DATABASE_URL: z.string().min(1, "WORKER_DATABASE_URL is required"),
   EXPO_ACCESS_TOKEN: z.string().min(1, "EXPO_ACCESS_TOKEN is required"),
   
   WORKER_POLL_INTERVAL_MS: z.coerce.number().int().positive().default(5000),

@@ -22,7 +22,9 @@ sseRouter.get('/:id/live', sseAuthMiddleware, async (req, res, next) => {
     const channel = buildEventChannel(eventId);
     
     // Enforce Event Read Authorization before subscribing to SSE notifications
+    console.log(`[SSE DEBUG] Checking auth for user ${req.user!.id} and event ${eventId}`);
     await eventsService.checkEventReadAuthorization(req.user!.id, eventId);
+    console.log(`[SSE DEBUG] Auth successful`);
 
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache, no-transform');

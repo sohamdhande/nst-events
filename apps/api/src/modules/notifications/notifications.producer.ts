@@ -89,7 +89,9 @@ export const enqueueNotification = async ({
     }
   }
 
-  // 2. Create Inbox Notification
+  // 2. Create Inbox Notification (Temporarily impersonate target user to satisfy RLS RETURNING clause)
+  const [caller] = await tx.$queryRaw<any[]>`SELECT current_setting('app.user_id', true) as uid`;
+  await tx.$executeRawUnsafe(`SET LOCAL app.user_id = '${userId}'`);
   const notification = await tx.notification.create({
     data: {
       userId,
@@ -99,6 +101,7 @@ export const enqueueNotification = async ({
       metadata: metadata as any,
     },
   });
+  await tx.$executeRawUnsafe(`SET LOCAL app.user_id = '${caller.uid || ''}'`);
 
   // 3. Compute Idempotency Key
   const idempotencyKey = createHash('sha256').update(idempotencyString).digest('hex');

@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert';
 import { prisma } from '../../src/lib/prisma';
+import { adminPrisma } from '../helpers/adminDb';
 import { attendanceService } from '../../src/modules/attendance/attendance.service';
 import { generateQrPayload } from '../../src/modules/attendance/totp.utils';
 import { UnprocessableEntityError, ConflictError } from '../../src/lib/errors';
@@ -8,7 +9,7 @@ import crypto from 'crypto';
 
 test('Attendance Single-Use QR validation', async (t) => {
   // 1. Setup mock users
-  const user1 = await prisma.user.create({
+  const user1 = await adminPrisma.user.create({
     data: {
       email: `user1-${Date.now()}@test.com`,
       googleSub: `sub-u1-${Date.now()}`,
@@ -16,7 +17,7 @@ test('Attendance Single-Use QR validation', async (t) => {
     }
   });
 
-  const user2 = await prisma.user.create({
+  const user2 = await adminPrisma.user.create({
     data: {
       email: `user2-${Date.now()}@test.com`,
       googleSub: `sub-u2-${Date.now()}`,
@@ -25,7 +26,7 @@ test('Attendance Single-Use QR validation', async (t) => {
   });
 
   // 2. Setup event and session
-  const event = await prisma.event.create({
+  const event = await adminPrisma.event.create({
     data: {
       title: 'Test Event QR',
       startTime: new Date(Date.now() - 3600000),
@@ -37,7 +38,7 @@ test('Attendance Single-Use QR validation', async (t) => {
     }
   });
 
-  const session = await prisma.attendanceSession.create({
+  const session = await adminPrisma.attendanceSession.create({
     data: {
       eventId: event.id,
       title: 'Test Session',
@@ -51,7 +52,7 @@ test('Attendance Single-Use QR validation', async (t) => {
   });
 
   // 3. Register both users for the event
-  await prisma.eventRegistration.createMany({
+  await adminPrisma.eventRegistration.createMany({
     data: [
       { eventId: event.id, userId: user1.id },
       { eventId: event.id, userId: user2.id }
@@ -87,6 +88,8 @@ test('Attendance Single-Use QR validation', async (t) => {
   const fulfilled = results.filter(r => r.status === 'fulfilled');
   const rejected = results.filter(r => r.status === 'rejected');
 
+  console.log('REJECTED:', rejected.map(r => r.status === 'rejected' ? r.reason : null));
+
   assert.strictEqual(fulfilled.length, 1, 'Exactly one concurrent request should succeed');
   assert.strictEqual(rejected.length, 1, 'Exactly one concurrent request should fail');
 
@@ -96,11 +99,11 @@ test('Attendance Single-Use QR validation', async (t) => {
   }
 
   // Cleanup
-  await prisma.consumedQrSignature.deleteMany({ where: { sessionId: session.id } });
-  await prisma.leaderboardScore.deleteMany({ where: { userId: { in: [user1.id, user2.id] } } });
-  await prisma.attendanceRecord.deleteMany({ where: { sessionId: session.id } });
-  await prisma.attendanceSession.delete({ where: { id: session.id } });
-  await prisma.eventRegistration.deleteMany({ where: { eventId: event.id } });
-  await prisma.event.delete({ where: { id: event.id } });
-  await prisma.user.deleteMany({ where: { id: { in: [user1.id, user2.id] } } });
+  await adminPrisma.consumedQrSignature.deleteMany({ where: { sessionId: session.id } });
+  await adminPrisma.leaderboardScore.deleteMany({ where: { userId: { in: [user1.id, user2.id] } } });
+  await adminPrisma.attendanceRecord.deleteMany({ where: { sessionId: session.id } });
+  await adminPrisma.attendanceSession.delete({ where: { id: session.id } });
+  await adminPrisma.eventRegistration.deleteMany({ where: { eventId: event.id } });
+  await adminPrisma.event.delete({ where: { id: event.id } });
+  await adminPrisma.user.deleteMany({ where: { id: { in: [user1.id, user2.id] } } });
 });

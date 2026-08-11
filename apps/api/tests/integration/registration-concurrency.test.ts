@@ -1,11 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert';
 import { prisma } from '../../src/lib/prisma';
+import { adminPrisma } from '../helpers/adminDb';
 import { registerEvent } from '../../src/modules/registrations/registrations.service';
 
 test('Registration Concurrency Race', async (t) => {
   // 1. Setup mock event with capacity 3
-  const organizer = await prisma.user.create({
+  const organizer = await adminPrisma.user.create({
     data: {
       email: `org-${Date.now()}@test.com`,
       googleSub: `sub-org-${Date.now()}`,
@@ -13,7 +14,7 @@ test('Registration Concurrency Race', async (t) => {
     }
   });
 
-  const testEvent = await prisma.event.create({
+  const testEvent = await adminPrisma.event.create({
     data: {
       title: 'Concurrency Test Event',
       description: 'Capacity 3',
@@ -32,7 +33,7 @@ test('Registration Concurrency Race', async (t) => {
   // 2. Setup 10 distinct mock users
   const userIds: string[] = [];
   for (let i = 0; i < 10; i++) {
-    const u = await prisma.user.create({
+    const u = await adminPrisma.user.create({
       data: {
         email: `reg-${i}-${Date.now()}@test.com`,
         googleSub: `sub-reg-${i}-${Date.now()}`,
@@ -48,10 +49,10 @@ test('Registration Concurrency Race', async (t) => {
   );
 
   // 4. Verify Database Invariants
-  const dbEvent = await prisma.event.findUnique({ where: { id: testEvent.id } });
+  const dbEvent = await adminPrisma.event.findUnique({ where: { id: testEvent.id } });
   assert.strictEqual(dbEvent?.registrationCount, 3, 'registration_count should not exceed 3');
 
-  const registrations = await prisma.eventRegistration.findMany({
+  const registrations = await adminPrisma.eventRegistration.findMany({
     where: { eventId: testEvent.id }
   });
 
@@ -66,7 +67,7 @@ test('Registration Concurrency Race', async (t) => {
   assert.strictEqual(distinctUsers.size, 10, 'Each user should only have 1 registration record');
 
   // Cleanup
-  await prisma.eventRegistration.deleteMany({ where: { eventId: testEvent.id } });
-  await prisma.event.delete({ where: { id: testEvent.id } });
-  await prisma.user.deleteMany({ where: { id: { in: [...userIds, organizer.id] } } });
+  await adminPrisma.eventRegistration.deleteMany({ where: { eventId: testEvent.id } });
+  await adminPrisma.event.delete({ where: { id: testEvent.id } });
+  await adminPrisma.user.deleteMany({ where: { id: { in: [...userIds, organizer.id] } } });
 });

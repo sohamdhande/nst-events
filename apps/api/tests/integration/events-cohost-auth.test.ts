@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert';
 import { prisma } from '../../src/lib/prisma';
+import { adminPrisma } from '../helpers/adminDb';
 import request from 'supertest';
 import { createApp } from '../../src/app';
 import { signJwt } from '../../src/lib/jwt';
@@ -9,29 +10,29 @@ const app = createApp();
 
 test('Event Creation Co-Host Authorization Bypass', async (t) => {
   // 1. Setup mock users
-  const attacker = await prisma.user.create({
+  const attacker = await adminPrisma.user.create({
     data: { email: `attacker-${Date.now()}@test.com`, googleSub: `sub-att-${Date.now()}`, fullName: 'Attacker User', globalRole: 'STUDENT' }
   });
 
-  const platformAdmin = await prisma.user.create({
+  const platformAdmin = await adminPrisma.user.create({
     data: { email: `admin-${Date.now()}@test.com`, googleSub: `sub-padm-${Date.now()}`, fullName: 'Platform Admin', globalRole: 'PLATFORM_ADMIN' }
   });
 
-  const legitMultiAdmin = await prisma.user.create({
+  const legitMultiAdmin = await adminPrisma.user.create({
     data: { email: `multi-${Date.now()}@test.com`, googleSub: `sub-multi-${Date.now()}`, fullName: 'Multi Admin', globalRole: 'STUDENT' }
   });
 
   // 2. Setup clubs
-  const clubA = await prisma.club.create({ data: { name: `Club A ${Date.now()}`, description: 'A' } });
-  const clubB = await prisma.club.create({ data: { name: `Club B ${Date.now()}`, description: 'B' } });
+  const clubA = await adminPrisma.club.create({ data: { name: `Club A ${Date.now()}`, description: 'A' } });
+  const clubB = await adminPrisma.club.create({ data: { name: `Club B ${Date.now()}`, description: 'B' } });
 
   // 3. Setup Memberships
   // Attacker is CLUB_ADMIN of Club A, but not in Club B
-  await prisma.clubMembership.create({ data: { userId: attacker.id, clubId: clubA.id, role: 'CLUB_ADMIN' } });
+  await adminPrisma.clubMembership.create({ data: { userId: attacker.id, clubId: clubA.id, role: 'CLUB_ADMIN' } });
 
   // Legit Multi Admin is CLUB_ADMIN of Club A and CORE_MEMBER of Club B
-  await prisma.clubMembership.create({ data: { userId: legitMultiAdmin.id, clubId: clubA.id, role: 'CLUB_ADMIN' } });
-  await prisma.clubMembership.create({ data: { userId: legitMultiAdmin.id, clubId: clubB.id, role: 'CORE_MEMBER' } });
+  await adminPrisma.clubMembership.create({ data: { userId: legitMultiAdmin.id, clubId: clubA.id, role: 'CLUB_ADMIN' } });
+  await adminPrisma.clubMembership.create({ data: { userId: legitMultiAdmin.id, clubId: clubB.id, role: 'CORE_MEMBER' } });
 
   const attackerToken = signJwt(attacker.id);
   const platformAdminToken = signJwt(platformAdmin.id);
@@ -59,7 +60,7 @@ test('Event Creation Co-Host Authorization Bypass', async (t) => {
     assert.match(res.body.detail || '', /Insufficient club role for club/);
     
     // Verify it was atomic and didn't partially create
-    const eventCount = await prisma.event.count({ where: { createdBy: attacker.id } });
+    const eventCount = await adminPrisma.event.count({ where: { createdBy: attacker.id } });
     assert.strictEqual(eventCount, 0);
   });
 
@@ -70,7 +71,7 @@ test('Event Creation Co-Host Authorization Bypass', async (t) => {
       .send(createPayload([{ club_id: clubA.id, is_primary: true }]));
 
     assert.strictEqual(res.status, 201);
-    const eventCount = await prisma.event.count({ where: { id: res.body.id } });
+    const eventCount = await adminPrisma.event.count({ where: { id: res.body.id } });
     assert.strictEqual(eventCount, 1);
   });
 
@@ -84,7 +85,7 @@ test('Event Creation Co-Host Authorization Bypass', async (t) => {
       ]));
 
     assert.strictEqual(res.status, 201);
-    const eventCount = await prisma.event.count({ where: { id: res.body.id } });
+    const eventCount = await adminPrisma.event.count({ where: { id: res.body.id } });
     assert.strictEqual(eventCount, 1);
   });
 
@@ -98,14 +99,14 @@ test('Event Creation Co-Host Authorization Bypass', async (t) => {
       ]));
 
     assert.strictEqual(res.status, 201);
-    const eventCount = await prisma.event.count({ where: { id: res.body.id } });
+    const eventCount = await adminPrisma.event.count({ where: { id: res.body.id } });
     assert.strictEqual(eventCount, 1);
   });
 
   // Cleanup
-  await prisma.eventClub.deleteMany({ where: { clubId: { in: [clubA.id, clubB.id] } } });
-  await prisma.event.deleteMany({ where: { createdBy: { in: [attacker.id, platformAdmin.id, legitMultiAdmin.id] } } });
-  await prisma.clubMembership.deleteMany({ where: { userId: { in: [attacker.id, legitMultiAdmin.id] } } });
-  await prisma.club.deleteMany({ where: { id: { in: [clubA.id, clubB.id] } } });
-  await prisma.user.deleteMany({ where: { id: { in: [attacker.id, platformAdmin.id, legitMultiAdmin.id] } } });
+  await adminPrisma.eventClub.deleteMany({ where: { clubId: { in: [clubA.id, clubB.id] } } });
+  await adminPrisma.event.deleteMany({ where: { createdBy: { in: [attacker.id, platformAdmin.id, legitMultiAdmin.id] } } });
+  await adminPrisma.clubMembership.deleteMany({ where: { userId: { in: [attacker.id, legitMultiAdmin.id] } } });
+  await adminPrisma.club.deleteMany({ where: { id: { in: [clubA.id, clubB.id] } } });
+  await adminPrisma.user.deleteMany({ where: { id: { in: [attacker.id, platformAdmin.id, legitMultiAdmin.id] } } });
 });

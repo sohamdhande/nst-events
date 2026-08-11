@@ -22,7 +22,7 @@ spec:
             - containerPort: 3002
           envFrom:
             - secretRef:
-                name: nst-secrets
+                name: nst-worker-secrets
           readinessProbe:
             httpGet:
               path: /health

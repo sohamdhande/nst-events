@@ -10,7 +10,7 @@ import { registry, queueDepth } from './lib/metrics';
 export const prisma: PrismaClient = new PrismaClient({
   datasources: {
     db: {
-      url: config.DATABASE_URL,
+      url: config.WORKER_DATABASE_URL,
     },
   },
 });

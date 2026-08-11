@@ -1,6 +1,7 @@
 import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert';
 import { prisma } from '../../src/lib/prisma';
+import { adminPrisma } from '../helpers/adminDb';
 import { createEvent, listEvents, updateEvent } from '../../src/modules/events/events.service';
 import { Prisma } from '@nst/database';
 
@@ -11,28 +12,28 @@ describe('Events Integration', () => {
 
   before(async () => {
     // Setup test data
-    const user = await prisma.user.create({
+    const user = await adminPrisma.user.create({
       data: { email: 'test_events@example.com', googleSub: 'google_test_events', fullName: 'Test User' },
     });
     userId = user.id;
 
-    const club = await prisma.club.create({
+    const club = await adminPrisma.club.create({
       data: { name: 'Test Events Club' },
     });
     clubId = club.id;
 
-    await prisma.clubMembership.create({
+    await adminPrisma.clubMembership.create({
       data: { userId, clubId, role: 'CLUB_ADMIN' },
     });
   });
 
   after(async () => {
     // Cleanup
-    await prisma.eventClub.deleteMany({ where: { clubId } });
-    await prisma.event.deleteMany({ where: { createdBy: userId } });
-    await prisma.clubMembership.deleteMany({ where: { userId } });
-    await prisma.club.delete({ where: { id: clubId } });
-    await prisma.user.delete({ where: { id: userId } });
+    await adminPrisma.eventClub.deleteMany({ where: { clubId } });
+    await adminPrisma.event.deleteMany({ where: { createdBy: userId } });
+    await adminPrisma.clubMembership.deleteMany({ where: { userId } });
+    await adminPrisma.club.delete({ where: { id: clubId } });
+    await adminPrisma.user.delete({ where: { id: userId } });
   });
 
   it('should create an event and populate search_vector', async () => {
@@ -53,7 +54,7 @@ describe('Events Integration', () => {
     assert.strictEqual(event.title, 'UNIQUE_POSTGRES_ABC123 Workshop');
 
     // Verify search_vector directly using raw SQL
-    const result = await prisma.$queryRaw<{ search_vector: unknown }[]>`
+    const result = await adminPrisma.$queryRaw<{ search_vector: unknown }[]>`
       SELECT search_vector::text FROM events WHERE id = ${eventId}::uuid
     `;
     assert.ok(result[0].search_vector !== null, 'search_vector should not be null');

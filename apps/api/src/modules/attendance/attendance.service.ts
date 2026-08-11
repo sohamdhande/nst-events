@@ -41,32 +41,29 @@ export class AttendanceService {
       app_version: string;
     }
   ) {
-    // 1. Cryptographic Validation (Express level)
-    const session = await prisma.attendanceSession.findUnique({
-      where: { id: payload.session_id },
-      select: { qrSecret: true },
-    });
-
-    if (!session) {
-      throw new UnprocessableEntityError('SESSION_CLOSED');
-    }
-
-    const isValid = verifyQrPayload(payload.session_id, payload.totp_token, session.qrSecret);
-    if (!isValid) {
-      throw new UnprocessableEntityError('QR_EXPIRED');
-    }
-
-    // 2. Database RPC Invocation (with transaction)
     try {
-      // Extract signature for single-use verification
-      const parts = payload.totp_token.split(':');
-      const signature = parts[2];
+      return await withUserContext(userId, async (tx) => {
+        // 1. Cryptographic Validation (Express level)
+        const session = await tx.attendanceSession.findUnique({
+          where: { id: payload.session_id },
+          select: { qrSecret: true },
+        });
 
-      // Prisma $queryRaw cannot return a single typed row out-of-the-box perfectly without mapping,
-      // but we can type-cast the result.
-      const result = await prisma.$transaction(async (tx) => {
+        if (!session) {
+          throw new UnprocessableEntityError('SESSION_CLOSED');
+        }
+
+        const isValid = verifyQrPayload(payload.session_id, payload.totp_token, session.qrSecret);
+        if (!isValid) {
+          throw new UnprocessableEntityError('QR_EXPIRED');
+        }
+
+        // 2. Database RPC Invocation
         // 2a. Guard against QR relay attacks by making the signature single-use.
-        // This MUST be the first operation in the transaction so we fail fast.
+        // This MUST be the first operation after validation so we fail fast.
+        const parts = payload.totp_token.split(':');
+        const signature = parts[2];
+
         try {
           await tx.consumedQrSignature.create({
             data: {
@@ -81,10 +78,7 @@ export class AttendanceService {
           throw e;
         }
 
-        // Set the current user context for RLS
-        await tx.$executeRaw`SELECT set_config('app.user_id', ${userId}, true)`;
-        
-        return await tx.$queryRaw<any[]>`
+        const result = await tx.$queryRaw<any[]>`
           WITH rpc AS (
             SELECT * FROM mark_attendance(
               ${payload.session_id}::uuid,
@@ -101,27 +95,27 @@ export class AttendanceService {
           SELECT rpc.*, current_setting('app.attendance_is_new', true) as is_new
           FROM rpc
         `;
+
+        if (!result || result.length === 0) {
+          throw new Error('Failed to mark attendance');
+        }
+
+        const attendanceRecord = result[0];
+
+        // 3. Derive Service-Level Presentation Fields
+        const flagged = attendanceRecord.audit_metadata?.device_collision_detected === true;
+        const points_awarded = SCORE_RULES.ATTENDANCE;
+
+        const is_new = attendanceRecord.is_new === 'true';
+
+        return {
+          attendance_id: attendanceRecord.id,
+          status: attendanceRecord.status,
+          points_awarded,
+          flagged,
+          is_new,
+        };
       });
-
-      if (!result || result.length === 0) {
-        throw new Error('Failed to mark attendance');
-      }
-
-      const attendanceRecord = result[0];
-
-      // 3. Derive Service-Level Presentation Fields
-      const flagged = attendanceRecord.audit_metadata?.device_collision_detected === true;
-      const points_awarded = SCORE_RULES.ATTENDANCE;
-
-      const is_new = attendanceRecord.is_new === 'true';
-
-      return {
-        attendance_id: attendanceRecord.id,
-        status: attendanceRecord.status,
-        points_awarded,
-        flagged,
-        is_new,
-      };
     } catch (error: any) {
       // Map PostgreSQL RAISE EXCEPTION errors to HTTP 422
       const msg = error.message || '';
