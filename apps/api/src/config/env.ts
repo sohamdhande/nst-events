@@ -12,6 +12,7 @@ const envSchema = z.object({
   GOOGLE_CALLBACK_URL: z.string().url('GOOGLE_CALLBACK_URL must be a valid URL'),
   ALLOWED_EMAIL_DOMAINS: z.string().default('adypu.edu.in,newtonschool.co'),
   ALLOWED_ORIGINS: z.string().default('http://localhost:3000,http://localhost:3001'),
+  ALLOW_INSECURE_COOKIES_LOCAL_DEV: z.coerce.boolean().default(false),
 });
 
 export type Env = z.infer<typeof envSchema>;
