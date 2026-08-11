@@ -1,10 +1,13 @@
 import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert';
 import request from 'supertest';
+import { Client } from 'pg';
+
+process.env.DATABASE_URL = "postgresql://nst_app:new_secure_nst_app_password_987@localhost:5440/nst_events?schema=public";
+
 import { prisma } from '../../src/lib/prisma';
 import { createApp } from '../../src/app';
 import { signJwt } from '../../src/lib/jwt';
-import { withUserContext } from '@nst/database';
 import { randomUUID } from 'crypto';
 
 const app = createApp();
@@ -17,59 +20,45 @@ describe('Phase 16A: SSE Authorization Security', () => {
   let tokenA: string;
   let tokenB: string;
 
+  const pgClient = new Client({ connectionString: "postgresql://postgres:postgres@localhost:5440/nst_events?schema=public" });
+
   before(async () => {
+    await pgClient.connect();
+    
     // Clean up
-    await prisma.$executeRawUnsafe('TRUNCATE TABLE users CASCADE');
+    await pgClient.query('TRUNCATE TABLE users CASCADE');
 
-    // Reset app.user_id to ensure RLS doesn't block setup
-    await prisma.$executeRaw`SELECT set_config('app.user_id', '', false)`;
+    userA = { id: randomUUID() };
+    userB = { id: randomUUID() };
 
-    const userAObj = await prisma.user.create({
-      data: { email: 'user_a_sse@example.com', googleSub: 'google_sub_a_sse', fullName: 'User A SSE' }
-    });
-    userA = { id: userAObj.id };
-
-    const userBObj = await prisma.user.create({
-      data: { email: 'user_b_sse@example.com', googleSub: 'google_sub_b_sse', fullName: 'User B SSE' }
-    });
-    userB = { id: userBObj.id };
+    await pgClient.query(`
+      INSERT INTO users (id, email, google_sub, full_name, global_role) VALUES 
+      ($1, 'user_a_sse@example.com', 'google_sub_a_sse', 'User A SSE', 'STUDENT'),
+      ($2, 'user_b_sse@example.com', 'google_sub_b_sse', 'User B SSE', 'STUDENT')
+    `, [userA.id, userB.id]);
 
     tokenA = signJwt(userA.id);
     tokenB = signJwt(userB.id);
 
+    eventA = { id: randomUUID() };
+    eventB = { id: randomUUID() };
+
     // Event A is PUBLIC, User A can read it
-    eventA = await prisma.event.create({
-      data: {
-        title: 'Event A Public',
-        startTime: new Date(),
-        endTime: new Date(Date.now() + 3600000),
-        eventType: 'WORKSHOP',
-        visibility: 'PUBLIC',
-        registrationType: 'INDIVIDUAL',
-        attendanceType: 'SINGLE',
-        state: 'PUBLISHED',
-        createdBy: userA.id,
-      }
-    });
+    await pgClient.query(`
+      INSERT INTO events (id, title, state, visibility, registration_type, attendance_type, created_by, start_time, end_time, event_type) VALUES 
+      ($1, 'Event A Public', 'PUBLISHED', 'PUBLIC', 'INDIVIDUAL', 'SINGLE', $2, now(), now() + interval '1 hour', 'WORKSHOP')
+    `, [eventA.id, userA.id]);
 
     // Event B is PRIVATE
-    eventB = await prisma.event.create({
-      data: {
-        title: 'Event B Private',
-        startTime: new Date(),
-        endTime: new Date(Date.now() + 3600000),
-        eventType: 'WORKSHOP',
-        visibility: 'PRIVATE',
-        registrationType: 'INDIVIDUAL',
-        attendanceType: 'SINGLE',
-        state: 'PUBLISHED',
-        createdBy: userB.id,
-      }
-    });
+    await pgClient.query(`
+      INSERT INTO events (id, title, state, visibility, registration_type, attendance_type, created_by, start_time, end_time, event_type) VALUES 
+      ($1, 'Event B Private', 'PUBLISHED', 'PRIVATE', 'INDIVIDUAL', 'SINGLE', $2, now(), now() + interval '1 hour', 'WORKSHOP')
+    `, [eventB.id, userB.id]);
   });
 
   after(async () => {
-    await prisma.$executeRawUnsafe('TRUNCATE TABLE users CASCADE');
+    await pgClient.query('TRUNCATE TABLE users CASCADE');
+    await pgClient.end();
     process.exit(0);
   });
 

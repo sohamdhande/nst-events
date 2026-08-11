@@ -68,9 +68,9 @@ describe('Phase 15C: Application-Role RLS Enforcement', () => {
     `, [registrationAId, eventA, studentId]);
 
     await pgClient.query(`
-      INSERT INTO attendance_sessions (id, event_id, title, start_time, end_time, open_at, close_at) VALUES 
-      ($1, $2, 'Session A', now(), now() + interval '1 hour', now(), now() + interval '1 hour'), 
-      ($3, $4, 'Session B', now(), now() + interval '1 hour', now(), now() + interval '1 hour');
+      INSERT INTO attendance_sessions (id, event_id, title, start_time, end_time, open_at, close_at, qr_secret) VALUES 
+      ($1, $2, 'Session A', now(), now() + interval '1 hour', now(), now() + interval '1 hour', 'test_qr_secret_a'), 
+      ($3, $4, 'Session B', now(), now() + interval '1 hour', now(), now() + interval '1 hour', 'test_qr_secret_b');
     `, [sessionA, eventA, sessionB, eventB]);
 
     await pgClient.query(`

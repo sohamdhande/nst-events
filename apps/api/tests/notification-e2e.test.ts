@@ -1,4 +1,10 @@
 // @ts-nocheck
+import { describe, it, before, after } from 'node:test';
+import assert from 'node:assert';
+
+process.env.DATABASE_URL = "postgresql://postgres:postgres@localhost:5440/nst_events?schema=public";
+process.env.EXPO_ACCESS_TOKEN = "dummy_expo_access_token";
+
 import { prisma } from '@nst/database';
 import { Expo } from 'expo-server-sdk';
 import { expo } from '../../worker/src/index';
@@ -90,10 +96,11 @@ async function setupTestData() {
     data: {
       eventId: testEventId,
       title: 'Session 1',
-      startTime: event.startTime,
-      endTime: event.endTime,
-      openAt: new Date(Date.now()),
-      closeAt: event.endTime,
+      startTime: new Date(Date.now() + 86400000),
+      endTime: new Date(Date.now() + 86400000 + 3600000),
+      openAt: new Date(),
+      closeAt: new Date(Date.now() + 86400000 + 3600000),
+      qrSecret: 'dummy_qr_secret_e2e'
     }
   });
   testSessionId = session.id;
