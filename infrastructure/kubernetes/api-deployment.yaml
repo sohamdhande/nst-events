@@ -15,6 +15,7 @@ spec:
       labels:
         app: nst-api
     spec:
+      automountServiceAccountToken: false
       securityContext:
         runAsNonRoot: true
         runAsUser: 1000
@@ -24,6 +25,16 @@ spec:
           image: nst-api:latest
           ports:
             - containerPort: 3001
+          securityContext:
+            allowPrivilegeEscalation: false
+            privileged: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          volumeMounts:
+            - name: tmp-volume
+              mountPath: /tmp
           envFrom:
             - secretRef:
                 name: nst-api-secrets
@@ -46,6 +57,9 @@ spec:
             limits:
               cpu: "500m"
               memory: "512Mi"
+      volumes:
+        - name: tmp-volume
+          emptyDir: {}
 ---
 apiVersion: v1
 kind: Service

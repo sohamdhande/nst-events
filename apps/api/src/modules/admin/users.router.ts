@@ -3,7 +3,7 @@ import { prisma } from '../../lib/prisma';
 import { authenticate } from '../../middleware/authenticate';
 import { requireRole } from '../../middleware/authorize';
 
-export const adminUsersRouter = Router();
+export const adminUsersRouter: Router = Router();
 
 // POST /v1/admin/users/:userId/revoke-sessions
 adminUsersRouter.post(
