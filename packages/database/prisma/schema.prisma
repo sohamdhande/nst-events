@@ -169,15 +169,15 @@ model User {
   avatarUrl   String?    @map("avatar_url")
   globalRole  GlobalRole @default(STUDENT) @map("global_role")
   createdAt   DateTime   @default(now()) @map("created_at") @db.Timestamptz
-  /// Managed by PostgreSQL trigger (TODO: add updated_at trigger in SQL migration)
+  //// TODO: SQL migration (Status: OPEN)
   updatedAt   DateTime?  @updatedAt @map("updated_at") @db.Timestamptz
   /// Soft delete — NULL means active
   deletedAt   DateTime?  @map("deleted_at") @db.Timestamptz
 
-  // TODO: SQL migration — CHECK (email LIKE '%@adypu.edu.in' OR email LIKE '%@newtonschool.co')
-  // TODO: SQL migration — GIN index on search_vector tsvector generated column
-  // TODO: SQL migration — Audit trigger: AFTER INSERT OR UPDATE OR DELETE → audit_logs
-  // TODO: SQL migration — RLS: SELECT own row + public profile fields; UPDATE own row only
+  // // TODO: SQL migration (Status: OPEN)
+  // // Managed by SQL migration (Implemented)
+  // // TODO: SQL migration (Status: OPEN)
+  // // Managed by SQL migration (Implemented)
 
   // Relations
   refreshTokens              RefreshToken[]
@@ -226,9 +226,9 @@ model RefreshToken {
   ipAddress String?   @map("ip_address")
   createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
 
-  // TODO: SQL migration — pg_cron job: purge rows where expires_at < now()
+  // // INTENTIONALLY NOT IMPLEMENTED: Scheduled cleanup deferred.
   //       OR (revoked_at IS NOT NULL AND revoked_at < now() - interval '7 days')
-  // TODO: SQL migration — RLS: No client SELECT policy. Managed by Express auth module only.
+  // // TODO: SQL migration (Status: OPEN)
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -253,10 +253,10 @@ model Club {
   updatedAt   DateTime?  @updatedAt @map("updated_at") @db.Timestamptz
   deletedAt   DateTime?  @map("deleted_at") @db.Timestamptz
 
-  // TODO: SQL migration — GIN index on search_vector tsvector generated column
-  // TODO: SQL migration — Audit trigger: AFTER DELETE → audit_logs
-  // TODO: SQL migration — Soft-delete cascade trigger → club_memberships, event_clubs
-  // TODO: SQL migration — RLS: SELECT all auth; UPDATE Platform Admin only
+  // // Managed by SQL migration (Implemented)
+  // // Managed by SQL migration (Implemented)
+  // // TODO: SQL migration (Status: OPEN)
+  // // Managed by SQL migration (Implemented)
   // Status transitions: ACTIVE → INACTIVE → ACTIVE (Platform Admin)
   //                     ACTIVE/INACTIVE → DISSOLVED (Platform Admin, irreversible)
 
@@ -285,9 +285,9 @@ model ClubMembership {
   updatedAt DateTime? @updatedAt @map("updated_at") @db.Timestamptz
   deletedAt DateTime? @map("deleted_at") @db.Timestamptz
 
-  // TODO: SQL migration — PARTIAL UNIQUE: UNIQUE(club_id, user_id) WHERE deleted_at IS NULL
-  // TODO: SQL migration — Audit trigger: role changes → audit_logs
-  // TODO: SQL migration — RLS: SELECT all auth; INSERT/UPDATE/DELETE Club Admin, Faculty
+  // // TODO: SQL migration (Status: OPEN)
+  // // TODO: SQL migration (Status: OPEN)
+  // // TODO: SQL migration (Status: OPEN)
 
   user User @relation(fields: [userId], references: [id])
   club Club @relation(fields: [clubId], references: [id])
@@ -329,13 +329,13 @@ model Event {
   updatedAt         DateTime?   @updatedAt @map("updated_at") @db.Timestamptz
   deletedAt         DateTime?   @map("deleted_at") @db.Timestamptz
 
-  // TODO: SQL migration — CHECK(start_time < end_time)
-  // TODO: SQL migration — GIN index on metadata
-  // TODO: SQL migration — GIN index on search_vector generated column
+  // // TODO: SQL migration (Status: OPEN)
+  // // TODO: SQL migration (Status: OPEN)
+  // // Managed by SQL migration (Implemented)
   searchVector      Unsupported("tsvector")? @map("search_vector")
-  // TODO: SQL migration — Audit trigger: state transitions → audit_logs
-  // TODO: SQL migration — Soft-delete cascade trigger → event_registrations, attendance_sessions, teams
-  // TODO: SQL migration — RLS: SELECT (PUBLISHED+PUBLIC all; DRAFT/PENDING organizers only)
+  // // TODO: SQL migration (Status: OPEN)
+  // // TODO: SQL migration (Status: OPEN)
+  // // Managed by SQL migration (Implemented)
   //                       INSERT: CLUB_ADMIN, CORE_MEMBER
   //                       UPDATE: CLUB_ADMIN (DRAFT), FACULTY (state transitions)
   //                       DELETE: soft-delete by CLUB_ADMIN
@@ -364,7 +364,7 @@ model EventClub {
   /// True for the club that holds primary admin rights for the event
   isPrimary Boolean @default(false) @map("is_primary")
 
-  // TODO: SQL migration — RLS: SELECT all auth; INSERT/UPDATE/DELETE Club Admin of the club
+  // // TODO: SQL migration (Status: OPEN)
 
   event Event @relation(fields: [eventId], references: [id])
   club  Club  @relation(fields: [clubId], references: [id])
@@ -386,7 +386,7 @@ model Team {
   createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
   deletedAt DateTime? @map("deleted_at") @db.Timestamptz
 
-  // TODO: SQL migration — RLS: SELECT all auth; INSERT authenticated;
+  // // Managed by SQL migration (Implemented)
   //                       UPDATE/DELETE team leader only
 
   event              Event               @relation(fields: [eventId], references: [id])
@@ -415,10 +415,10 @@ model EventRegistration {
   registeredAt        DateTime           @default(now()) @map("registered_at") @db.Timestamptz
   deletedAt           DateTime?          @map("deleted_at") @db.Timestamptz
 
-  // TODO: SQL migration — PARTIAL UNIQUE: UNIQUE(event_id, user_id) WHERE deleted_at IS NULL
-  // TODO: SQL migration — COMPOSITE FK: FOREIGN KEY (team_id, event_id) REFERENCES teams(id, event_id)
+  // // TODO: SQL migration (Status: OPEN)
+  // // Managed by SQL migration (Implemented)
   //                       Prevents cross-event team registration.
-  // TODO: SQL migration — RLS: SELECT self + organizers; INSERT self (via RPC);
+  // // TODO: SQL migration (Status: OPEN)
   //                       DELETE self; UPDATE(participation_role) Club Admin, Faculty only
 
   event Event  @relation(fields: [eventId], references: [id])
@@ -455,9 +455,9 @@ model AttendanceSession {
   updatedAt      DateTime? @updatedAt @map("updated_at") @db.Timestamptz
   deletedAt      DateTime? @map("deleted_at") @db.Timestamptz
 
-  // TODO: SQL migration — CHECK(start_time < end_time)
-  // TODO: SQL migration — CHECK(open_at < close_at)
-  // TODO: SQL migration — RLS: Same read policies as parent event; INSERT/UPDATE organizers
+  // // TODO: SQL migration (Status: OPEN)
+  // // TODO: SQL migration (Status: OPEN)
+  // // TODO: SQL migration (Status: OPEN)
 
   event             Event              @relation(fields: [eventId], references: [id])
   creator           User               @relation("SessionCreatedBy", fields: [createdBy], references: [id])
@@ -487,8 +487,8 @@ model AttendanceRecord {
   /// Fields: device_id, device_os, gps_accuracy, mock_location_detected, app_version, flagged, flag_reason
   auditMetadata Json              @default("{}") @map("audit_metadata") @db.JsonB
 
-  // TODO: SQL migration — Audit trigger: AFTER INSERT OR UPDATE OR DELETE → audit_logs
-  // TODO: SQL migration — RLS: SELECT self + organizers; INSERT via RPC only;
+  // // TODO: SQL migration (Status: OPEN)
+  // // TODO: SQL migration (Status: OPEN)
   //                       UPDATE/DELETE Platform Admin only
 
   session       AttendanceSession @relation(fields: [sessionId], references: [id])
@@ -521,8 +521,8 @@ model AttendanceDispute {
   reviewNotes             String?       @map("review_notes")
   createdAt               DateTime      @default(now()) @map("created_at") @db.Timestamptz
 
-  // TODO: SQL migration — RLS: SELECT self + organizers; INSERT self; UPDATE Club Admin, Faculty
-  // TODO: RPC: resolve_attendance_dispute — sets attendance_records.status = EXCUSED on APPROVED
+  // // TODO: SQL migration (Status: OPEN)
+  // // Managed by SQL migration (Implemented)
 
   attendanceRecord AttendanceRecord? @relation(fields: [attendanceRecordId], references: [id])
   session          AttendanceSession @relation(fields: [sessionId], references: [id])
@@ -543,7 +543,7 @@ model ConsumedQrSignature {
   signature  String   @db.Text
   consumedAt DateTime @default(now()) @map("consumed_at") @db.Timestamptz
 
-  // TODO: Periodic cleanup job (e.g., pg_cron) can delete rows older than 24 hours,
+  // // INTENTIONALLY NOT IMPLEMENTED: Scheduled cleanup deferred.
   // since QR signatures are only valid for ~45 seconds.
 
   session AttendanceSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
@@ -565,7 +565,7 @@ model EventResult {
   createdBy   String            @map("created_by") @db.Uuid
   createdAt   DateTime          @default(now()) @map("created_at") @db.Timestamptz
 
-  // TODO: SQL migration — RLS: SELECT all auth; INSERT/UPDATE Club Admin, Faculty; DELETE Platform Admin
+  // // TODO: SQL migration (Status: OPEN)
 
   event     Event @relation(fields: [eventId], references: [id])
   user      User  @relation("EventResultUser", fields: [userId], references: [id])
@@ -594,8 +594,8 @@ model Notification {
   deliveryError   String?   @map("delivery_error")
   createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz
 
-  // TODO: SQL migration — pgmq queue: SELECT pgmq.create('notifications')
-  // TODO: SQL migration — RLS: SELECT self; UPDATE(read_at) self; INSERT system/worker only
+  // // SUPERSEDED: Replaced by native notification_jobs.
+  // // Managed by SQL migration (Implemented)
 
   user User @relation(fields: [userId], references: [id])
 
@@ -617,7 +617,7 @@ model NotificationPreference {
   clubAnnouncements   Boolean @default(true) @map("club_announcements")
   attendanceAlerts    Boolean @default(true) @map("attendance_alerts")
 
-  // TODO: SQL migration — RLS: SELECT/UPDATE self only
+  // // TODO: SQL migration (Status: OPEN)
 
   user User @relation(fields: [userId], references: [id])
 
@@ -644,8 +644,8 @@ model PushToken {
   createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
   updatedAt  DateTime? @updatedAt @map("updated_at") @db.Timestamptz
 
-  // TODO: SQL migration — pg_cron job: hard-delete rows where last_seen_at < now() - interval '90 days'
-  // TODO: SQL migration — RLS: No client SELECT policy. Express upserts; nst-worker hard-deletes on DeviceNotRegistered.
+  // // INTENTIONALLY NOT IMPLEMENTED: Scheduled cleanup deferred.
+  // // TODO: SQL migration (Status: OPEN)
   // UPSERT on conflict(device_id): UPDATE expo_token, user_id, last_seen_at
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -674,8 +674,8 @@ model NotificationJob {
   createdAt       DateTime              @default(now()) @map("created_at") @db.Timestamptz
   updatedAt       DateTime              @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
 
-  // TODO: SQL migration - Enqueue logic: ON CONFLICT (idempotency_key) DO NOTHING
-  // TODO: SQL migration - RLS: None (Client/Express). worker role only. Clients can INSERT via RPC.
+  // // TODO: SQL migration (Status: OPEN)
+  // // TODO: SQL migration (Status: OPEN)
   // NO FOREIGN KEYS (intentionally decoupled for performance)
 
   @@map("notification_jobs")
@@ -695,7 +695,7 @@ model Announcement {
   createdBy String   @map("created_by") @db.Uuid
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
 
-  // TODO: SQL migration — RLS: SELECT all auth; INSERT Club Admin (club-scoped), Platform Admin (global)
+  // // Managed by SQL migration (Implemented)
 
   club    Club? @relation(fields: [clubId], references: [id])
   creator User  @relation(fields: [createdBy], references: [id])
@@ -721,9 +721,9 @@ model LeadershipHandoverRequest {
   reviewNotes     String?       @map("review_notes")
   createdAt       DateTime      @default(now()) @map("created_at") @db.Timestamptz
 
-  // TODO: SQL migration — PARTIAL UNIQUE INDEX on club_id WHERE status = 'PENDING'
+  // // TODO: SQL migration (Status: OPEN)
   //                       to ensure only one pending request per club at a time
-  // TODO: SQL migration — RLS: SELECT participants + Faculty + Platform Admin;
+  // // TODO: SQL migration (Status: OPEN)
   //                       UPDATE Faculty Mentor (or Faculty Admin fallback), Platform Admin
 
   club          Club  @relation(fields: [clubId], references: [id])
@@ -751,9 +751,9 @@ model LeaderboardScore {
   sourceId  String   @map("source_id") @db.Uuid
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
 
-  // TODO: SQL migration — BRIN index on created_at for analytical roll-ups
-  // TODO: SQL migration — RLS: SELECT all auth; INSERT Express backend only (via RPCs)
-  // TODO: Materialized views club_leaderboard_mv and student_leaderboard_mv (SQL migration)
+  // // Managed by SQL migration (Implemented)
+  // // TODO: SQL migration (Status: OPEN)
+  // // Managed by SQL migration (Implemented)
   //       Refreshed via pg_cron every 5 minutes. Platform Admin may trigger manual refresh.
 
   user User  @relation(fields: [userId], references: [id])
@@ -783,9 +783,9 @@ model AuditLog {
   ipAddress     String?   @map("ip_address")
   createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz
 
-  // TODO: SQL migration — BRIN index on created_at for time-range queries
-  // TODO: SQL migration — Triggers: SECURITY DEFINER INSERT (bypasses RLS on audit_logs)
-  // TODO: SQL migration — RLS: SELECT Platform Admin, Faculty Admin only;
+  // // Managed by SQL migration (Implemented)
+  // // TODO: SQL migration (Status: OPEN)
+  // // TODO: SQL migration (Status: OPEN)
   //                       INSERT triggers only; UPDATE/DELETE denied to all
   // Retention: Indefinite in V1
 
