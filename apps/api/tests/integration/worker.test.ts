@@ -6,7 +6,6 @@ import crypto from 'crypto';
 
 // Set mock env vars before importing worker which parses them on load
 process.env.EXPO_ACCESS_TOKEN = 'mock_expo_token_for_tests';
-process.env.WORKER_DATABASE_URL = 'postgresql://nst_worker:worker_local_secret@localhost:5440/nst_events?schema=public';
 
 import { processBatch } from '../../../worker/src/worker';
 import { expo } from '../../../worker/src/index';

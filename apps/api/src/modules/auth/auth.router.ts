@@ -18,13 +18,6 @@ import { rateLimit } from 'express-rate-limit';
 const callbackLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 10,
-  keyGenerator: (req) => {
-    const ip = req.ip || req.socket.remoteAddress || 'unknown';
-    // Use state param as an additional identifier to mitigate rotating-IP attacks,
-    // though a dedicated attacker could just rotate the state param too.
-    const state = req.query.state ? String(req.query.state) : 'no_state';
-    return `${ip}_${state}`;
-  },
   message: { error: 'Too many authentication attempts, please try again later.' },
   standardHeaders: true,
   legacyHeaders: false,

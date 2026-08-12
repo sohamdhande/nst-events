@@ -42,8 +42,8 @@ describe('Phase 15C: Application-Role RLS Enforcement', () => {
     `, [adminId, studentId]);
 
     await pgClient.query(`
-      INSERT INTO clubs (id, name, status) VALUES ($1, 'Test Club', 'ACTIVE');
-    `, [clubId]);
+      INSERT INTO clubs (id, name, status) VALUES ($1, $2, 'ACTIVE');
+    `, [clubId, `Test Club ${clubId}`]);
 
     await pgClient.query(`
       INSERT INTO club_memberships (id, club_id, user_id, role) VALUES 
