@@ -81,4 +81,17 @@ router.get('/users/me/registrations',
   }
 );
 
+router.get('/events/:id/my-registration',
+  authenticate,
+  validate(ParamEventIdSchema),
+  async (req, res, next) => {
+    try {
+      const result = await registrationsService.getMyRegistrationStatus(req.user!.id, req.params.id);
+      res.json(result);
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
 export const registrationsRouter: Router = router;

@@ -83,3 +83,17 @@ export const getMyRegistrations = async (userId: string): Promise<any[]> => {
     return registrations;
   });
 };
+
+export const getMyRegistrationStatus = async (userId: string, eventId: string) => {
+  return withUserContext(userId, async (tx) => {
+    const reg = await tx.eventRegistration.findFirst({
+      where: { eventId, userId, deletedAt: null },
+      select: { registrationStatus: true }
+    });
+
+    if (!reg) {
+      return { status: 'NOT_REGISTERED' };
+    }
+    return { status: reg.registrationStatus };
+  });
+};
