@@ -5,6 +5,23 @@ All notable changes to the **NST Events** platform will be documented in this fi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Security
+- Hardened PostgreSQL `SECURITY DEFINER` boundaries (stripped `search_path`, dropped `TEMP` privileges).
+- Improved `global_role` protection via database triggers.
+- Strengthened Worker database isolation (restricted to `nst_worker`).
+- Hardened QR validation with cryptographic replay protection.
+- Hardened authentication rate limiting.
+
+### Infrastructure
+- Hardened Kubernetes security contexts (unprivileged, read-only root).
+- Restricted PostgreSQL network ingress via `postgres-network-policy`.
+
+### Testing
+- Expanded security regression coverage for RLS under concurrent loads.
+- Isolated Phase 19 experimental logic to prevent pipeline pollution.
+
 ## [1.0.0] - 2026-08-07
 
 ### Changed

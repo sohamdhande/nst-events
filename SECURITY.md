@@ -26,3 +26,10 @@ The NST Events team takes security issues seriously. If you discover a security 
 - **Patch & Deployment**: High/Critical vulnerabilities within 7 days; Medium/Low within 30 days.
 
 Thank you for helping keep NST Events secure!
+
+## Database Authorization
+
+NST-Events enforces strict least-privilege database roles:
+- Application API executes as `nst_app`.
+- Background processing executes as `nst_worker`.
+- PostgreSQL Row-Level Security (RLS) is utilized as a defense-in-depth boundary against RBAC bypasses.
