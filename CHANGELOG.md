@@ -14,6 +14,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Hardened QR validation with cryptographic replay protection.
 - Hardened authentication rate limiting.
 
+### Tech Debt
+- **`cancel_registration` RPC Bug (Phase 19D)**: The legacy PostgreSQL RPC for `cancel_registration` incorrectly updates the registration state to `CANCELLED` before evaluating whether the previous state was `REGISTERED`, resulting in waitlisted users never being promoted. This must be addressed in a future backend migration phase.
+
 ### Infrastructure
 - Hardened Kubernetes security contexts (unprivileged, read-only root).
 - Restricted PostgreSQL network ingress via `postgres-network-policy`.
