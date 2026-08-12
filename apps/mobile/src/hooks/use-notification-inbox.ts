@@ -28,7 +28,7 @@ export function useNotificationInbox() {
     queryKey: ['notifications'],
     queryFn: async ({ pageParam = undefined }) => {
       const cursor = pageParam ? `?cursor=${pageParam}&limit=20` : '?limit=20';
-      return apiClient(`/notifications${cursor}`);
+      return apiClient(`/v1/notifications${cursor}`);
     },
     initialPageParam: undefined,
     getNextPageParam: (lastPage: any) => {
@@ -42,7 +42,7 @@ export function useNotificationInbox() {
   // 2. Fetch Unread Count (Lightweight query)
   const { data: unreadData } = useInfiniteQuery({
     queryKey: ['notifications', 'unread'],
-    queryFn: async () => apiClient(`/notifications?filter_read=false&limit=1`),
+    queryFn: async () => apiClient(`/v1/notifications?filter_read=false&limit=1`),
     initialPageParam: undefined,
     getNextPageParam: () => undefined,
   });
@@ -52,7 +52,7 @@ export function useNotificationInbox() {
   // 3. Mark Single Notification as Read
   const { mutate: markAsRead } = useMutation({
     mutationFn: async (id: string) => {
-      return apiClient(`/notifications/${id}/read`, { method: 'PATCH' });
+      return apiClient(`/v1/notifications/${id}/read`, { method: 'PATCH' });
     },
     onSuccess: () => {
       // Invalidate queries to trigger re-fetch (No optimistic updates as mandated)
@@ -63,7 +63,7 @@ export function useNotificationInbox() {
   // 4. Mark All Notifications as Read
   const { mutate: markAllAsRead, isPending: isMarkingAllRead } = useMutation({
     mutationFn: async () => {
-      return apiClient(`/notifications/read-all`, { method: 'PATCH' });
+      return apiClient(`/v1/notifications/read-all`, { method: 'PATCH' });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['notifications'] });

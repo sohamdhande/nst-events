@@ -21,7 +21,7 @@ export default function TeamsScreen() {
 
   const { data: teams, isLoading } = useQuery({
     queryKey: ['teams', id],
-    queryFn: () => apiClient(`/events/${id}/teams`),
+    queryFn: () => apiClient(`/v1/events/${id}/teams`),
   });
 
   const { createTeam, joinTeam, leaveTeam, isCreating, isJoining, isLeaving } = useTeams(id as string);

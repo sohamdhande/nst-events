@@ -12,19 +12,19 @@ export default function EventScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { isOnline } = useNetworkStatus();
-  
+
   // Realtime synchronization hook automatically patches cache
   useEventLive(id as string);
 
   // Queries (Single source of truth)
   const { data: event, isLoading: isEventLoading } = useQuery({
     queryKey: ['events', id],
-    queryFn: () => apiClient(`/events/${id}`),
+    queryFn: () => apiClient(`/v1/events/${id}`),
   });
 
   const { data: registration, isLoading: isRegLoading } = useQuery({
     queryKey: ['events', id, 'registration'],
-    queryFn: () => apiClient(`/events/${id}/register`), 
+    queryFn: () => apiClient(`/v1/events/${id}/my-registration`),
   });
 
   // Mutations
@@ -47,16 +47,16 @@ export default function EventScreen() {
       ) : (
         <View className="p-4">
           <Card>
-            <Text className="text-2xl font-bold mb-2" accessibilityRole="header">{event?.name || 'Event Details'}</Text>
+            <Text className="text-2xl font-bold mb-2" accessibilityRole="header">{event?.title || 'Event Details'}</Text>
             <Text className="text-gray-600 mb-4">{event?.description || 'No description available.'}</Text>
-            
+
             <View className="flex-row justify-between mb-2">
               <Text className="font-bold">Capacity:</Text>
               <Text accessibilityLabel={`${event?.registration_count || 0} out of ${event?.max_capacity || 'unlimited'} registered`}>
                 {event?.registration_count || 0} / {event?.max_capacity || '∞'}
               </Text>
             </View>
-            
+
             <Divider />
 
             {registration?.status === 'REGISTERED' || registration?.status === 'WAITLISTED' ? (
@@ -64,22 +64,22 @@ export default function EventScreen() {
                 <Text className="text-lg mb-4 text-center font-bold" accessibilityRole="text">
                   Status: {registration.status}
                 </Text>
-                <Button 
-                  title="Cancel Registration" 
-                  variant="danger" 
+                <Button
+                  title="Cancel Registration"
+                  variant="danger"
                   accessibilityLabel="Cancel Registration"
-                  onPress={() => cancel()} 
-                  loading={isActionLoading} 
+                  onPress={() => cancel()}
+                  loading={isActionLoading}
                   disabled={!isOnline}
                 />
-                
+
                 {registration.status === 'REGISTERED' && event?.registration_type === 'TEAM' && (
                   <View className="mt-4">
-                    <Button 
-                      title="Manage Team" 
+                    <Button
+                      title="Manage Team"
                       variant="secondary"
                       accessibilityLabel="Manage Team"
-                      onPress={() => router.push(`/events/${id}/teams`)} 
+                      onPress={() => router.push(`/events/${id}/teams`)}
                     />
                   </View>
                 )}
@@ -87,18 +87,18 @@ export default function EventScreen() {
             ) : (
               <View>
                 {event?.state === 'CLOSED' || isFull ? (
-                  <Button 
-                    title={event?.state === 'CLOSED' ? 'Event Closed' : 'Event Full'} 
-                    disabled={true} 
+                  <Button
+                    title={event?.state === 'CLOSED' ? 'Event Closed' : 'Event Full'}
+                    disabled={true}
                     accessibilityLabel={event?.state === 'CLOSED' ? 'Event Closed' : 'Event Full'}
                   />
                 ) : (
-                  <Button 
-                    title="Register" 
-                    variant="primary" 
+                  <Button
+                    title="Register"
+                    variant="primary"
                     accessibilityLabel="Register for Event"
-                    onPress={() => register()} 
-                    loading={isActionLoading} 
+                    onPress={() => register()}
+                    loading={isActionLoading}
                     disabled={!isOnline || event?.state !== 'PUBLISHED'}
                   />
                 )}

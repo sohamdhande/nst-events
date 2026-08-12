@@ -11,7 +11,7 @@ export const useRegistration = (eventId: string) => {
   const register = useMutation({
     mutationFn: async () => {
       if (!isOnline) throw { status: 0, message: 'Offline' };
-      return apiClient(`/events/${eventId}/register`, { method: 'POST' });
+      return apiClient(`/v1/events/${eventId}/register`, { method: 'POST' });
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['events', eventId] });
@@ -37,7 +37,7 @@ export const useRegistration = (eventId: string) => {
   const cancel = useMutation({
     mutationFn: async () => {
       if (!isOnline) throw { status: 0, message: 'Offline' };
-      return apiClient(`/events/${eventId}/register`, { method: 'DELETE' });
+      return apiClient(`/v1/events/${eventId}/register`, { method: 'DELETE' });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['events', eventId] });

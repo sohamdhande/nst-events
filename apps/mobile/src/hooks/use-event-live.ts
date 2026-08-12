@@ -23,8 +23,8 @@ export const useEventLive = (eventId: string) => {
       return;
     }
 
-    const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3001/v1';
-    const sseUrl = `${API_BASE_URL}/events/${eventId}/live?token=${token}`;
+    const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3001';
+    const sseUrl = `${API_BASE_URL}/v1/events/${eventId}/live?token=${token}`;
 
     let manager = sseManagers.get(eventId);
     if (!manager) {

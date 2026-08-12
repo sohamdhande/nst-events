@@ -10,10 +10,10 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@nst/shared": "workspace:*",
     "next": "16.2.12",
     "react": "19.2.4",
-    "react-dom": "19.2.4",
-    "@nst/shared": "workspace:*"
+    "react-dom": "19.2.4"
   },
   "devDependencies": {
     "@nst/config": "workspace:*",
@@ -24,6 +24,8 @@
     "eslint": "9.39.5",
     "eslint-config-next": "16.2.12",
     "tailwindcss": "4.3.3",
-    "typescript": "5.9.3"
+    "ts-node": "10.9.2",
+    "typescript": "5.9.3",
+    "vitest": "^4.1.10"
   }
 }

@@ -1,7 +1,6 @@
 import { useAuthStore } from '../store/auth';
 
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3001/v1';
-
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3001';
 export const apiClient = async (endpoint: string, options: RequestInit = {}) => {
   const token = useAuthStore.getState().accessToken;
   const headers: Record<string, string> = {

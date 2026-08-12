@@ -11,9 +11,9 @@ export const useTeams = (eventId: string) => {
   const createTeam = useMutation({
     mutationFn: async (name: string) => {
       if (!isOnline) throw { status: 0, message: 'Offline' };
-      return apiClient(`/events/${eventId}/teams`, { 
-        method: 'POST', 
-        body: JSON.stringify({ name }) 
+      return apiClient(`/v1/events/${eventId}/teams`, {
+        method: 'POST',
+        body: JSON.stringify({ name })
       });
     },
     onSuccess: () => {
@@ -29,7 +29,7 @@ export const useTeams = (eventId: string) => {
   const joinTeam = useMutation({
     mutationFn: async (teamId: string) => {
       if (!isOnline) throw { status: 0, message: 'Offline' };
-      return apiClient(`/teams/${teamId}/join`, { method: 'POST' });
+      return apiClient(`/v1/teams/${teamId}/join`, { method: 'POST' });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['events', eventId] });
@@ -44,7 +44,7 @@ export const useTeams = (eventId: string) => {
   const leaveTeam = useMutation({
     mutationFn: async (teamId: string) => {
       if (!isOnline) throw { status: 0, message: 'Offline' };
-      return apiClient(`/teams/${teamId}/leave`, { method: 'DELETE' });
+      return apiClient(`/v1/teams/${teamId}/leave`, { method: 'DELETE' });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['events', eventId] });
