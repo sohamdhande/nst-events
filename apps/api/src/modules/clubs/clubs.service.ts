@@ -68,6 +68,14 @@ export const getClubs = async (
           ? { name: options.order }
           : { createdAt: options.order },
       where: { deletedAt: null },
+      include: {
+        _count: {
+          select: {
+            eventClubs: true,
+            memberships: { where: { deletedAt: null } },
+          },
+        },
+      },
     });
 
     let next_cursor = undefined;
@@ -77,7 +85,17 @@ export const getClubs = async (
       next_cursor = nextItem!.id;
     }
 
-    return { data: items, pagination: { next_cursor, has_more } };
+    const data = items.map((club) => ({
+      id: club.id,
+      name: club.name,
+      description: club.description,
+      status: club.status,
+      banner_url: club.bannerUrl,
+      event_count: club._count.eventClubs,
+      member_count: club._count.memberships,
+    }));
+
+    return { data, pagination: { next_cursor, has_more } };
   });
 };
 
@@ -245,22 +263,48 @@ export const searchClubs = async (
       if (isNaN(offset)) offset = 0;
     }
 
-    const items = await tx.$queryRaw<{ id: string; _type: string; name: string }[]>`
-      SELECT id, 'CLUB' as "_type", name FROM clubs
+    const fts = await tx.$queryRaw<{ id: string }[]>`
+      SELECT id FROM clubs
       WHERE deleted_at IS NULL
       AND to_tsvector('english', name || ' ' || COALESCE(description, '')) @@ plainto_tsquery('english', ${query})
       ORDER BY ts_rank(to_tsvector('english', name || ' ' || COALESCE(description, '')), plainto_tsquery('english', ${query})) DESC, id ASC
       LIMIT ${options.limit + 1} OFFSET ${offset}
     `;
 
+    const items = await tx.club.findMany({
+      where: { id: { in: fts.map((f) => f.id) } },
+      include: {
+        _count: {
+          select: {
+            eventClubs: true,
+            memberships: { where: { deletedAt: null } },
+          },
+        },
+      },
+    });
+
+    // Re-order based on FTS output
+    const itemsMap = new Map(items.map((i) => [i.id, i]));
+    const sortedItems = fts.map((f) => itemsMap.get(f.id)).filter(Boolean) as typeof items;
+
     let next_cursor = undefined;
-    const has_more = items.length > options.limit;
+    const has_more = sortedItems.length > options.limit;
     if (has_more) {
-      items.pop();
+      sortedItems.pop();
       next_cursor = (offset + options.limit).toString();
     }
 
-    return { data: items, pagination: { next_cursor, has_more } };
+    const data = sortedItems.map((club) => ({
+      id: club.id,
+      name: club.name,
+      description: club.description,
+      status: club.status,
+      banner_url: club.bannerUrl,
+      event_count: club._count.eventClubs,
+      member_count: club._count.memberships,
+    }));
+
+    return { data, pagination: { next_cursor, has_more } };
   });
 };
 
