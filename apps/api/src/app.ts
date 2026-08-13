@@ -14,8 +14,10 @@ import { leaderboardRouter, adminLeaderboardRouter } from './modules/leaderboard
 import { notificationsRouter } from './modules/notifications/notifications.router';
 import { adminQueueRouter } from './modules/admin/queue.router';
 import { adminUsersRouter } from './modules/admin/users.router';
+import { adminAuditLogsRouter } from './modules/admin/audit-logs.router';
 import { teamsRouter } from './modules/teams/teams.router';
 import { registrationsRouter } from './modules/registrations/registrations.router';
+import { dashboardRouter } from './modules/dashboard/dashboard.router';
 import { errorHandler } from './middleware/error-handler';
 import { requestIdMiddleware } from './middleware/request-id';
 import { requestLogger } from './middleware/request-logger';
@@ -25,7 +27,7 @@ import { pgListener } from './modules/sse/pg-listener';
 
 export function createApp(): Express {
   const app = express();
-  
+
   // SECURITY [TRUST PROXY]: Trust internal K3s cluster overlay networks (cloudflared tunnels, NGINX ingress).
   // This explicitly prevents IP spoofing in our multi-hop Cloudflare -> K3s topology.
   // Express will strip these trusted internal IPs from X-Forwarded-For right-to-left
@@ -33,7 +35,7 @@ export function createApp(): Express {
   // Do NOT simplify this to `trust proxy: 1` or `trust proxy: true`, as that will
   // either rate-limit Cloudflare's own IPs or allow attackers to spoof client IPs.
   app.set('trust proxy', ['loopback', 'linklocal', 'uniquelocal', '10.0.0.0/8', '172.16.0.0/12', '192.168.0.0/16']);
-  
+
   app.use(helmet());
   app.use(
     cors({
@@ -71,11 +73,13 @@ export function createApp(): Express {
   app.use('/v1/events', sseRouter); // Mounted precisely at GET /events/:id/live
   app.use('/v1/events', eventsRouter);
   app.use('/v1/teams', teamsRouter);
+  app.use('/v1/dashboard', dashboardRouter);
   app.use('/v1', registrationsRouter);
   app.use('/v1', attendanceRouter);
   app.use('/v1/leaderboard', leaderboardRouter);
   app.use('/v1/admin/leaderboard', adminLeaderboardRouter);
   app.use('/v1/admin/users', adminUsersRouter);
+  app.use('/v1/admin/audit-logs', adminAuditLogsRouter);
   app.use('/v1/admin', adminQueueRouter);
   app.use('/v1/notifications', notificationsRouter);
 

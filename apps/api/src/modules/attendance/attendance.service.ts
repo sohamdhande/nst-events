@@ -13,7 +13,7 @@ export class AttendanceService {
       where: { id: sessionId },
       select: { qrSecret: true },
     });
-    
+
     if (!session) {
       throw new Error('Session not found');
     }
@@ -131,7 +131,7 @@ export class AttendanceService {
       if (msg.includes('OUTSIDE_GEOFENCE')) throw new UnprocessableEntityError('OUTSIDE_GEOFENCE');
       if (msg.includes('NOT_REGISTERED')) throw new UnprocessableEntityError('NOT_REGISTERED');
       if (msg.includes('UNAUTHORIZED')) throw new UnprocessableEntityError('UNAUTHORIZED');
-      
+
       throw error;
     }
   }
@@ -157,7 +157,7 @@ export class AttendanceService {
     const result = await prisma.$transaction(async (tx) => {
       await tx.$executeRaw`SELECT set_config('app.user_id', ${userId}, true)`;
       const recordsJson = JSON.stringify(payload.records);
-      
+
       return await tx.$queryRaw<any[]>`
         SELECT sync_offline_attendance(${recordsJson}::jsonb) as result
       `;
@@ -246,8 +246,8 @@ export class AttendanceService {
         await tx.$executeRaw`SELECT set_config('app.user_id', ${userId}, true)`;
         return await tx.$queryRaw<any[]>`
           SELECT * FROM submit_attendance_dispute(
-            ${payload.session_id}::uuid, 
-            ${payload.reason}, 
+            ${payload.session_id}::uuid,
+            ${payload.reason},
             ${payload.evidence_urls ? payload.evidence_urls : null}::text[]
           )
         `;
@@ -290,12 +290,12 @@ export class AttendanceService {
         await tx.$executeRaw`SELECT set_config('app.user_id', ${userId}, true)`;
         const rpcResult = await tx.$queryRaw<any[]>`
           SELECT * FROM resolve_attendance_dispute(
-            ${disputeId}::uuid, 
-            ${payload.resolution}, 
+            ${disputeId}::uuid,
+            ${payload.resolution},
             ${payload.review_notes || null}
           )
         `;
-        
+
         if (!rpcResult || rpcResult.length === 0) throw new Error('Failed to resolve dispute');
 
         const dispute = await tx.attendanceDispute.findUnique({
@@ -331,6 +331,43 @@ export class AttendanceService {
       if (msg.includes('INVALID_RESOLUTION')) throw new UnprocessableEntityError('INVALID_RESOLUTION');
       throw error;
     }
+  }
+  async exportEventAttendance(userId: string, eventId: string): Promise<string> {
+    return withUserContext(userId, async (tx) => {
+      const records = await tx.attendanceRecord.findMany({
+        where: {
+          session: { eventId }
+        },
+        include: {
+          user: { select: { fullName: true, email: true } },
+          session: { select: { title: true } }
+        },
+        orderBy: { markedAt: 'asc' }
+      });
+
+      // Prevent CSV Injection (Spreadsheet formula injection)
+      const sanitizeCsv = (val: string) => {
+        const str = val.replace(/"/g, '""');
+        return /^[=+\-@]/.test(str) ? "'" + str : str;
+      };
+
+      // Create CSV header
+      let csv = 'user_name,user_email,session_title,status,method,marked_at\n';
+
+      // Append rows
+      for (const record of records) {
+        const name = `"${sanitizeCsv(record.user.fullName)}"`;
+        const email = `"${sanitizeCsv(record.user.email)}"`;
+        const sessionTitle = `"${sanitizeCsv(record.session.title)}"`;
+        const status = record.status;
+        const method = record.method;
+        const markedAt = record.markedAt.toISOString();
+
+        csv += `${name},${email},${sessionTitle},${status},${method},${markedAt}\n`;
+      }
+
+      return csv;
+    });
   }
 }
 

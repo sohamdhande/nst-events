@@ -28,3 +28,10 @@ export const ListRegistrationsQuerySchema = z.object({
     filter_status: z.string().optional(),
   }).passthrough(),
 });
+
+export const ListTeamsQuerySchema = z.object({
+  query: z.object({
+    cursor: z.string().uuid().optional(),
+    limit: z.coerce.number().min(1).max(100).default(20),
+  }).passthrough(),
+});

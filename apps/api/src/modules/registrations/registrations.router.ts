@@ -4,7 +4,7 @@ import { requireEventRole } from '../../middleware/authorize';
 import { validate } from '../../middleware/validate';
 import * as registrationsService from './registrations.service';
 import * as teamsService from '../teams/teams.service';
-import { ParamEventIdSchema, CreateTeamSchema, ListRegistrationsQuerySchema } from './registrations.schema';
+import { ParamEventIdSchema, CreateTeamSchema, ListRegistrationsQuerySchema, ListTeamsQuerySchema } from './registrations.schema';
 
 const router = Router();
 
@@ -41,6 +41,21 @@ router.post('/events/:id/teams',
     try {
       const result = await teamsService.createTeam(req.user!.id, req.params.id, req.body.team_name);
       res.status(201).json(result);
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+router.get('/events/:id/teams',
+  authenticate,
+  validate(ParamEventIdSchema),
+  validate(ListTeamsQuerySchema),
+  async (req, res, next) => {
+    try {
+      const query = req.query as any;
+      const result = await teamsService.listTeams(req.user!.id, req.params.id, query.limit, query.cursor);
+      res.json(result);
     } catch (err) {
       next(err);
     }

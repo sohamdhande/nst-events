@@ -2,8 +2,46 @@ import { Router } from 'express';
 import { prisma } from '../../lib/prisma';
 import { authenticate } from '../../middleware/authenticate';
 import { requireRole } from '../../middleware/authorize';
+import { validate } from '../../middleware/validate';
+import { listAdminUsersSchema, updateAdminUserRoleSchema } from './users.schema';
+import { adminUsersService } from './users.service';
 
 export const adminUsersRouter: Router = Router();
+
+// GET /v1/admin/users
+adminUsersRouter.get(
+  '/',
+  authenticate,
+  requireRole(['PLATFORM_ADMIN']),
+  validate(listAdminUsersSchema),
+  async (req, res, next) => {
+    try {
+      const result = await adminUsersService.listUsers(req.query as any);
+      res.status(200).json(result);
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+// POST /v1/admin/users/:userId/role
+adminUsersRouter.post(
+  '/:userId/role',
+  authenticate,
+  requireRole(['PLATFORM_ADMIN']),
+  validate(updateAdminUserRoleSchema),
+  async (req, res, next) => {
+    try {
+      const adminId = req.user!.id;
+      const targetId = req.params.userId;
+      const payload = req.body;
+      const result = await adminUsersService.updateUserRole(adminId, targetId, payload);
+      res.status(200).json(result);
+    } catch (err) {
+      next(err);
+    }
+  }
+);
 
 // POST /v1/admin/users/:userId/revoke-sessions
 adminUsersRouter.post(

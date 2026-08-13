@@ -3,6 +3,54 @@ import { enqueueNotification } from '../notifications/notifications.producer';
 import { prisma } from '../../lib/prisma';
 import { NotFoundError } from '../../lib/errors';
 
+export const listTeams = async (userId: string, eventId: string, limit: number = 50, cursor?: string) => {
+  return withUserContext(userId, async (tx) => {
+    const take = limit + 1;
+    const teams = await tx.team.findMany({
+      where: {
+        eventId,
+        deletedAt: null,
+      },
+      take,
+      skip: cursor ? 1 : 0,
+      cursor: cursor ? { id: cursor } : undefined,
+      include: {
+        leader: { select: { fullName: true } },
+        eventRegistrations: {
+          where: { deletedAt: null },
+          select: {
+            userId: true,
+            registrationStatus: true,
+            user: { select: { fullName: true } }
+          }
+        }
+      },
+      orderBy: { createdAt: 'asc' }
+    });
+
+    let nextCursor: string | undefined = undefined;
+    if (teams.length > limit) {
+      const nextItem = teams.pop();
+      nextCursor = nextItem!.id;
+    }
+
+    const data = teams.map((t) => ({
+      id: t.id,
+      name: t.name,
+      leader_id: t.leaderId,
+      leader_name: t.leader?.fullName || 'Unknown',
+      member_count: t.eventRegistrations.length,
+      members: t.eventRegistrations.map((m) => ({
+        user_id: m.userId,
+        full_name: m.user?.fullName || 'Unknown',
+        registration_status: m.registrationStatus
+      }))
+    }));
+
+    return { data, pagination: { nextCursor } };
+  });
+};
+
 export const createTeam = async (userId: string, eventId: string, teamName: string) => {
   return withUserContext(userId, async (tx) => {
     const result = await tx.$queryRaw<{ create_team: string }[]>`
@@ -32,9 +80,9 @@ export const leaveTeam = async (userId: string, teamId: string) => {
     const result = await tx.$queryRaw<{ leave_team: string[] }[]>`
       SELECT leave_team(${team.eventId}::uuid, ${teamId}::uuid, ${userId}::uuid);
     `;
-    
+
     const promotedUserIds = result[0].leave_team;
-    
+
     if (promotedUserIds && promotedUserIds.length > 0) {
       for (const uid of promotedUserIds) {
         await enqueueNotification({
@@ -53,7 +101,7 @@ export const leaveTeam = async (userId: string, teamId: string) => {
         });
       }
     }
-    
+
     return promotedUserIds;
   });
 };
