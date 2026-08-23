@@ -110,7 +110,6 @@ router.post(
   authenticate,
   requireClubRole((req) => req.params.id, [
     'CLUB_ADMIN',
-    'FACULTY_MENTOR',
   ]),
   validate(AddMemberSchema),
   async (req, res, next) => {
@@ -163,7 +162,6 @@ router.delete(
   authenticate,
   requireClubRole((req) => req.params.id, [
     'CLUB_ADMIN',
-    'FACULTY_MENTOR',
   ]),
   async (req, res, next) => {
     try {

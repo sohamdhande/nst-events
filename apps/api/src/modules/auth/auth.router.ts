@@ -14,6 +14,7 @@ import { googleOAuth } from './google.oauth';
 import { authenticate } from '../../middleware/authenticate';
 import { prisma } from '../../lib/prisma';
 import { rateLimit } from 'express-rate-limit';
+import { env } from '../../config/env';
 
 const callbackLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -75,13 +76,9 @@ authRouter.get(
         getRefreshTokenCookieOptions()
       );
 
-      res.status(200).json({
-        access_token: result.access_token,
-        expires_in: result.expires_in,
-        user: result.user,
-      });
+      res.redirect(303, `${env.WEB_APP_URL}/dashboard`);
     } catch (err) {
-      next(err);
+      res.redirect(303, `${env.WEB_APP_URL}/login?error=authentication_failed`);
     }
   }
 );

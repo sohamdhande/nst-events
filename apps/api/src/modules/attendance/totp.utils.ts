@@ -38,7 +38,7 @@ export function generateQrPayload(sessionId: string, qrSecret: string): string {
 /**
  * Verifies a QR payload, allowing for ±1 window drift.
  */
-export function verifyQrPayload(sessionId: string, payload: string, qrSecret: string): boolean {
+export function verifyQrPayload(sessionId: string, payload: string, qrSecret: string, timestampMs?: number): boolean {
   if (!payload || !payload.startsWith(`${VERSION}:${sessionId}:`)) {
     return false;
   }
@@ -49,7 +49,7 @@ export function verifyQrPayload(sessionId: string, payload: string, qrSecret: st
   }
   
   const extractedSignature = parts[2];
-  const currentEpoch = getCurrentWindowEpoch();
+  const currentEpoch = getCurrentWindowEpoch(timestampMs ?? Date.now());
 
   // ± 1 window drift tolerance
   const allowedEpochs = [currentEpoch, currentEpoch - 1, currentEpoch + 1];

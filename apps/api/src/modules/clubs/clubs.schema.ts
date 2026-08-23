@@ -10,12 +10,14 @@ export const CreateClubSchema = z.object({
 });
 
 export const UpdateClubStatusSchema = z.object({
+  params: z.object({ id: z.string().uuid() }),
   body: z.object({
     status: z.nativeEnum(ClubStatus),
   }),
 });
 
 export const AddMemberSchema = z.object({
+  params: z.object({ id: z.string().uuid() }),
   body: z.object({
     user_id: z.string().uuid(),
     role: z.nativeEnum(ClubRole),
@@ -23,6 +25,7 @@ export const AddMemberSchema = z.object({
 });
 
 export const UpdateMemberRoleSchema = z.object({
+  params: z.object({ id: z.string().uuid(), userId: z.string().uuid() }),
   body: z.object({
     role: z.nativeEnum(ClubRole),
   }),

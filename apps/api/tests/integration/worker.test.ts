@@ -116,3 +116,9 @@ test('Worker Reliability and Crash Recovery', async (t) => {
   await adminPrisma.pushToken.deleteMany({ where: { userId: testUser.id } });
   await adminPrisma.user.delete({ where: { id: testUser.id } });
 });
+
+import { after } from 'node:test';
+import { prisma as workerPrisma } from '../../../worker/src/index';
+after(async () => {
+  await workerPrisma.$disconnect();
+});

@@ -52,10 +52,13 @@ class PGListener {
     }
   }
 
+  private isDisconnecting: boolean = false;
+
   private handleDisconnect() {
     sseEventBus.emit('system:disconnect', {});
     if (this.reconnectTimeout) clearTimeout(this.reconnectTimeout);
     this.client = null;
+    if (this.isDisconnecting) return;
     this.reconnectTimeout = setTimeout(() => this.connect(), 5000);
     this.reconnectTimeout.unref();
   }
@@ -83,11 +86,13 @@ class PGListener {
   }
 
   async disconnect() {
+    this.isDisconnecting = true;
     if (this.reconnectTimeout) clearTimeout(this.reconnectTimeout);
     if (this.client) {
       await this.client.end();
       this.client = null;
     }
+    this.isDisconnecting = false;
   }
 }
 

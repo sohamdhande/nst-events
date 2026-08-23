@@ -12,7 +12,7 @@ export const markAttendanceSchema = z.object({
     totp_token: z.string().min(1, 'TOTP token is required'),
     latitude: z.number().min(-90).max(90),
     longitude: z.number().min(-180).max(180),
-    device_id: z.string().min(1, 'Device ID is required'),
+    device_id: z.string().min(1, 'Device ID is required').max(255, 'Device ID is too long'),
     device_os: z.string().min(1, 'Device OS is required'),
     gps_accuracy: z.number().min(0, 'GPS accuracy must be non-negative'),
     mock_location_detected: z.boolean(),
@@ -31,6 +31,8 @@ export const syncOfflineSchema = z.object({
         device_id: z.string().max(255),
         gps_lat: z.number().min(-90).max(90),
         gps_lng: z.number().min(-180).max(180),
+        gps_accuracy: z.number().min(0, 'GPS accuracy must be non-negative'),
+        mock_location_detected: z.boolean(),
         offline_seq: z.number().int().min(1),
       })
     ).max(1000, 'Maximum 1000 records per batch'),
@@ -82,5 +84,14 @@ export const resolveDisputeSchema = z.object({
   body: z.object({
     resolution: z.enum(['APPROVED', 'REJECTED']),
     review_notes: z.string().max(1000).optional(),
+  }),
+  params: z.object({
+    id: z.string().uuid(),
+  }),
+});
+
+export const reviewFlaggedSchema = z.object({
+  params: z.object({
+    id: z.string().uuid(),
   }),
 });

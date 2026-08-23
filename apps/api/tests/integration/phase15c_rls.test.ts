@@ -26,14 +26,14 @@ describe('Phase 15C: Application-Role RLS Enforcement', () => {
 
   before(async () => {
     // 1. Verify connection is nst_app for tests
-    const [role] = await prisma.$queryRaw<{ current_user: string, session_user: string }[]>`
+    const _timer = setTimeout(() => {}, 10000); const [role] = await prisma.$queryRaw<{ current_user: string, session_user: string }[]>`
       SELECT current_user, session_user;
     `;
     assert.strictEqual(role.current_user, 'nst_app', 'Tests must run as nst_app, not postgres');
     assert.strictEqual(role.session_user, 'nst_app');
 
     // 2. Setup Fixtures as postgres
-    await pgClient.connect();
+    console.log("connecting pgClient"); await pgClient.connect(); console.log("pgClient connected");
     
     await pgClient.query(`
       INSERT INTO users (id, email, google_sub, full_name, global_role) VALUES 

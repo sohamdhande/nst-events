@@ -15,8 +15,10 @@
   },
   "devDependencies": {
     "@nst/config": "workspace:*",
+    "@types/sinon": "^22.0.0",
     "husky": "9.1.7",
     "prettier": "3.9.6",
+    "sinon": "^22.1.0",
     "turbo": "2.10.8"
   },
   "packageManager": "pnpm@9.0.0",

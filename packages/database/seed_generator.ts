@@ -1,4 +1,9 @@
-// ============================================================
+import fs from 'fs';
+
+const existingSeedFile = fs.readFileSync('packages/database/prisma/seed.ts', 'utf-8');
+
+// We will construct a new file based on the previous structure.
+let newSeed = `// ============================================================
 // NST Events — Database Seed Script
 // Phase 21: V1 Demo Data Seeding Execution
 // ============================================================
@@ -28,7 +33,7 @@ import crypto from 'crypto';
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log('🌱 Seeding NST Events database with extended V1 data...\n');
+  console.log('🌱 Seeding NST Events database with extended V1 data...\\n');
 
   // ----------------------------------------------------------
   // 1. USERS
@@ -62,7 +67,7 @@ async function main() {
   const userCoreMember = await upsertUser('coremember@adypu.edu.in', 'gsub-cm', 'Core Member User', GlobalRole.STUDENT);
   const userFacultyMentor = await upsertUser('facultymentor@adypu.edu.in', 'gsub-fm', 'Faculty Mentor User', GlobalRole.FACULTY_ADMIN);
 
-  console.log('  ✓ Created/verified users\n');
+  console.log('  ✓ Created/verified users\\n');
 
   // ----------------------------------------------------------
   // 2. CLUBS
@@ -83,7 +88,7 @@ async function main() {
   const clubAIML = await upsertClub('AI/ML Club', 'Exploring Artificial Intelligence, Machine Learning, and Data Science.', ClubStatus.ACTIVE);
   const clubDesign = await upsertClub('Design Club', 'UI/UX, Graphic Design, and creative problem solving.', ClubStatus.ACTIVE);
 
-  console.log('  ✓ Created/verified clubs\n');
+  console.log('  ✓ Created/verified clubs\\n');
 
   // ----------------------------------------------------------
   // 3. CLUB MEMBERSHIPS
@@ -116,7 +121,7 @@ async function main() {
   await upsertMembership(userStudent3.id, clubDesign.id, ClubRole.MEMBER);
   await upsertMembership(userStudent4.id, clubDesign.id, ClubRole.MEMBER);
 
-  console.log('  ✓ Created/verified club memberships\n');
+  console.log('  ✓ Created/verified club memberships\\n');
 
   // ----------------------------------------------------------
   // 4. EVENTS
@@ -205,7 +210,7 @@ async function main() {
     createdBy: userCoreMember.id,
   });
 
-  console.log('  ✓ Created/verified events\n');
+  console.log('  ✓ Created/verified events\\n');
 
   // ----------------------------------------------------------
   // 5. EVENT_CLUBS
@@ -226,7 +231,7 @@ async function main() {
   await upsertEventClub(eventAIHackathon.id, clubAIML.id, true);
   await upsertEventClub(eventFutureSeminar.id, clubAIML.id, true);
 
-  console.log('  ✓ Created/verified event_clubs mappings\n');
+  console.log('  ✓ Created/verified event_clubs mappings\\n');
 
   // ----------------------------------------------------------
   // 6. TEAMS
@@ -244,7 +249,7 @@ async function main() {
   const teamAI_A = await upsertTeam(eventAIHackathon.id, 'Neural Ninjas', userStudent1.id);
   const teamAI_B = await upsertTeam(eventAIHackathon.id, 'Data Driven', userStudent3.id);
 
-  console.log('  ✓ Created/verified teams\n');
+  console.log('  ✓ Created/verified teams\\n');
 
   // ----------------------------------------------------------
   // 7. EVENT REGISTRATIONS
@@ -282,7 +287,7 @@ async function main() {
   await upsertRegistration(eventAIHackathon.id, userStudent4.id, teamAI_B.id, RegistrationStatus.WAITLISTED, ParticipationRole.ATTENDEE);
   await upsertRegistration(eventAIHackathon.id, userStudent5.id, null, RegistrationStatus.WAITLISTED, ParticipationRole.ATTENDEE);
 
-  console.log('  ✓ Created/verified event registrations\n');
+  console.log('  ✓ Created/verified event registrations\\n');
 
   // ----------------------------------------------------------
   // 8. ATTENDANCE SESSIONS & RECORDS
@@ -327,7 +332,7 @@ async function main() {
   await upsertAttendanceRecord(sessionTechSymp.id, userStudent2.id, AttendanceStatus.PRESENT);
   await upsertAttendanceRecord(sessionTechSymp.id, userStudent3.id, AttendanceStatus.ABSENT);
 
-  console.log('  ✓ Created/verified attendance data\n');
+  console.log('  ✓ Created/verified attendance data\\n');
 
   // ----------------------------------------------------------
   // 9. NOTIFICATIONS
@@ -367,7 +372,7 @@ async function main() {
     });
   }
 
-  console.log('  ✓ Created/verified notifications\n');
+  console.log('  ✓ Created/verified notifications\\n');
 
   // ----------------------------------------------------------
   // 10. AUDIT LOGS
@@ -398,7 +403,7 @@ async function main() {
       ]
     });
   }
-  console.log('  ✓ Created/verified audit logs\n');
+  console.log('  ✓ Created/verified audit logs\\n');
 
   // ----------------------------------------------------------
   // 11. QUEUE / DEAD LETTER
@@ -430,7 +435,7 @@ async function main() {
       }
     });
   }
-  console.log('  ✓ Created/verified dead-letter queue records\n');
+  console.log('  ✓ Created/verified dead-letter queue records\\n');
 
   // ----------------------------------------------------------
   // 12. LEADERBOARD SCORES
@@ -457,7 +462,7 @@ async function main() {
       ]
     });
   }
-  console.log('  ✓ Created/verified leaderboard scores\n');
+  console.log('  ✓ Created/verified leaderboard scores\\n');
 
   // ----------------------------------------------------------
   // SUMMARY
@@ -490,3 +495,7 @@ main()
   .finally(async () => {
     await prisma.$disconnect();
   });
+`;
+
+fs.writeFileSync('packages/database/prisma/seed.ts', newSeed);
+console.log('Wrote new seed.ts');

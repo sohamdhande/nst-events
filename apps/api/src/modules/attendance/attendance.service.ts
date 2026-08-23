@@ -1,6 +1,6 @@
 import { prisma, withUserContext } from '@nst/database';
 import { generateQrPayload, verifyQrPayload } from './totp.utils';
-import { UnprocessableEntityError, ConflictError } from '../../lib/errors';
+import { UnprocessableEntityError, ConflictError, ForbiddenError, NotFoundError, BadRequestError } from '../../lib/errors';
 import { SCORE_RULES } from '../../config/score-rules';
 import { enqueueNotification } from '../notifications/notifications.producer';
 
@@ -150,20 +150,89 @@ export class AttendanceService {
         device_id: string;
         gps_lat: number;
         gps_lng: number;
+        gps_accuracy: number;
+        mock_location_detected: boolean;
         offline_seq: number;
       }>;
     }
   ) {
+    if (!payload.records || payload.records.length === 0) {
+      return { processed: 0, skipped: 0, errors: [] };
+    }
+
+    const sessionIds = [...new Set(payload.records.map((r) => r.session_id))];
+
+    const sessions = await prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT set_config('app.user_id', ${userId}, true)`;
+      return tx.attendanceSession.findMany({
+        where: { id: { in: sessionIds } },
+        select: { id: true, qrSecret: true },
+      });
+    });
+    const sessionSecretMap = new Map(sessions.map((s) => [s.id, s.qrSecret]));
+
+    const validRecords: Array<{
+      user_id: string;
+      session_id: string;
+      scanned_token: string;
+      scan_timestamp: string;
+      device_id: string;
+      gps_lat: number;
+      gps_lng: number;
+      gps_accuracy: number;
+      mock_location_detected: boolean;
+      offline_seq: number;
+    }> = [];
+    const errors: Array<{ offline_seq: number; error_code: string; message: string }> = [];
+    let skipped = 0;
+
+    for (const record of payload.records) {
+      const secret = sessionSecretMap.get(record.session_id);
+      if (!secret) {
+        skipped++;
+        errors.push({
+          offline_seq: record.offline_seq,
+          error_code: 'SESSION_CLOSED',
+          message: 'SESSION_CLOSED',
+        });
+        continue;
+      }
+
+      const scanTimeMs = new Date(record.scan_timestamp).getTime();
+      const isValid = verifyQrPayload(record.session_id, record.scanned_token, secret, scanTimeMs);
+      
+      if (!isValid) {
+        skipped++;
+        errors.push({
+          offline_seq: record.offline_seq,
+          error_code: 'INVALID_SIGNATURE',
+          message: 'INVALID_SIGNATURE',
+        });
+      } else {
+        validRecords.push(record);
+      }
+    }
+
+    if (validRecords.length === 0) {
+      return { processed: 0, skipped, errors };
+    }
+
     const result = await prisma.$transaction(async (tx) => {
       await tx.$executeRaw`SELECT set_config('app.user_id', ${userId}, true)`;
-      const recordsJson = JSON.stringify(payload.records);
+      const recordsJson = JSON.stringify(validRecords);
 
       return await tx.$queryRaw<any[]>`
         SELECT sync_offline_attendance(${recordsJson}::jsonb) as result
       `;
     });
 
-    return result[0].result;
+    const dbResult = result[0].result;
+
+    return {
+      processed: dbResult.processed,
+      skipped: dbResult.skipped + skipped,
+      errors: [...errors, ...(dbResult.errors || [])],
+    };
   }
 
   async getEventAttendance(userId: string, eventId: string, query: any): Promise<{ data: any[]; nextCursor?: string }> {
@@ -325,13 +394,45 @@ export class AttendanceService {
       });
       return result;
     } catch (error: any) {
-      const msg = error.message || '';
-      if (msg.includes('DISPUTE_NOT_FOUND')) throw new UnprocessableEntityError('DISPUTE_NOT_FOUND');
-      if (msg.includes('DISPUTE_ALREADY_RESOLVED')) throw new UnprocessableEntityError('DISPUTE_ALREADY_RESOLVED');
-      if (msg.includes('INVALID_RESOLUTION')) throw new UnprocessableEntityError('INVALID_RESOLUTION');
+      if (error.message.includes('UNAUTHORIZED') || error.message.includes('permission denied')) {
+        throw new ForbiddenError('Forbidden');
+      }
+      if (error.message.includes('DISPUTE_NOT_FOUND')) {
+        throw new NotFoundError('Dispute not found');
+      }
+      if (error.message.includes('ALREADY_RESOLVED')) {
+        throw new BadRequestError('Dispute is already resolved');
+      }
       throw error;
     }
   }
+
+  async reviewFlaggedAttendance(userId: string, attendanceId: string) {
+    try {
+      const result = await prisma.$transaction(async (tx) => {
+        await tx.$executeRaw`SELECT set_config('app.user_id', ${userId}, true)`;
+        const rpcResult = await tx.$queryRaw<any[]>`
+          SELECT * FROM review_flagged_attendance(
+            ${attendanceId}::uuid
+          );
+        `;
+        return rpcResult[0];
+      });
+      return result;
+    } catch (error: any) {
+      if (error.message.includes('UNAUTHORIZED_REVIEWER') || error.message.includes('UNAUTHORIZED') || error.message.includes('permission denied')) {
+        throw new ForbiddenError('Forbidden');
+      }
+      if (error.message.includes('ATTENDANCE_NOT_FOUND')) {
+        throw new NotFoundError('Attendance record not found');
+      }
+      if (error.message.includes('ATTENDANCE_NOT_FLAGGED')) {
+        throw new BadRequestError('Attendance is not flagged for collision');
+      }
+      throw error;
+    }
+  }
+
   async exportEventAttendance(userId: string, eventId: string): Promise<string> {
     return withUserContext(userId, async (tx) => {
       const records = await tx.attendanceRecord.findMany({

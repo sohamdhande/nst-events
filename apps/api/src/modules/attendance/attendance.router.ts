@@ -6,7 +6,7 @@ import { validate } from '../../middleware/validate';
 import { 
   generateQrSchema, markAttendanceSchema, syncOfflineSchema,
   getEventAttendanceSchema, getMeAttendanceSchema, manualMarkSchema,
-  submitDisputeSchema, getDisputesSchema, resolveDisputeSchema
+  submitDisputeSchema, getDisputesSchema, resolveDisputeSchema, reviewFlaggedSchema
 } from './attendance.schema';
 import { attendanceService } from './attendance.service';
 import { prisma } from '@nst/database';
@@ -43,22 +43,6 @@ const syncOfflineRateLimit = rateLimit({
 const getEventIdFromSession = async (req: any): Promise<string> => {
   const sessionId = req.body.session_id;
   if (!sessionId) return '';
-  const session = await prisma.attendanceSession.findUnique({
-    where: { id: sessionId },
-    select: { eventId: true },
-  });
-  return session?.eventId || '';
-};
-
-/**
- * Helper to fetch event_id from the first record in an offline batch.
- */
-const getEventIdFromOfflineBatch = async (req: any): Promise<string> => {
-  const records = req.body.records;
-  if (!records || records.length === 0) return '';
-  const sessionId = records[0].session_id;
-  if (!sessionId) return '';
-  
   const session = await prisma.attendanceSession.findUnique({
     where: { id: sessionId },
     select: { eventId: true },
@@ -113,7 +97,6 @@ attendanceRouter.post(
     }
     next();
   },
-  requireEventRole(getEventIdFromOfflineBatch, ['CLUB_ADMIN', 'CORE_MEMBER']),
   syncOfflineRateLimit,
   async (req, res, next) => {
     try {
@@ -243,6 +226,23 @@ attendanceRouter.patch(
       const userId = req.user!.id;
       const payload = req.body;
       const result = await attendanceService.resolveAttendanceDispute(userId, req.params.id, payload);
+      res.status(200).json(result);
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+// PATCH /attendance/:id/review
+attendanceRouter.patch(
+  '/attendance/:id/review',
+  authenticate,
+  validate(reviewFlaggedSchema),
+  // Authorization is enforced strictly inside the review_flagged_attendance PostgreSQL RPC.
+  async (req, res, next) => {
+    try {
+      const userId = req.user!.id;
+      const result = await attendanceService.reviewFlaggedAttendance(userId, req.params.id);
       res.status(200).json(result);
     } catch (error) {
       next(error);
