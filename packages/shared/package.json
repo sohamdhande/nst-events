@@ -16,11 +16,11 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "zod": "3.25.76"
+    "zod": "4.4.3"
   },
   "devDependencies": {
     "@nst/config": "workspace:*",
-    "@types/node": "20.19.43",
-    "typescript": "5.9.3"
+    "@types/node": "26.2.0",
+    "typescript": "7.0.2"
   }
 }
