@@ -13,14 +13,19 @@ import {
   CreateSessionSchema,
   UpdateSessionSchema,
 } from './events.schema';
+import { CreateTeamSchema } from '../teams/teams.schema';
+import * as teamsService from '../teams/teams.service';
 import { z } from 'zod';
 
 const ParamIdSchema = z.object({
   params: z.object({ id: z.string().uuid() }).passthrough(),
-});
+}).passthrough();
 const ParamSessionIdSchema = z.object({
   params: z.object({ id: z.string().uuid(), sessionId: z.string().uuid() }).passthrough(),
-});
+}).passthrough();
+const ParamEventTeamIdSchema = z.object({
+  params: z.object({ id: z.string().uuid(), teamId: z.string().uuid() }).passthrough(),
+}).passthrough();
 
 const router = Router();
 
@@ -179,6 +184,52 @@ router.post(
     try {
       const result = await eventsService.unlockEvent(req.user!.id, req.params.id);
       res.json(result);
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+// ==========================================
+// Session Routes
+// ==========================================
+
+router.get(
+  '/:id/teams',
+  authenticate,
+  validate(ParamIdSchema),
+  async (req, res, next) => {
+    try {
+      const teams = await teamsService.listTeams(req.user!.id, req.params.id, 50, req.query.cursor as string);
+      res.json(teams);
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+router.post(
+  '/:id/teams',
+  authenticate,
+  validate(CreateTeamSchema),
+  async (req, res, next) => {
+    try {
+      const team = await teamsService.createTeam(req.user!.id, req.params.id, req.body.team_name);
+      res.status(201).json(team);
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+router.get(
+  '/:id/teams/:teamId/invitations',
+  authenticate,
+  validate(ParamEventTeamIdSchema),
+  async (req, res, next) => {
+    try {
+      const invitations = await teamsService.getSentTeamInvitations(req.user!.id, req.params.id, req.params.teamId);
+      res.json(invitations);
     } catch (err) {
       next(err);
     }

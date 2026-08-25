@@ -7,6 +7,7 @@ import { Platform } from 'react-native';
 import { useMutation } from '@tanstack/react-query';
 import { apiClient } from '../infrastructure/api';
 import { useAuthStore } from '../store/auth';
+import { useRouter } from 'expo-router';
 
 const TOKEN_CACHE_KEY = 'last_synced_push_token';
 const USER_CACHE_KEY = 'last_synced_push_user_id';
@@ -14,6 +15,8 @@ const USER_CACHE_KEY = 'last_synced_push_user_id';
 export function useNotifications() {
   const userId = useAuthStore((state) => state.userId);
   const isLoggedIn = useAuthStore((state) => state.isLoggedIn);
+  const router = useRouter();
+  const lastNotificationResponse = Notifications.useLastNotificationResponse();
 
   const { mutate: syncToken } = useMutation({
     mutationFn: async (expoToken: string) => {
@@ -36,6 +39,21 @@ export function useNotifications() {
     },
     retry: 3, // Safe React Query exponential backoff
   });
+
+  // Handle incoming notification interaction (Deep Linking)
+  useEffect(() => {
+    if (lastNotificationResponse && isLoggedIn) {
+      const { notification } = lastNotificationResponse;
+      const metadata = notification.request.content.data?.metadata as any;
+      
+      if (metadata?.entity_ids?.invitation_id) {
+        // Preferred deep link for team invitations
+        router.push({ pathname: '/invitations', params: { invitationId: metadata.entity_ids.invitation_id } });
+      } else if (metadata?.routing?.target === 'event_details' && metadata?.routing?.params?.id) {
+        router.push(`/events/${metadata.routing.params.id}`);
+      }
+    }
+  }, [lastNotificationResponse, isLoggedIn, router]);
 
   useEffect(() => {
     let isMounted = true;

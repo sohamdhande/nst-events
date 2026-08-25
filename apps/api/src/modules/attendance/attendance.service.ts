@@ -11,11 +11,22 @@ export class AttendanceService {
   async generateQr(sessionId: string) {
     const session = await prisma.attendanceSession.findUnique({
       where: { id: sessionId },
-      select: { qrSecret: true },
+      select: { 
+        qrSecret: true,
+        event: { select: { isLocked: true, endTime: true } }
+      },
     });
 
     if (!session) {
       throw new Error('Session not found');
+    }
+
+    const dbTimeResult = await prisma.$queryRaw<{ now: Date }[]>`SELECT now() as now`;
+    const dbNow = dbTimeResult[0].now;
+    const finalDeadline = new Date(session.event.endTime.getTime() + 24 * 60 * 60 * 1000);
+    
+    if (session.event.isLocked || dbNow >= finalDeadline) {
+      throw new UnprocessableEntityError('EVENT_LOCKED');
     }
 
     const qr_payload = generateQrPayload(sessionId, session.qrSecret);
@@ -286,6 +297,28 @@ export class AttendanceService {
   async manualMarkAttendance(userId: string, payload: { session_id: string; user_id: string }) {
     try {
       const result = await prisma.$transaction(async (tx) => {
+        const session = await tx.attendanceSession.findUnique({
+          where: { id: payload.session_id },
+          select: { eventId: true }
+        });
+        
+        if (!session) throw new UnprocessableEntityError('SESSION_CLOSED');
+        
+        const event = await tx.event.findUnique({
+          where: { id: session.eventId },
+          select: { isLocked: true, endTime: true }
+        });
+        
+        if (event) {
+          const dbTimeResult = await tx.$queryRaw<{ now: Date }[]>`SELECT now() as now`;
+          const dbNow = dbTimeResult[0].now;
+          const finalDeadline = new Date(event.endTime.getTime() + 24 * 60 * 60 * 1000);
+          
+          if (event.isLocked || dbNow >= finalDeadline) {
+            throw new Error('EVENT_LOCKED');
+          }
+        }
+
         await tx.$executeRaw`SELECT set_config('app.user_id', ${userId}, true)`;
         return await tx.$queryRaw<any[]>`
           WITH rpc AS (

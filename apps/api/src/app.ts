@@ -15,6 +15,9 @@ import { notificationsRouter } from './modules/notifications/notifications.route
 import { adminQueueRouter } from './modules/admin/queue.router';
 import { adminUsersRouter } from './modules/admin/users.router';
 import { adminAuditLogsRouter } from './modules/admin/audit-logs.router';
+import { adminTeamsRouter } from './modules/admin/teams.router';
+import { adminAcademicProgramsRouter } from './modules/admin/academic-programs.router';
+import { adminAcademicBatchesRouter } from './modules/admin/academic-batches.router';
 import { teamsRouter } from './modules/teams/teams.router';
 import { registrationsRouter } from './modules/registrations/registrations.router';
 import { dashboardRouter } from './modules/dashboard/dashboard.router';
@@ -23,6 +26,8 @@ import { requestIdMiddleware } from './middleware/request-id';
 import { requestLogger } from './middleware/request-logger';
 import { sseRouter } from './modules/sse/sse.router';
 import { pgListener } from './modules/sse/pg-listener';
+import { academicBatchesRouter } from './modules/academic-batches/academic-batches.router';
+import { academicProgramsRouter } from './modules/academic-programs/academic-programs.router';
 
 
 export function createApp(): Express {
@@ -70,7 +75,7 @@ export function createApp(): Express {
   app.use('/auth', authRouter);
   app.use('/users', usersRouter);
   app.use('/clubs', clubsRouter);
-  app.use('/v1/events', sseRouter); // Mounted precisely at GET /events/:id/live
+  app.use('/v1', sseRouter); // Mounted at /v1 (handles /events/:id/live and /notifications/live)
   app.use('/v1/events', eventsRouter);
   app.use('/v1/teams', teamsRouter);
   app.use('/v1/dashboard', dashboardRouter);
@@ -80,8 +85,13 @@ export function createApp(): Express {
   app.use('/v1/admin/leaderboard', adminLeaderboardRouter);
   app.use('/v1/admin/users', adminUsersRouter);
   app.use('/v1/admin/audit-logs', adminAuditLogsRouter);
+  app.use('/v1/admin/teams', adminTeamsRouter);
+  app.use('/v1/admin/academic-programs', adminAcademicProgramsRouter);
+  app.use('/v1/admin/academic-batches', adminAcademicBatchesRouter);
   app.use('/v1/admin', adminQueueRouter);
   app.use('/v1/notifications', notificationsRouter);
+  app.use('/v1/academic-batches', academicBatchesRouter);
+  app.use('/v1/academic-programs', academicProgramsRouter);
 
   app.get('/health', (_req, res) => {
     res.json({ status: 'ok' });

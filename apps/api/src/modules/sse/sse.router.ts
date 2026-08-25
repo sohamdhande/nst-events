@@ -16,7 +16,7 @@ const sseAuthMiddleware = (req: any, res: any, next: any) => {
   return authenticate(req, res, next);
 };
 
-sseRouter.get('/:id/live', sseAuthMiddleware, async (req, res, next) => {
+sseRouter.get('/events/:id/live', sseAuthMiddleware, async (req, res, next) => {
   try {
     const eventId = req.params.id;
     const channel = buildEventChannel(eventId);
@@ -57,6 +57,51 @@ sseRouter.get('/:id/live', sseAuthMiddleware, async (req, res, next) => {
       sseEventBus.off(channel, onEvent);
       sseEventBus.off('system:disconnect', onSystemDisconnect);
       await sseConnectionManager.unsubscribe(eventId);
+    });
+
+  } catch (err) {
+    next(err);
+  }
+});
+
+import { buildUserNotificationChannel } from './sse.utils';
+
+sseRouter.get('/notifications/live', sseAuthMiddleware, async (req, res, next) => {
+  try {
+    const userId = req.user!.id;
+    const channel = buildUserNotificationChannel(userId);
+    
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache, no-transform');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('X-Accel-Buffering', 'no');
+    res.flushHeaders();
+
+    await sseConnectionManager.subscribeUserNotifications(userId);
+
+    const onEvent = (payload: any) => {
+      // The payload is already constructed in the producer/service
+      res.write(`data: ${JSON.stringify(payload)}\n\n`);
+    };
+
+    sseEventBus.on(channel, onEvent);
+
+    const onSystemDisconnect = () => {
+      res.end(); // Closes the stream, forcing the EventSource client to reconnect and resync
+    };
+    sseEventBus.on('system:disconnect', onSystemDisconnect);
+
+    // 30s Heartbeat
+    const heartbeatInterval = setInterval(() => {
+      res.write(`data: ${JSON.stringify({ type: 'heartbeat', payload: { timestamp: new Date().toISOString() } })}\n\n`);
+    }, 30000);
+
+    // Strict connection cleanup
+    req.on('close', async () => {
+      clearInterval(heartbeatInterval);
+      sseEventBus.off(channel, onEvent);
+      sseEventBus.off('system:disconnect', onSystemDisconnect);
+      await sseConnectionManager.unsubscribeUserNotifications(userId);
     });
 
   } catch (err) {

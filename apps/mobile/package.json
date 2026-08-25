@@ -21,6 +21,7 @@
   },
   "devDependencies": {
     "@nst/config": "workspace:*",
+    "@testing-library/react-native": "^14.0.1",
     "@types/node": "20.19.43",
     "@types/react": "19.2.18",
     "ts-node": "10.9.2",

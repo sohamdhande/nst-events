@@ -8,7 +8,7 @@ export class SSEManager {
   private eventSource: EventSource | null = null;
   private reconnectAttempt: number = 0;
   private lastEventId: string | null = null;
-  private heartbeatTimeout: ReturnType<typeof setTimeout> | null = null;
+  private heartbeatTimeout: any = null;
   private listeners: Map<string, SSECallback[]> = new Map();
 
   constructor(url: string, token: string) {

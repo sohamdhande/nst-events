@@ -1,4 +1,5 @@
 import { withUserContext } from '@nst/database';
+import { prisma } from '../../lib/prisma';
 
 export const getMe = async (userId: string) => {
   return withUserContext(userId, async (tx) => {
@@ -22,6 +23,25 @@ export const getMe = async (userId: string) => {
             },
           },
         },
+        academicProfile: {
+          select: {
+            assignmentSource: true,
+            batch: {
+              select: {
+                id: true,
+                admissionYear: true,
+                graduationYear: true,
+                program: {
+                  select: {
+                    id: true,
+                    name: true,
+                    code: true,
+                  },
+                },
+              },
+            },
+          },
+        },
       },
     });
 
@@ -38,6 +58,21 @@ export const getMe = async (userId: string) => {
         club_name: m.club.name,
         role: m.role,
       })),
+      academic_profile: user.academicProfile
+        ? {
+            batch: {
+              id: user.academicProfile.batch.id,
+              program: {
+                id: user.academicProfile.batch.program.id,
+                name: user.academicProfile.batch.program.name,
+                code: user.academicProfile.batch.program.code,
+              },
+              admission_year: user.academicProfile.batch.admissionYear,
+              graduation_year: user.academicProfile.batch.graduationYear,
+            },
+            assignment_source: user.academicProfile.assignmentSource,
+          }
+        : null,
     };
   });
 };
@@ -131,5 +166,57 @@ export const registerPushToken = async (
       expo_token: token.expoToken,
       platform: token.platform,
     };
+  });
+};
+
+export const getPendingTeamInvitations = async (userId: string) => {
+  return withUserContext(userId, async (tx) => {
+    await tx.teamInvitation.updateMany({
+      where: {
+        inviteeId: userId,
+        status: 'PENDING',
+        expiresAt: { lt: new Date() }
+      },
+      data: { status: 'EXPIRED' }
+    });
+
+    const invitations = await tx.teamInvitation.findMany({
+      where: {
+        inviteeId: userId,
+        status: 'PENDING',
+        expiresAt: { gte: new Date() }
+      },
+      include: {
+        team: {
+          include: {
+            event: true
+          }
+        }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    const leaderIds = Array.from(new Set(invitations.map((inv: any) => inv.team.leaderId)));
+    const profiles = await tx.publicProfile.findMany({
+      where: { id: { in: leaderIds } },
+      select: { id: true, fullName: true }
+    });
+    const profileMap = new Map(profiles.map((p: any) => [p.id, p]));
+
+    return invitations.map((inv: any) => ({
+      invitation_id: inv.id,
+      status: inv.status,
+      created_at: inv.createdAt,
+      expires_at: inv.expiresAt,
+      team: {
+        team_id: inv.team.id,
+        team_name: inv.team.name,
+        leader: profileMap.get(inv.team.leaderId)?.fullName || 'Unknown'
+      },
+      event: {
+        event_id: inv.team.event.id,
+        event_title: inv.team.event.title
+      }
+    }));
   });
 };

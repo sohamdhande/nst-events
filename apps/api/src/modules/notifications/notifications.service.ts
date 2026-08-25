@@ -51,6 +51,15 @@ export const getNotifications = async (
   });
 };
 
+export const getUnreadCount = async (userId: string) => {
+  return withUserContext(userId, async (tx) => {
+    const count = await tx.notification.count({
+      where: { userId, readAt: null },
+    });
+    return { unread_count: count };
+  });
+};
+
 export const markAsRead = async (userId: string, notificationId: string) => {
   return withUserContext(userId, async (tx) => {
     // We strictly ignore any client payload and only update readAt
@@ -74,6 +83,13 @@ export const markAsRead = async (userId: string, notificationId: string) => {
       select: { readAt: true },
     });
 
+    await tx.$executeRaw`
+      SELECT pg_notify(
+        ${`user_${userId}_notifications_live`},
+        ${JSON.stringify({ type: 'NOTIFICATION_READ', notification_id: notificationId })}
+      )
+    `;
+
     return { read_at: updated.readAt };
   });
 };
@@ -81,7 +97,7 @@ export const markAsRead = async (userId: string, notificationId: string) => {
 export const markAllAsRead = async (userId: string) => {
   return withUserContext(userId, async (tx) => {
     // Explicitly update only UNREAD notifications (where readAt IS NULL)
-    await tx.notification.updateMany({
+    const result = await tx.notification.updateMany({
       where: {
         userId,
         readAt: null,
@@ -90,6 +106,15 @@ export const markAllAsRead = async (userId: string) => {
         readAt: new Date(),
       },
     });
+
+    if (result.count > 0) {
+      await tx.$executeRaw`
+        SELECT pg_notify(
+          ${`user_${userId}_notifications_live`},
+          ${JSON.stringify({ type: 'NOTIFICATIONS_READ_ALL' })}
+        )
+      `;
+    }
   });
 };
 

@@ -35,3 +35,8 @@ export const ListTeamsQuerySchema = z.object({
     limit: z.coerce.number().min(1).max(100).default(20),
   }).passthrough(),
 });
+export const InviteeSearchQuerySchema = z.object({
+  query: z.object({
+    q: z.string().min(2).max(100),
+  }).passthrough(),
+});

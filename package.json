@@ -25,5 +25,11 @@
   "workspaces": [
     "apps/*",
     "packages/*"
-  ]
+  ],
+  "dependencies": {
+    "@testing-library/jest-dom": "^7.0.1",
+    "@testing-library/react": "^16.3.2",
+    "jsdom": "^30.0.1",
+    "vitest": "^4.1.10"
+  }
 }

@@ -1,0 +1,990 @@
+
+[1m[30m[46m RUN [49m[39m[22m [36mv4.1.10 [39m[90m/Users/sohamdhande/Docs_Local/nst-events/apps/dashboard[39m
+
+Not implemented: Window's getComputedStyle() method: with pseudo-elements
+[90mstderr[2m | tests/queues-management.test.tsx[2m > [22m[2mQueuesManagementPage[2m > [22m[2mrenders summary metrics correctly
+[22m[39mWarning: [antd: Statistic] `valueStyle` is deprecated. Please use `styles.content` instead.
+
+Not implemented: Window's getComputedStyle() method: with pseudo-elements
+[90mstderr[2m | tests/queues-management.test.tsx[2m > [22m[2mQueuesManagementPage[2m > [22m[2mrenders dead letter table and expands row
+[22m[39mWarning: [antd: Statistic] `valueStyle` is deprecated. Please use `styles.content` instead.
+
+Not implemented: Window's getComputedStyle() method: with pseudo-elements
+[90mstderr[2m | tests/queues-management.test.tsx[2m > [22m[2mQueuesManagementPage[2m > [22m[2mfilters by notification type
+[22m[39mWarning: [antd: Statistic] `valueStyle` is deprecated. Please use `styles.content` instead.
+
+Not implemented: Window's getComputedStyle() method: with pseudo-elements
+[90mstderr[2m | tests/queues-management.test.tsx[2m > [22m[2mQueuesManagementPage[2m > [22m[2mopens replay confirmation modal and submits
+[22m[39mWarning: [antd: Statistic] `valueStyle` is deprecated. Please use `styles.content` instead.
+
+Not implemented: Window's getComputedStyle() method: with pseudo-elements
+ [31m❯[39m tests/queues-management.test.tsx [2m([22m[2m5 tests[22m[2m | [22m[31m4 failed[39m[2m)[22m[33m 2159[2mms[22m[39m
+     [32m✓[39m redirects unauthorized users[32m 12[2mms[22m[39m
+[31m     [31m×[31m renders summary metrics correctly[39m[33m 370[2mms[22m[39m
+[31m     [31m×[31m renders dead letter table and expands row[39m[32m 48[2mms[22m[39m
+[31m     [31m×[31m filters by notification type[39m[32m 44[2mms[22m[39m
+[31m     [31m×[31m opens replay confirmation modal and submits[39m[33m 1683[2mms[22m[39m
+
+[31m⎯⎯⎯⎯⎯⎯⎯[39m[1m[41m Failed Tests 4 [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯[39m
+
+[41m[1m FAIL [22m[49m tests/queues-management.test.tsx[2m > [22mQueuesManagementPage[2m > [22mrenders summary metrics correctly
+[31m[1mTestingLibraryElementError[22m[39m: Found multiple elements with the text: 5
+
+Here are the matching elements:
+
+Ignored nodes: comments, script, style
+[36m<span[39m
+  [33mclass[39m=[32m"ant-statistic-content-value-int"[39m
+[36m>[39m
+  [0m5[0m
+[36m</span>[39m
+
+Ignored nodes: comments, script, style
+[36m<td[39m
+  [33mclass[39m=[32m"ant-table-cell"[39m
+[36m>[39m
+  [0m5[0m
+[36m</td>[39m
+
+(If this is intentional, then use the `*AllBy*` variant of the query (like `queryAllByText`, `getAllByText`, or `findAllByText`)).
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div />[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"max-w-6xl mx-auto space-y-6"[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"mb-6 space-y-4"[39m
+      [36m>[39m
+        [36m<nav[39m
+          [33mclass[39m=[32m"ant-breadcrumb css-dev-only-do-not-override-viwxw0 css-var-root"[39m
+        [36m>[39m
+          [36m<ol>[39m
+            [36m<li[39m
+              [33mclass[39m=[32m"ant-breadcrumb-item"[39m
+            [36m>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"ant-breadcrumb-link"[39m
+              [36m>[39m
+                [0mAdministration[0m
+              [36m</span>[39m
+            [36m</li>[39m
+            [36m<li[39m
+              [33maria-hidden[39m=[32m"true"[39m
+              [33mclass[39m=[32m"ant-breadcrumb-separator"[39m
+            [36m>[39m
+              [0m/[0m
+            [36m</li>[39m
+            [36m<li[39m
+              [33mclass[39m=[32m"ant-breadcrumb-item"[39m
+            [36m>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"ant-breadcrumb-link"[39m
+              [36m>[39m
+                [0mQueues[0m
+              [36m</span>[39m
+            [36m</li>[39m
+          [36m</ol>[39m
+        [36m</nav>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex flex-col sm:flex-row sm:items-start justify-between gap-4"[39m
+        [36m>[39m
+          [36m<div>[39m
+            [36m<h2[39m
+              [33mclass[39m=[32m"ant-typography css-dev-only-do-not-override-viwxw0 css-var-root"[39m
+              [33mstyle[39m=[32m"margin: 0px; font-size: 24px; font-weight: 600; letter-spacing: -0.02em;"[39m
+            [36m>[39m
+              [0mQueues & Dead Letters[0m
+            [36m</h2>[39m
+            [36m<span[39m
+              [33mclass[39m=[32m"ant-typography ant-typography-secondary block mt-1 css-dev-only-do-not-override-viwxw0 css-var-root"[39m
+            [36m>[39m
+              [0mMonitor asynchronous jobs, failures, and dead-lettered operations.[0m
+            [36m</span>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"ant-space css-dev-only-do-not-override-viwxw0 ant-space-horizontal ant-space-align-center ant-space-gap-row-small ant-space-gap-col-small css-var-root"[39m
+          [36m/>[39m
+        [36m</div>[39m
+      [36m</div>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"ant-row css-dev-only-do-not-override-viwxw0 css-var-root"[39m
+        [33mstyle[39m=[32m"margin-inline: -8px; row-gap: 16px;"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"ant-col ant-col-xs-12 ant-col-sm-6 css-dev-only-do-not-override-viwxw0 css-var-root"[39m
+          [33mstyle[39m=[32m"padding-inline: 8px;"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"ant-card ant-card-bordered ant-card-small bg-gray-50 css-dev-only-do-not-override-viwxw0 css-var-root"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"ant-card-body"[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"ant-statistic css-dev-only-do-not-override-viwxw0 css-var-root"[39m
+              [36m>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"ant-statistic-header"[39m
+                [36m>[39m
+                  [36m<div[39m
+                    [33mclass[39m=[32m"ant-statistic-title"[39m
+                  [36m>[39m
+                    [0mPending[0m
+                  [36m</div>[39m
+                [36m</div>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"ant-statistic-content"[39m
+                [36m>[39m
+                  [36m<span[39m
+                    [33mclass[39m=[32m"ant-statistic-content-value"[39m
+                  [36m>[39m
+                    [36m<span[39m
+                      [33mclass[39m=[32m"ant-statistic-content-value-int"[39m
+                    [36m>[39m
+                      [0m5[0m
+                    [36m</span>[39m
+                  [36m</span>[39m
+                [36m</div>[39m
+              [36m</div>[39m
+            [36m</div>[39m
+          [36m</div>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"ant-col ant-col-xs-12 ant-col-sm-6 css-dev-only-do-not-override-viwxw0 css-var-root"[39m
+          [33mstyle[39m=[32m"padding-inline: 8px;"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"ant-card ant-card-bordered ant-card-small bg-blue-50 css-dev-only-do-not-override-viwxw0 css-var-root"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"ant-card-body"[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"ant-statistic css-dev-only-do-not-override-viwxw0 css-var-root"[39m
+              [36m>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"ant-statistic-header"[39m
+                [36m>[39m
+                  [36m<div[39m
+                    [33mclass[39m=[32m"ant-statistic-title"[39m
+                  [36m>[39m
+                    [0mProcessing[0m
+                  [36m</div>[39m
+                [36m</div>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"ant-statistic-content"[39m
+                [36m>[39m
+                  [36m<span[39m
+                    [33mclass[39m=[32m"ant-statistic-content-value"[39m
+                  [36m>[39m
+                    [36m<span[39m
+                      [33mclass[39m=[32m"ant-statistic-content-value-int"[39m
+                    [36m>[39m
+                      [0m2[0m
+                    [36m</span>[39m
+                  [36m</span>[39m
+                [36m</div>[39m
+              [36m</div>[39m
+            [36m</div>[39m
+          [36m</div>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"ant-col ant-col-xs-12 ant-col-sm-6 css-dev-only-do-not-override-viwxw0 css-var-root"[39m
+          [33mstyle[39m=[32m"padding-inline: 8px;"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"ant-card ant-card-bordered ant-card-small bg-orange-50 css-dev-only-do-not-override-viwxw0 css-var-root"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"ant-card-body"[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"ant-statistic css-dev-only-do-not-override-viwxw0 css-var-root"[39m
+              [36m>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"ant-statistic-header"[39m
+                [36m>[39m
+                  [36m<div[39m
+                    [33mclass[39m=[32m"ant-sta...
+[90m [2m❯[22m Object.getElementError ../../node_modules/.pnpm/@testing-library+dom@10.4.1/node_modules/@testing-library/dom/dist/config.js:[2m37:19[22m[39m
+[90m [2m❯[22m getElementError ../../node_modules/.pnpm/@testing-library+dom@10.4.1/node_modules/@testing-library/dom/dist/query-helpers.js:[2m20:35[22m[39m
+[90m [2m❯[22m getMultipleElementsFoundError ../../node_modules/.pnpm/@testing-library+dom@10.4.1/node_modules/@testing-library/dom/dist/query-helpers.js:[2m23:10[22m[39m
+[90m [2m❯[22m ../../node_modules/.pnpm/@testing-library+dom@10.4.1/node_modules/@testing-library/dom/dist/query-helpers.js:[2m55:13[22m[39m
+[90m [2m❯[22m ../../node_modules/.pnpm/@testing-library+dom@10.4.1/node_modules/@testing-library/dom/dist/query-helpers.js:[2m95:19[22m[39m
+[36m [2m❯[22m tests/queues-management.test.tsx:[2m118:19[22m[39m
+    [90m116|[39m   [34mit[39m([32m'renders summary metrics correctly'[39m[33m,[39m () [33m=>[39m {
+    [90m117|[39m     [34mrenderComponent[39m()[33m;[39m
+    [90m118|[39m     [34mexpect[39m(screen[33m.[39m[34mgetByText[39m([32m'5'[39m))[33m.[39m[34mtoBeDefined[39m()[33m;[39m [90m// Pending[39m
+    [90m   |[39m                   [31m^[39m
+    [90m119|[39m     [34mexpect[39m(screen[33m.[39m[34mgetByText[39m([32m'2'[39m))[33m.[39m[34mtoBeDefined[39m()[33m;[39m [90m// Processing[39m
+    [90m120|[39m     [34mexpect[39m(screen[33m.[39m[34mgetByText[39m([32m'10'[39m))[33m.[39m[34mtoBeDefined[39m()[33m;[39m [90m// Failed[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/4]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/queues-management.test.tsx[2m > [22mQueuesManagementPage[2m > [22mrenders dead letter table and expands row
+[31m[1mTestingLibraryElementError[22m[39m: Found multiple elements with the text: EMAIL_SEND
+
+Here are the matching elements:
+
+Ignored nodes: comments, script, style
+[36m<span[39m
+  [33mclass[39m=[32m"ant-tag ant-tag-filled ant-tag-geekblue css-dev-only-do-not-override-viwxw0 css-var-root"[39m
+[36m>[39m
+  [0mEMAIL_SEND[0m
+[36m</span>[39m
+
+Ignored nodes: comments, script, style
+[36m<span[39m
+  [33mclass[39m=[32m"ant-tag ant-tag-filled ant-tag-geekblue css-dev-only-do-not-override-viwxw0 css-var-root"[39m
+[36m>[39m
+  [0mEMAIL_SEND[0m
+[36m</span>[39m
+
+(If this is intentional, then use the `*AllBy*` variant of the query (like `queryAllByText`, `getAllByText`, or `findAllByText`)).
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div />[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"max-w-6xl mx-auto space-y-6"[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"mb-6 space-y-4"[39m
+      [36m>[39m
+        [36m<nav[39m
+          [33mclass[39m=[32m"ant-breadcrumb css-dev-only-do-not-override-viwxw0 css-var-root"[39m
+        [36m>[39m
+          [36m<ol>[39m
+            [36m<li[39m
+              [33mclass[39m=[32m"ant-breadcrumb-item"[39m
+            [36m>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"ant-breadcrumb-link"[39m
+              [36m>[39m
+                [0mAdministration[0m
+              [36m</span>[39m
+            [36m</li>[39m
+            [36m<li[39m
+              [33maria-hidden[39m=[32m"true"[39m
+              [33mclass[39m=[32m"ant-breadcrumb-separator"[39m
+            [36m>[39m
+              [0m/[0m
+            [36m</li>[39m
+            [36m<li[39m
+              [33mclass[39m=[32m"ant-breadcrumb-item"[39m
+            [36m>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"ant-breadcrumb-link"[39m
+              [36m>[39m
+                [0mQueues[0m
+              [36m</span>[39m
+            [36m</li>[39m
+          [36m</ol>[39m
+        [36m</nav>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex flex-col sm:flex-row sm:items-start justify-between gap-4"[39m
+        [36m>[39m
+          [36m<div>[39m
+            [36m<h2[39m
+              [33mclass[39m=[32m"ant-typography css-dev-only-do-not-override-viwxw0 css-var-root"[39m
+              [33mstyle[39m=[32m"margin: 0px; font-size: 24px; font-weight: 600; letter-spacing: -0.02em;"[39m
+            [36m>[39m
+              [0mQueues & Dead Letters[0m
+            [36m</h2>[39m
+            [36m<span[39m
+              [33mclass[39m=[32m"ant-typography ant-typography-secondary block mt-1 css-dev-only-do-not-override-viwxw0 css-var-root"[39m
+            [36m>[39m
+              [0mMonitor asynchronous jobs, failures, and dead-lettered operations.[0m
+            [36m</span>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"ant-space css-dev-only-do-not-override-viwxw0 ant-space-horizontal ant-space-align-center ant-space-gap-row-small ant-space-gap-col-small css-var-root"[39m
+          [36m/>[39m
+        [36m</div>[39m
+      [36m</div>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"ant-row css-dev-only-do-not-override-viwxw0 css-var-root"[39m
+        [33mstyle[39m=[32m"margin-inline: -8px; row-gap: 16px;"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"ant-col ant-col-xs-12 ant-col-sm-6 css-dev-only-do-not-override-viwxw0 css-var-root"[39m
+          [33mstyle[39m=[32m"padding-inline: 8px;"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"ant-card ant-card-bordered ant-card-small bg-gray-50 css-dev-only-do-not-override-viwxw0 css-var-root"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"ant-card-body"[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"ant-statistic css-dev-only-do-not-override-viwxw0 css-var-root"[39m
+              [36m>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"ant-statistic-header"[39m
+                [36m>[39m
+                  [36m<div[39m
+                    [33mclass[39m=[32m"ant-statistic-title"[39m
+                  [36m>[39m
+                    [0mPending[0m
+                  [36m</div>[39m
+                [36m</div>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"ant-statistic-content"[39m
+                [36m>[39m
+                  [36m<span[39m
+                    [33mclass[39m=[32m"ant-statistic-content-value"[39m
+                  [36m>[39m
+                    [36m<span[39m
+                      [33mclass[39m=[32m"ant-statistic-content-value-int"[39m
+                    [36m>[39m
+                      [0m5[0m
+                    [36m</span>[39m
+                  [36m</span>[39m
+                [36m</div>[39m
+              [36m</div>[39m
+            [36m</div>[39m
+          [36m</div>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"ant-col ant-col-xs-12 ant-col-sm-6 css-dev-only-do-not-override-viwxw0 css-var-root"[39m
+          [33mstyle[39m=[32m"padding-inline: 8px;"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"ant-card ant-card-bordered ant-card-small bg-blue-50 css-dev-only-do-not-override-viwxw0 css-var-root"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"ant-card-body"[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"ant-statistic css-dev-only-do-not-override-viwxw0 css-var-root"[39m
+              [36m>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"ant-statistic-header"[39m
+                [36m>[39m
+                  [36m<div[39m
+                    [33mclass[39m=[32m"ant-statistic-title"[39m
+                  [36m>[39m
+                    [0mProcessing[0m
+                  [36m</div>[39m
+                [36m</div>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"ant-statistic-content"[39m
+                [36m>[39m
+                  [36m<span[39m
+                    [33mclass[39m=[32m"ant-statistic-content-value"[39m
+                  [36m>[39m
+                    [36m<span[39m
+                      [33mclass[39m=[32m"ant-statistic-content-value-int"[39m
+                    [36m>[39m
+                      [0m2[0m
+                    [36m</span>[39m
+                  [36m</span>[39m
+                [36m</div>[39m
+              [36m</div>[39m
+            [36m</div>[39m
+          [36m</div>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"ant-col ant-col-xs-12 ant-col-sm-6 css-dev-only-do-not-override-viwxw0 css-var-root"[39m
+          [33mstyle[39m=[32m"padding-inline: 8px;"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"ant-card ant-card-bordered ant-card-small bg-orange-50 css-dev-only-do-not-override-viwxw0 css-var-root"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"ant-card-body"[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"ant-statistic css-dev-only-do-not-override-viwxw0 css-var-root"[39m
+              [36m>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"ant-statistic-header"[39m
+                [36m>[39m
+                  [36m<div[39m
+                    [33mclass[39m=[32m"ant-sta...
+[90m [2m❯[22m Object.getElementError ../../node_modules/.pnpm/@testing-library+dom@10.4.1/node_modules/@testing-library/dom/dist/config.js:[2m37:19[22m[39m
+[90m [2m❯[22m getElementError ../../node_modules/.pnpm/@testing-library+dom@10.4.1/node_modules/@testing-library/dom/dist/query-helpers.js:[2m20:35[22m[39m
+[90m [2m❯[22m getMultipleElementsFoundError ../../node_modules/.pnpm/@testing-library+dom@10.4.1/node_modules/@testing-library/dom/dist/query-helpers.js:[2m23:10[22m[39m
+[90m [2m❯[22m ../../node_modules/.pnpm/@testing-library+dom@10.4.1/node_modules/@testing-library/dom/dist/query-helpers.js:[2m55:13[22m[39m
+[90m [2m❯[22m ../../node_modules/.pnpm/@testing-library+dom@10.4.1/node_modules/@testing-library/dom/dist/query-helpers.js:[2m95:19[22m[39m
+[36m [2m❯[22m tests/queues-management.test.tsx:[2m126:19[22m[39m
+    [90m124|[39m   [34mit[39m([32m'renders dead letter table and expands row'[39m[33m,[39m [35masync[39m () [33m=>[39m {
+    [90m125|[39m     [34mrenderComponent[39m()[33m;[39m
+    [90m126|[39m     [34mexpect[39m(screen[33m.[39m[34mgetByText[39m([32m'EMAIL_SEND'[39m))[33m.[39m[34mtoBeDefined[39m()[33m;[39m
+    [90m   |[39m                   [31m^[39m
+    [90m127|[39m
+    [90m128|[39m     [90m// Expand row[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/4]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/queues-management.test.tsx[2m > [22mQueuesManagementPage[2m > [22mfilters by notification type
+[31m[1mTestingLibraryElementError[22m[39m: Found multiple elements with the placeholder text of: Filter by Job Type
+
+Here are the matching elements:
+
+Ignored nodes: comments, script, style
+[36m<input[39m
+  [33mclass[39m=[32m"ant-input css-dev-only-do-not-override-viwxw0"[39m
+  [33mplaceholder[39m=[32m"Filter by Job Type"[39m
+  [33mtype[39m=[32m"search"[39m
+  [33mvalue[39m=[32m""[39m
+[36m/>[39m
+
+Ignored nodes: comments, script, style
+[36m<input[39m
+  [33mclass[39m=[32m"ant-input css-dev-only-do-not-override-viwxw0"[39m
+  [33mplaceholder[39m=[32m"Filter by Job Type"[39m
+  [33mtype[39m=[32m"search"[39m
+  [33mvalue[39m=[32m""[39m
+[36m/>[39m
+
+Ignored nodes: comments, script, style
+[36m<input[39m
+  [33mclass[39m=[32m"ant-input css-dev-only-do-not-override-viwxw0"[39m
+  [33mplaceholder[39m=[32m"Filter by Job Type"[39m
+  [33mtype[39m=[32m"search"[39m
+  [33mvalue[39m=[32m""[39m
+[36m/>[39m
+
+(If this is intentional, then use the `*AllBy*` variant of the query (like `queryAllByText`, `getAllByText`, or `findAllByText`)).
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div />[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"max-w-6xl mx-auto space-y-6"[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"mb-6 space-y-4"[39m
+      [36m>[39m
+        [36m<nav[39m
+          [33mclass[39m=[32m"ant-breadcrumb css-dev-only-do-not-override-viwxw0 css-var-root"[39m
+        [36m>[39m
+          [36m<ol>[39m
+            [36m<li[39m
+              [33mclass[39m=[32m"ant-breadcrumb-item"[39m
+            [36m>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"ant-breadcrumb-link"[39m
+              [36m>[39m
+                [0mAdministration[0m
+              [36m</span>[39m
+            [36m</li>[39m
+            [36m<li[39m
+              [33maria-hidden[39m=[32m"true"[39m
+              [33mclass[39m=[32m"ant-breadcrumb-separator"[39m
+            [36m>[39m
+              [0m/[0m
+            [36m</li>[39m
+            [36m<li[39m
+              [33mclass[39m=[32m"ant-breadcrumb-item"[39m
+            [36m>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"ant-breadcrumb-link"[39m
+              [36m>[39m
+                [0mQueues[0m
+              [36m</span>[39m
+            [36m</li>[39m
+          [36m</ol>[39m
+        [36m</nav>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex flex-col sm:flex-row sm:items-start justify-between gap-4"[39m
+        [36m>[39m
+          [36m<div>[39m
+            [36m<h2[39m
+              [33mclass[39m=[32m"ant-typography css-dev-only-do-not-override-viwxw0 css-var-root"[39m
+              [33mstyle[39m=[32m"margin: 0px; font-size: 24px; font-weight: 600; letter-spacing: -0.02em;"[39m
+            [36m>[39m
+              [0mQueues & Dead Letters[0m
+            [36m</h2>[39m
+            [36m<span[39m
+              [33mclass[39m=[32m"ant-typography ant-typography-secondary block mt-1 css-dev-only-do-not-override-viwxw0 css-var-root"[39m
+            [36m>[39m
+              [0mMonitor asynchronous jobs, failures, and dead-lettered operations.[0m
+            [36m</span>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"ant-space css-dev-only-do-not-override-viwxw0 ant-space-horizontal ant-space-align-center ant-space-gap-row-small ant-space-gap-col-small css-var-root"[39m
+          [36m/>[39m
+        [36m</div>[39m
+      [36m</div>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"ant-row css-dev-only-do-not-override-viwxw0 css-var-root"[39m
+        [33mstyle[39m=[32m"margin-inline: -8px; row-gap: 16px;"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"ant-col ant-col-xs-12 ant-col-sm-6 css-dev-only-do-not-override-viwxw0 css-var-root"[39m
+          [33mstyle[39m=[32m"padding-inline: 8px;"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"ant-card ant-card-bordered ant-card-small bg-gray-50 css-dev-only-do-not-override-viwxw0 css-var-root"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"ant-card-body"[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"ant-statistic css-dev-only-do-not-override-viwxw0 css-var-root"[39m
+              [36m>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"ant-statistic-header"[39m
+                [36m>[39m
+                  [36m<div[39m
+                    [33mclass[39m=[32m"ant-statistic-title"[39m
+                  [36m>[39m
+                    [0mPending[0m
+                  [36m</div>[39m
+                [36m</div>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"ant-statistic-content"[39m
+                [36m>[39m
+                  [36m<span[39m
+                    [33mclass[39m=[32m"ant-statistic-content-value"[39m
+                  [36m>[39m
+                    [36m<span[39m
+                      [33mclass[39m=[32m"ant-statistic-content-value-int"[39m
+                    [36m>[39m
+                      [0m5[0m
+                    [36m</span>[39m
+                  [36m</span>[39m
+                [36m</div>[39m
+              [36m</div>[39m
+            [36m</div>[39m
+          [36m</div>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"ant-col ant-col-xs-12 ant-col-sm-6 css-dev-only-do-not-override-viwxw0 css-var-root"[39m
+          [33mstyle[39m=[32m"padding-inline: 8px;"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"ant-card ant-card-bordered ant-card-small bg-blue-50 css-dev-only-do-not-override-viwxw0 css-var-root"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"ant-card-body"[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"ant-statistic css-dev-only-do-not-override-viwxw0 css-var-root"[39m
+              [36m>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"ant-statistic-header"[39m
+                [36m>[39m
+                  [36m<div[39m
+                    [33mclass[39m=[32m"ant-statistic-title"[39m
+                  [36m>[39m
+                    [0mProcessing[0m
+                  [36m</div>[39m
+                [36m</div>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"ant-statistic-content"[39m
+                [36m>[39m
+                  [36m<span[39m
+                    [33mclass[39m=[32m"ant-statistic-content-value"[39m
+                  [36m>[39m
+                    [36m<span[39m
+                      [33mclass[39m=[32m"ant-statistic-content-value-int"[39m
+                    [36m>[39m
+                      [0m2[0m
+                    [36m</span>[39m
+                  [36m</span>[39m
+                [36m</div>[39m
+              [36m</div>[39m
+            [36m</div>[39m
+          [36m</div>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"ant-col ant-col-xs-12 ant-col-sm-6 css-dev-only-do-not-override-viwxw0 css-var-root"[39m
+          [33mstyle[39m=[32m"padding-inline: 8px;"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"ant-card ant-card-bordered ant-card-small bg-orange-50 css-dev-only-do-not-override-viwxw0 css-var-root"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"ant-card-body"[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"ant-statistic css-dev-only-do-not-override-viwxw0 css-var-root"[39m
+              [36m>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"ant-statistic-header"[39m
+                [36m>[39m
+                  [36m<div[39m
+                    [33mclass[39m=[32m"ant-sta...
+[90m [2m❯[22m Object.getElementError ../../node_modules/.pnpm/@testing-library+dom@10.4.1/node_modules/@testing-library/dom/dist/config.js:[2m37:19[22m[39m
+[90m [2m❯[22m getElementError ../../node_modules/.pnpm/@testing-library+dom@10.4.1/node_modules/@testing-library/dom/dist/query-helpers.js:[2m20:35[22m[39m
+[90m [2m❯[22m getMultipleElementsFoundError ../../node_modules/.pnpm/@testing-library+dom@10.4.1/node_modules/@testing-library/dom/dist/query-helpers.js:[2m23:10[22m[39m
+[90m [2m❯[22m ../../node_modules/.pnpm/@testing-library+dom@10.4.1/node_modules/@testing-library/dom/dist/query-helpers.js:[2m55:13[22m[39m
+[90m [2m❯[22m ../../node_modules/.pnpm/@testing-library+dom@10.4.1/node_modules/@testing-library/dom/dist/query-helpers.js:[2m95:19[22m[39m
+[36m [2m❯[22m tests/queues-management.test.tsx:[2m140:32[22m[39m
+    [90m138|[39m     [34mrenderComponent[39m()[33m;[39m
+    [90m139|[39m
+    [90m140|[39m     const searchInput = screen.getByPlaceholderText('Filter by Job Typ…
+    [90m   |[39m                                [31m^[39m
+    [90m141|[39m     fireEvent[33m.[39m[34mchange[39m(searchInput[33m,[39m { target[33m:[39m { value[33m:[39m [32m'EMPTY_TYPE'[39m } })[33m;[39m
+    [90m142|[39m     fireEvent[33m.[39m[34mkeyDown[39m(searchInput[33m,[39m { key[33m:[39m [32m'Enter'[39m[33m,[39m code[33m:[39m [32m'Enter'[39m })[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/4]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/queues-management.test.tsx[2m > [22mQueuesManagementPage[2m > [22mopens replay confirmation modal and submits
+[31m[1mTestingLibraryElementError[22m[39m: Found multiple elements with the text: Replay this dead-lettered job?
+
+Here are the matching elements:
+
+Ignored nodes: comments, script, style
+[36m<div[39m
+  [33mclass[39m=[32m"ant-modal-title"[39m
+  [33mid[39m=[32m"test-id"[39m
+[36m>[39m
+  [0mReplay this dead-lettered job?[0m
+[36m</div>[39m
+
+Ignored nodes: comments, script, style
+[36m<span[39m
+  [33mclass[39m=[32m"ant-modal-confirm-title"[39m
+[36m>[39m
+  [0mReplay this dead-lettered job?[0m
+[36m</span>[39m
+
+(If this is intentional, then use the `*AllBy*` variant of the query (like `queryAllByText`, `getAllByText`, or `findAllByText`)).
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div />[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"max-w-6xl mx-auto space-y-6"[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"mb-6 space-y-4"[39m
+      [36m>[39m
+        [36m<nav[39m
+          [33mclass[39m=[32m"ant-breadcrumb css-dev-only-do-not-override-viwxw0 css-var-root"[39m
+        [36m>[39m
+          [36m<ol>[39m
+            [36m<li[39m
+              [33mclass[39m=[32m"ant-breadcrumb-item"[39m
+            [36m>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"ant-breadcrumb-link"[39m
+              [36m>[39m
+                [0mAdministration[0m
+              [36m</span>[39m
+            [36m</li>[39m
+            [36m<li[39m
+              [33maria-hidden[39m=[32m"true"[39m
+              [33mclass[39m=[32m"ant-breadcrumb-separator"[39m
+            [36m>[39m
+              [0m/[0m
+            [36m</li>[39m
+            [36m<li[39m
+              [33mclass[39m=[32m"ant-breadcrumb-item"[39m
+            [36m>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"ant-breadcrumb-link"[39m
+              [36m>[39m
+                [0mQueues[0m
+              [36m</span>[39m
+            [36m</li>[39m
+          [36m</ol>[39m
+        [36m</nav>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex flex-col sm:flex-row sm:items-start justify-between gap-4"[39m
+        [36m>[39m
+          [36m<div>[39m
+            [36m<h2[39m
+              [33mclass[39m=[32m"ant-typography css-dev-only-do-not-override-viwxw0 css-var-root"[39m
+              [33mstyle[39m=[32m"margin: 0px; font-size: 24px; font-weight: 600; letter-spacing: -0.02em;"[39m
+            [36m>[39m
+              [0mQueues & Dead Letters[0m
+            [36m</h2>[39m
+            [36m<span[39m
+              [33mclass[39m=[32m"ant-typography ant-typography-secondary block mt-1 css-dev-only-do-not-override-viwxw0 css-var-root"[39m
+            [36m>[39m
+              [0mMonitor asynchronous jobs, failures, and dead-lettered operations.[0m
+            [36m</span>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"ant-space css-dev-only-do-not-override-viwxw0 ant-space-horizontal ant-space-align-center ant-space-gap-row-small ant-space-gap-col-small css-var-root"[39m
+          [36m/>[39m
+        [36m</div>[39m
+      [36m</div>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"ant-row css-dev-only-do-not-override-viwxw0 css-var-root"[39m
+        [33mstyle[39m=[32m"margin-inline: -8px; row-gap: 16px;"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"ant-col ant-col-xs-12 ant-col-sm-6 css-dev-only-do-not-override-viwxw0 css-var-root"[39m
+          [33mstyle[39m=[32m"padding-inline: 8px;"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"ant-card ant-card-bordered ant-card-small bg-gray-50 css-dev-only-do-not-override-viwxw0 css-var-root"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"ant-card-body"[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"ant-statistic css-dev-only-do-not-override-viwxw0 css-var-root"[39m
+              [36m>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"ant-statistic-header"[39m
+                [36m>[39m
+                  [36m<div[39m
+                    [33mclass[39m=[32m"ant-statistic-title"[39m
+                  [36m>[39m
+                    [0mPending[0m
+                  [36m</div>[39m
+                [36m</div>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"ant-statistic-content"[39m
+                [36m>[39m
+                  [36m<span[39m
+                    [33mclass[39m=[32m"ant-statistic-content-value"[39m
+                  [36m>[39m
+                    [36m<span[39m
+                      [33mclass[39m=[32m"ant-statistic-content-value-int"[39m
+                    [36m>[39m
+                      [0m5[0m
+                    [36m</span>[39m
+                  [36m</span>[39m
+                [36m</div>[39m
+              [36m</div>[39m
+            [36m</div>[39m
+          [36m</div>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"ant-col ant-col-xs-12 ant-col-sm-6 css-dev-only-do-not-override-viwxw0 css-var-root"[39m
+          [33mstyle[39m=[32m"padding-inline: 8px;"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"ant-card ant-card-bordered ant-card-small bg-blue-50 css-dev-only-do-not-override-viwxw0 css-var-root"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"ant-card-body"[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"ant-statistic css-dev-only-do-not-override-viwxw0 css-var-root"[39m
+              [36m>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"ant-statistic-header"[39m
+                [36m>[39m
+                  [36m<div[39m
+                    [33mclass[39m=[32m"ant-statistic-title"[39m
+                  [36m>[39m
+                    [0mProcessing[0m
+                  [36m</div>[39m
+                [36m</div>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"ant-statistic-content"[39m
+                [36m>[39m
+                  [36m<span[39m
+                    [33mclass[39m=[32m"ant-statistic-content-value"[39m
+                  [36m>[39m
+                    [36m<span[39m
+                      [33mclass[39m=[32m"ant-statistic-content-value-int"[39m
+                    [36m>[39m
+                      [0m2[0m
+                    [36m</span>[39m
+                  [36m</span>[39m
+                [36m</div>[39m
+              [36m</div>[39m
+            [36m</div>[39m
+          [36m</div>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"ant-col ant-col-xs-12 ant-col-sm-6 css-dev-only-do-not-override-viwxw0 css-var-root"[39m
+          [33mstyle[39m=[32m"padding-inline: 8px;"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"ant-card ant-card-bordered ant-card-small bg-orange-50 css-dev-only-do-not-override-viwxw0 css-var-root"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"ant-card-body"[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"ant-statistic css-dev-only-do-not-override-viwxw0 css-var-root"[39m
+              [36m>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"ant-statistic-header"[39m
+                [36m>[39m
+                  [36m<div[39m
+                    [33mclass[39m=[32m"ant-sta...
+
+Ignored nodes: comments, script, style
+[36m<html>[39m
+  [36m<head />[39m
+  [36m<body>[39m
+    [36m<div />[39m
+    [36m<div>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"max-w-6xl mx-auto space-y-6"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"mb-6 space-y-4"[39m
+        [36m>[39m
+          [36m<nav[39m
+            [33mclass[39m=[32m"ant-breadcrumb css-dev-only-do-not-override-viwxw0 css-var-root"[39m
+          [36m>[39m
+            [36m<ol>[39m
+              [36m<li[39m
+                [33mclass[39m=[32m"ant-breadcrumb-item"[39m
+              [36m>[39m
+                [36m<span[39m
+                  [33mclass[39m=[32m"ant-breadcrumb-link"[39m
+                [36m>[39m
+                  [0mAdministration[0m
+                [36m</span>[39m
+              [36m</li>[39m
+              [36m<li[39m
+                [33maria-hidden[39m=[32m"true"[39m
+                [33mclass[39m=[32m"ant-breadcrumb-separator"[39m
+              [36m>[39m
+                [0m/[0m
+              [36m</li>[39m
+              [36m<li[39m
+                [33mclass[39m=[32m"ant-breadcrumb-item"[39m
+              [36m>[39m
+                [36m<span[39m
+                  [33mclass[39m=[32m"ant-breadcrumb-link"[39m
+                [36m>[39m
+                  [0mQueues[0m
+                [36m</span>[39m
+              [36m</li>[39m
+            [36m</ol>[39m
+          [36m</nav>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"flex flex-col sm:flex-row sm:items-start justify-between gap-4"[39m
+          [36m>[39m
+            [36m<div>[39m
+              [36m<h2[39m
+                [33mclass[39m=[32m"ant-typography css-dev-only-do-not-override-viwxw0 css-var-root"[39m
+                [33mstyle[39m=[32m"margin: 0px; font-size: 24px; font-weight: 600; letter-spacing: -0.02em;"[39m
+              [36m>[39m
+                [0mQueues & Dead Letters[0m
+              [36m</h2>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"ant-typography ant-typography-secondary block mt-1 css-dev-only-do-not-override-viwxw0 css-var-root"[39m
+              [36m>[39m
+                [0mMonitor asynchronous jobs, failures, and dead-lettered operations.[0m
+              [36m</span>[39m
+            [36m</div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"ant-space css-dev-only-do-not-override-viwxw0 ant-space-horizontal ant-space-align-center ant-space-gap-row-small ant-space-gap-col-small css-var-root"[39m
+            [36m/>[39m
+          [36m</div>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"ant-row css-dev-only-do-not-override-viwxw0 css-var-root"[39m
+          [33mstyle[39m=[32m"margin-inline: -8px; row-gap: 16px;"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"ant-col ant-col-xs-12 ant-col-sm-6 css-dev-only-do-not-override-viwxw0 css-var-root"[39m
+            [33mstyle[39m=[32m"padding-inline: 8px;"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"ant-card ant-card-bordered ant-card-small bg-gray-50 css-dev-only-do-not-override-viwxw0 css-var-root"[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"ant-card-body"[39m
+              [36m>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"ant-statistic css-dev-only-do-not-override-viwxw0 css-var-root"[39m
+                [36m>[39m
+                  [36m<div[39m
+                    [33mclass[39m=[32m"ant-statistic-header"[39m
+                  [36m>[39m
+                    [36m<div[39m
+                      [33mclass[39m=[32m"ant-statistic-title"[39m
+                    [36m>[39m
+                      [0mPending[0m
+                    [36m</div>[39m
+                  [36m</div>[39m
+                  [36m<div[39m
+                    [33mclass[39m=[32m"ant-statistic-content"[39m
+                  [36m>[39m
+                    [36m<span[39m
+                      [33mclass[39m=[32m"ant-statistic-content-value"[39m
+                    [36m>[39m
+                      [36m<span[39m
+                        [33mclass[39m=[32m"ant-statistic-content-value-int"[39m
+                      [36m>[39m
+                        [0m5[0m
+                      [36m</span>[39m
+                    [36m</span>[39m
+                  [36m</div>[39m
+                [36m</div>[39m
+              [36m</div>[39m
+            [36m</div>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"ant-col ant-col-xs-12 ant-col-sm-6 css-dev-only-do-not-override-viwxw0 css-var-root"[39m
+            [33mstyle[39m=[32m"padding-inline: 8px;"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"ant-card ant-card-bordered ant-card-small bg-blue-50 css-dev-only-do-not-override-viwxw0 css-var-root"[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"ant-card-body"[39m
+              [36m>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"ant-statistic css-dev-only-do-not-override-viwxw0 css-var-root"[39m
+                [36m>[39m
+                  [36m<div[39m
+                    [33mclass[39m=[32m"ant-statistic-header"[39m
+                  [36m>[39m
+                    [36m<div[39m
+                      [33mclass[39m=[32m"ant-statistic-title"[39m
+                    [36m>[39m
+                      [0mProcessing[0m
+                    [36m</div>[39m
+                  [36m</div>[39m
+                  [36m<div[39m
+                    [33mclass[39m=[32m"ant-statistic-content"[39m
+                  [36m>[39m
+                    [36m<span[39m
+                      [33mclass[39m=[32m"ant-statistic-content-value"[39m
+                    [36m>[39m
+                      [36m<span[39m
+                        [33mclass[39m=[32m"ant-statistic-content-value-int"[39m
+                      [36m>[39m
+                        [0m2[0m
+                      [36m</span>[39m
+                    [36m</span>[39m
+                  [36m</div>[39m
+                [36m</div>[39m
+              [36m</div>[39m
+            [36m</div>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"ant-col ant-col-xs-12 ant-col-sm-6 css-dev-only-do-not-override-viwxw0 css-var-root"[39m
+            [33mstyle[39m=[32m"padding-inline: 8px;"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"ant-card ant-card-bordered ant-card-small bg-orange-50 css-dev-only-do-not-override-viwxw0 css-var-root"[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"ant-card-body"[39m
+              [36m>[39m
+                [36m<div[3...
+[90m [2m❯[22m Proxy.waitForWrapper ../../node_modules/.pnpm/@testing-library+dom@10.4.1/node_modules/@testing-library/dom/dist/wait-for.js:[2m163:27[22m[39m
+[36m [2m❯[22m tests/queues-management.test.tsx:[2m162:11[22m[39m
+    [90m160|[39m     fireEvent[33m.[39m[34mclick[39m(screen[33m.[39m[34mgetByText[39m([32m'Replay'[39m))[33m;[39m
+    [90m161|[39m
+    [90m162|[39m     [35mawait[39m [34mwaitFor[39m(() [33m=>[39m {
+    [90m   |[39m           [31m^[39m
+    [90m163|[39m       expect(screen.getByText('Replay this dead-lettered job?')).toBeD…
+    [90m164|[39m     })[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/4]⎯[22m[39m
+
+
+[2m Test Files [22m [1m[31m1 failed[39m[22m[90m (1)[39m
+[2m      Tests [22m [1m[31m4 failed[39m[22m[2m | [22m[1m[32m1 passed[39m[22m[90m (5)[39m
+[2m   Start at [22m 13:19:33
+[2m   Duration [22m 4.42s[2m (transform 54ms, setup 0ms, import 1.57s, tests 2.16s, environment 569ms)[22m
+
+undefined
+/Users/sohamdhande/Docs_Local/nst-events/apps/dashboard:
+ ERR_PNPM_RECURSIVE_EXEC_FIRST_FAIL  Command failed with exit code 1: vitest run tests/queues-management.test.tsx

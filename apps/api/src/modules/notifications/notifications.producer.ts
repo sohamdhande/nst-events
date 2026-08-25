@@ -15,6 +15,8 @@ export const NotificationMetadataSchema = z.object({
     dispute_id: z.string().uuid().optional(),
     attendance_id: z.string().uuid().optional(),
     announcement_id: z.string().uuid().optional(),
+    team_id: z.string().uuid().optional(),
+    invitation_id: z.string().uuid().optional(),
   }),
   action_payload: z.object({
     role: z.string().optional(),
@@ -25,7 +27,10 @@ export const NotificationMetadataSchema = z.object({
 export const ValidNotificationTypesSchema = z.enum([
   'WAITLIST_PROMOTED', 'APPROVAL_REQUEST', 'EVENT_APPROVED', 'EVENT_REJECTED',
   'ATTENDANCE_DISPUTE_RESOLVED', 'ROLE_CHANGED', 'CLUB_ANNOUNCEMENT',
-  'SYSTEM_ALERT', 'EVENT_REMINDER', 'ATTENDANCE_ALERT'
+  'SYSTEM_ALERT', 'EVENT_REMINDER', 'ATTENDANCE_ALERT',
+  'TEAM_REGISTERED', 'TEAM_WAITLISTED', 'TEAM_CANCELLED', 'TEAM_INVITATION_RECEIVED',
+  'TEAM_INVITATION_ACCEPTED', 'TEAM_INVITATION_DECLINED', 'TEAM_LEADERSHIP_TRANSFERRED',
+  'TEAM_MEMBER_REMOVED', 'TEAM_WAITLIST_PROMOTED'
 ]);
 
 export type NotificationMetadata = {
@@ -41,6 +46,8 @@ export type NotificationMetadata = {
     dispute_id?: string;
     attendance_id?: string;
     announcement_id?: string;
+    team_id?: string;
+    invitation_id?: string;
   };
   action_payload?: {
     role?: string;
@@ -138,6 +145,25 @@ export const enqueueNotification = async ({
       ON CONFLICT (idempotency_key) DO NOTHING;
     `;
   }
+
+  // 5. Emit Realtime SSE Event (Transaction-safe via PostgreSQL NOTIFY)
+  await tx.$executeRaw`
+    SELECT pg_notify(
+      ${`user_${userId}_notifications_live`},
+      ${JSON.stringify({
+        type: 'NOTIFICATION_CREATED',
+        notification: {
+          id: notification.id,
+          title: notification.title,
+          body: notification.body,
+          type: notification.type,
+          metadata: notification.metadata,
+          readAt: notification.readAt,
+          createdAt: notification.createdAt
+        }
+      })}
+    )
+  `;
 
   return notification;
 };

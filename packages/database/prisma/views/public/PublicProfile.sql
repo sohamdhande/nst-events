@@ -1,0 +1,10 @@
+SELECT
+  id,
+  full_name,
+  avatar_url,
+  global_role,
+  created_at,
+  updated_at,
+  deleted_at
+FROM
+  users;

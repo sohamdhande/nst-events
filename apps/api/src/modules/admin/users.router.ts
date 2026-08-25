@@ -3,7 +3,7 @@ import { prisma } from '../../lib/prisma';
 import { authenticate } from '../../middleware/authenticate';
 import { requireRole } from '../../middleware/authorize';
 import { validate } from '../../middleware/validate';
-import { listAdminUsersSchema, updateAdminUserRoleSchema } from './users.schema';
+import { listAdminUsersSchema, updateAdminUserRoleSchema, updateAcademicBatchSchema } from './users.schema';
 import { adminUsersService } from './users.service';
 
 export const adminUsersRouter: Router = Router();
@@ -19,7 +19,22 @@ adminUsersRouter.get(
       const result = await adminUsersService.listUsers(req.query as any);
       res.status(200).json(result);
     } catch (err) {
-      next(err);
+      console.error("ADMIN_BATCH_ERR:", err); next(err);
+    }
+  }
+);
+
+// GET /v1/admin/users/:userId
+adminUsersRouter.get(
+  '/:userId',
+  authenticate,
+  requireRole(['PLATFORM_ADMIN', 'FACULTY_ADMIN']),
+  async (req, res, next) => {
+    try {
+      const result = await adminUsersService.getUser(req.params.userId);
+      res.status(200).json(result);
+    } catch (err) {
+      console.error("ADMIN_USER_GET_ERR:", err); next(err);
     }
   }
 );
@@ -38,7 +53,7 @@ adminUsersRouter.post(
       const result = await adminUsersService.updateUserRole(adminId, targetId, payload);
       res.status(200).json(result);
     } catch (err) {
-      next(err);
+      console.error("ADMIN_BATCH_ERR:", err); next(err);
     }
   }
 );
@@ -57,7 +72,26 @@ adminUsersRouter.post(
       });
       res.json({ message: 'Sessions revoked', revoked_count: result.count });
     } catch (err) {
-      next(err);
+      console.error("ADMIN_BATCH_ERR:", err); next(err);
+    }
+  }
+);
+
+// PATCH /v1/admin/users/:userId/academic-batch
+adminUsersRouter.patch(
+  '/:userId/academic-batch',
+  authenticate,
+  requireRole(['PLATFORM_ADMIN', 'FACULTY_ADMIN']),
+  validate(updateAcademicBatchSchema),
+  async (req, res, next) => {
+    try {
+      const adminId = req.user!.id;
+      const targetId = req.params.userId;
+      const payload = req.body;
+      const result = await adminUsersService.updateAcademicBatch(adminId, targetId, payload);
+      res.status(200).json(result);
+    } catch (err) {
+      console.error("ADMIN_BATCH_ERR:", err); next(err);
     }
   }
 );

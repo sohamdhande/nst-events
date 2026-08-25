@@ -30,6 +30,7 @@ export function errorHandler(
   }
 
   if (err instanceof z.ZodError) {
+    console.error("ZodError Issues:", JSON.stringify(err.issues, null, 2));
     const detail = err.issues.map((issue) => issue.message).join(', ');
     res.status(400).json({
       type: 'https://api.nstsdc.org/errors/bad-request',

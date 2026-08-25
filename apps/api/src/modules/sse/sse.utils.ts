@@ -15,3 +15,15 @@ export function buildEventChannel(eventId: string): string {
   
   return `event_${result.data}_live`;
 }
+
+/**
+ * Validates a userId as a strict UUID and constructs the canonical PostgreSQL LISTEN channel for user notifications.
+ */
+export function buildUserNotificationChannel(userId: string): string {
+  const result = uuidSchema.safeParse(userId);
+  if (!result.success) {
+    throw new UnprocessableEntityError('Invalid user ID format');
+  }
+  
+  return `user_${result.data}_notifications_live`;
+}

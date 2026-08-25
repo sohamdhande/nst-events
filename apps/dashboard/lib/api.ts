@@ -7,6 +7,7 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 import { getWebAuthStore } from './auth-store';
 export class ApiError extends Error {
   status: number;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   data: any;
   requestId?: string;
 
@@ -19,6 +20,7 @@ export class ApiError extends Error {
   }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const apiClient = async <T = any>(endpoint: string, options: RequestInit = {}): Promise<T> => {
   // Web Authentication Integration Boundary
   // Expects cookies (httpOnly) or localStorage fallback depending on future auth implementation.
@@ -46,6 +48,7 @@ export const apiClient = async <T = any>(endpoint: string, options: RequestInit 
   const requestId = response.headers.get('x-request-id') || undefined;
 
   if (!response.ok) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let errorBody: any = {};
     try {
       errorBody = await response.json();

@@ -20,3 +20,15 @@ export const updateAdminUserRoleSchema = z.object({
 export type ListAdminUsersQuery = z.infer<typeof listAdminUsersSchema>['query'];
 export type UpdateAdminUserRoleBody = z.infer<typeof updateAdminUserRoleSchema>['body'];
 export type UpdateAdminUserRoleParams = z.infer<typeof updateAdminUserRoleSchema>['params'];
+
+export const updateAcademicBatchSchema = z.object({
+  params: z.object({
+    userId: z.string().uuid(),
+  }),
+  body: z.object({
+    batchId: z.string().uuid(),
+  }),
+});
+
+export type UpdateAcademicBatchBody = z.infer<typeof updateAcademicBatchSchema>['body'];
+export type UpdateAcademicBatchParams = z.infer<typeof updateAcademicBatchSchema>['params'];

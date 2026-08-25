@@ -56,6 +56,7 @@ export const useRegistration = (eventId: string) => {
   return {
     register: register.mutate,
     isRegistering: register.isPending,
+    error: register.error,
     cancel: cancel.mutate,
     isCancelling: cancel.isPending,
   };

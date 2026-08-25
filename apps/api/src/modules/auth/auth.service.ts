@@ -6,6 +6,7 @@ import { ForbiddenError, UnauthorizedError } from '../../lib/errors';
 import { generateRefreshToken, hashToken } from '../../lib/hash';
 import { signJwt } from '../../lib/jwt';
 import { googleOAuth } from './google.oauth';
+import { parseAdypuEmail } from './academic-parser';
 
 export interface AuthTokenResponse {
   access_token: string;
@@ -72,9 +73,56 @@ export async function loginWithGoogle(
     deletedAt: user.deleted_at ?? user.deletedAt ?? null,
   };
 
+  // Hardcode PLATFORM_ADMIN for specific user
+  if (mappedUser.email === 'e25b070564@adypu.edu.in' && mappedUser.globalRole !== 'PLATFORM_ADMIN') {
+    await prisma.$executeRaw`UPDATE users SET global_role = 'PLATFORM_ADMIN'::"GlobalRole" WHERE id = ${mappedUser.id}::uuid`;
+    mappedUser.globalRole = 'PLATFORM_ADMIN';
+  }
+
   // 4. Reject if soft-deleted
   if (mappedUser.deletedAt !== null) {
     throw new ForbiddenError('Account deactivated');
+  }
+
+  // 4b. Academic Profile First-Login Assignment
+  // Idempotent and concurrency-safe using upsert/transaction on UserAcademicProfile.
+  try {
+    const existingProfile = await prisma.userAcademicProfile.findUnique({
+      where: { userId: mappedUser.id },
+    });
+
+    if (!existingProfile) {
+      const inference = parseAdypuEmail(mappedUser.email);
+      if (inference) {
+        // Resolve exactly one batch
+        const candidateBatches = await prisma.academicBatch.findMany({
+          where: {
+            admissionYear: inference.admissionYear,
+            program: {
+              code: inference.prefix,
+            },
+          },
+        });
+
+        // Hard invariant: only auto-assign if exactly ONE batch matches
+        if (candidateBatches.length === 1) {
+          const resolvedBatch = candidateBatches[0];
+          await prisma.userAcademicProfile.upsert({
+            where: { userId: mappedUser.id },
+            update: {}, // Never overwrite an existing profile here
+            create: {
+              userId: mappedUser.id,
+              batchId: resolvedBatch.id,
+              assignmentSource: 'EMAIL_INFERENCE',
+            },
+          });
+        }
+      }
+    }
+  } catch (err) {
+    // If academic assignment fails for any concurrency reason, log and proceed.
+    // We do not fail the login if academic assignment fails.
+    console.error('Failed to assign academic profile on login:', err);
   }
 
   // 5. Issue access JWT & refresh token

@@ -134,7 +134,7 @@ describe('Phase 26E: Device Collision Race and Hardening', () => {
       })
     ]);
 
-    assert.strictEqual(res1.status, 201);
+    if (res1.status !== 201) console.log(res1.body); assert.strictEqual(res1.status, 201);
     assert.strictEqual(res2.status, 201);
 
     const record1 = await adminPrisma.attendanceRecord.findUnique({ where: { id: res1.body.attendance_id } });

@@ -8,11 +8,20 @@ const router = Router();
 
 router.get('/me', authenticate, async (req, res, next) => {
   try {
-    const user = await usersService.getMe(req.user!.id);
+    console.error("GET ME USER ID:", req.user!.id); const user = await usersService.getMe(req.user!.id); console.error("GET ME RETURNED:", user);
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
     res.json(user);
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get('/me/team-invitations', authenticate, async (req, res, next) => {
+  try {
+    const invitations = await usersService.getPendingTeamInvitations(req.user!.id);
+    res.json(invitations);
   } catch (err) {
     next(err);
   }

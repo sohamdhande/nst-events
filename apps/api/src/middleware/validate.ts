@@ -11,9 +11,9 @@ export const validate = (schema: AnyZodObject) => {
         params: req.params,
       });
       
-      req.body = parsed.body;
-      req.query = parsed.query;
-      req.params = parsed.params;
+      if (parsed.body !== undefined) req.body = parsed.body;
+      if (parsed.query !== undefined) req.query = parsed.query;
+      if (parsed.params !== undefined) req.params = parsed.params;
       
       next();
     } catch (error) {

@@ -21,6 +21,19 @@ router.get(
   }
 );
 
+router.get(
+  '/unread-count',
+  authenticate,
+  async (req, res, next) => {
+    try {
+      const result = await notificationsService.getUnreadCount(req.user!.id);
+      res.status(200).json(result);
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
 router.patch(
   '/read-all',
   authenticate,

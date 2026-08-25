@@ -41,7 +41,7 @@ class PGListener {
       
       // Restore active subscriptions on reconnect
       for (const channel of this.activeChannels) {
-        await this.client.query(`LISTEN ${channel}`);
+        await this.client.query(`LISTEN "${channel}"`);
       }
 
       this.isConnecting = false;
@@ -67,7 +67,7 @@ class PGListener {
     this.activeChannels.add(channel);
     if (this.client) {
       try {
-        await this.client.query(`LISTEN ${channel}`);
+        await this.client.query(`LISTEN "${channel}"`);
       } catch (e) {
         console.error(`PGListener listen error on ${channel}:`, e);
       }
@@ -78,7 +78,7 @@ class PGListener {
     this.activeChannels.delete(channel);
     if (this.client) {
       try {
-        await this.client.query(`UNLISTEN ${channel}`);
+        await this.client.query(`UNLISTEN "${channel}"`);
       } catch (e) {
         console.error(`PGListener unlisten error on ${channel}:`, e);
       }
