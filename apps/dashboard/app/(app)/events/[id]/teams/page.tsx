@@ -7,12 +7,8 @@ import { LeftOutlined, MoreOutlined } from '@ant-design/icons';
 import { useEventDetail } from '../../../../../hooks/useEventDetail';
 import { useTeamsList, Team, TeamMember } from '../../../../../hooks/useTeams';
 import { useCurrentUser } from '../../../../../hooks/useCurrentUser';
-import { 
-  useAdminCancelTeam, 
-  useAdminRemoveMember, 
-  useAdminTransferLeadership, 
-  useAdminPromoteWaitlist 
-} from '../../../../../hooks/useAdminTeams';
+import { useAdminCancelTeam, useAdminRemoveMember, useAdminTransferLeadership, useAdminPromoteWaitlist } from '../../../../../hooks/useAdminTeams';
+import { resolveEventLockState } from '../../../../../lib/event-utils';
 
 const { Title, Text } = Typography;
 const { confirm } = Modal;
@@ -48,7 +44,8 @@ export default function TeamsManagementPage({ params }: { params: Promise<{ id: 
     return data?.pages.flatMap(page => page.data) || [];
   }, [data]);
 
-  const isEffectivelyLocked = event?.isLocked;
+  const lockState = event ? resolveEventLockState(event) : 'UNLOCKED';
+  const isEffectivelyLocked = lockState !== 'UNLOCKED';
   
   const isGlobalAdmin = currentUser?.global_role === 'PLATFORM_ADMIN' || currentUser?.global_role === 'FACULTY_ADMIN';
   const isClubAdmin = currentUser?.club_memberships?.some(m => m.role === 'CLUB_ADMIN' && event?.eventClubs?.some(ec => ec.clubId === m.club_id));
@@ -164,7 +161,7 @@ export default function TeamsManagementPage({ params }: { params: Promise<{ id: 
   if (event.registrationType !== 'TEAM') {
     return (
       <div style={{ maxWidth: 600, margin: '100px auto', textAlign: 'center' }}>
-        <Space direction="vertical" size="large">
+        <Space orientation="vertical" size="large">
           <Alert 
             message="Individual Registration Event" 
             description="This event uses individual registration. Team management is not applicable." 
@@ -277,8 +274,11 @@ export default function TeamsManagementPage({ params }: { params: Promise<{ id: 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 16 }}>
         <Space align="center" wrap>
           <Title level={2} style={{ margin: 0 }}>Teams</Title>
-          {isEffectivelyLocked && (
-            <Tag color="red" bordered={false} style={{ fontSize: 14, padding: '4px 8px' }}>LOCKED — READ-ONLY</Tag>
+          {lockState === 'MANUALLY_LOCKED' && (
+            <Tag color="red" variant="filled" style={{ fontSize: 14, padding: '4px 8px' }}>LOCKED — READ-ONLY</Tag>
+          )}
+          {lockState === 'PERMANENTLY_LOCKED' && (
+            <Tag color="red" variant="filled" style={{ fontSize: 14, padding: '4px 8px' }}>PERMANENTLY LOCKED — READ-ONLY</Tag>
           )}
         </Space>
         <Text type="secondary" style={{ display: 'block', width: '100%' }}>
@@ -287,7 +287,7 @@ export default function TeamsManagementPage({ params }: { params: Promise<{ id: 
       </div>
 
       <Card styles={{ body: { padding: 16 } }} variant="borderless">
-        <Space split={<Text type="secondary">|</Text>} wrap>
+        <Space separator={<Text type="secondary">|</Text>} wrap>
           <Text strong>Minimum Size: <Text type="secondary" style={{ fontWeight: 'normal' }}>{minTeamSize ?? 'Not set'}</Text></Text>
           <Text strong>Maximum Size: <Text type="secondary" style={{ fontWeight: 'normal' }}>{maxTeamSize ?? 'Not set'}</Text></Text>
         </Space>

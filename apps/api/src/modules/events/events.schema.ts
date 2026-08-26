@@ -122,3 +122,5 @@ export type ListEventsQuery = z.infer<typeof ListEventsQuerySchema>['query'];
 export type RejectEventInput = z.infer<typeof RejectEventSchema>['body'];
 export type CreateSessionInput = z.infer<typeof CreateSessionSchema>['body'];
 export type UpdateSessionInput = z.infer<typeof UpdateSessionSchema>['body'];
+
+export type EventLockState = 'UNLOCKED' | 'MANUALLY_LOCKED' | 'PERMANENTLY_LOCKED';

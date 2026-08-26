@@ -1,12 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import { Table, Button, Modal, Form, Input, message, Tag } from 'antd';
+import { Table, Button, Modal, Form, Input, Tag, App } from 'antd';
 import { EditOutlined, PlusOutlined } from '@ant-design/icons';
 import { useAdminAcademicPrograms, AdminAcademicProgram } from '../../../../hooks/useAdminAcademicPrograms';
 import { AdminPageHeader } from '../../../../components/admin/AdminPageHeader';
 
 export default function AcademicProgramsPage() {
+  const { message } = App.useApp();
   const { data, isLoading, isError, createProgram, updateProgram } = useAdminAcademicPrograms();
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [editingProgram, setEditingProgram] = useState<AdminAcademicProgram | null>(null);

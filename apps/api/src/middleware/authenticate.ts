@@ -30,12 +30,16 @@ export async function authenticate(
     const user = await withUserContext(payload.sub, async (tx) => {
       return tx.user.findUnique({
         where: { id: payload.sub },
-        select: { id: true, deletedAt: true },
+        select: { id: true, deletedAt: true, securityVersion: true },
       });
     });
 
     if (!user || user.deletedAt !== null) {
       throw new ForbiddenError('Account deactivated');
+    }
+
+    if (user.securityVersion !== payload.secVer) {
+      throw new UnauthorizedError('Session revoked due to role or access change');
     }
 
     req.user = {

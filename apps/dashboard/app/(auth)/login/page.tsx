@@ -34,7 +34,7 @@ function LoginContent() {
   };
 
   return (
-    <div style={{
+    <div suppressHydrationWarning style={{
       width: '100%',
       maxWidth: 400,
       padding: '40px 32px',
@@ -44,8 +44,8 @@ function LoginContent() {
       border: `1px solid ${token.colorBorderSecondary}`,
       textAlign: 'center',
     }}>
-      <div style={{ marginBottom: 32 }}>
-        <div style={{
+      <div suppressHydrationWarning style={{ marginBottom: 32 }}>
+        <div suppressHydrationWarning style={{
           display: 'inline-flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -56,15 +56,15 @@ function LoginContent() {
           marginBottom: 20,
           boxShadow: '0 4px 12px rgba(22, 119, 255, 0.2)'
         }}>
-          <span style={{ color: 'white', fontWeight: 800, fontSize: 20, letterSpacing: -0.5 }}>
+          <span suppressHydrationWarning style={{ color: 'white', fontWeight: 800, fontSize: 20, letterSpacing: -0.5 }}>
             NST
           </span>
         </div>
         
-        <Title level={3} style={{ margin: 0, fontWeight: 700, letterSpacing: -0.5, color: token.colorText }}>
+        <Title suppressHydrationWarning level={3} style={{ margin: 0, fontWeight: 700, letterSpacing: -0.5, color: token.colorText }}>
           NST Events
         </Title>
-        <Text style={{ display: 'block', marginTop: 6, fontSize: 14, color: token.colorTextSecondary }}>
+        <Text suppressHydrationWarning style={{ display: 'block', marginTop: 6, fontSize: 14, color: token.colorTextSecondary }}>
           Club & Faculty Management Portal
         </Text>
       </div>
@@ -80,6 +80,7 @@ function LoginContent() {
       )}
 
       <Button
+        suppressHydrationWarning
         type="primary"
         size="large"
         block
@@ -97,13 +98,14 @@ function LoginContent() {
         Sign in with Google
       </Button>
 
-      <Divider style={{ margin: '24px 0', borderColor: token.colorBorderSecondary }}>
+      <Divider suppressHydrationWarning style={{ margin: '24px 0', borderColor: token.colorBorderSecondary }}>
         <Text type="secondary" style={{ fontSize: 12 }}>STUDENT ACCESS</Text>
       </Divider>
 
       <Text type="secondary" style={{ fontSize: 13, display: 'block' }}>
         Are you a student? {' '}
         <Link 
+          suppressHydrationWarning
           href="/student-access" 
           style={{ color: '#1677ff', fontWeight: 500, transition: 'color 0.2s' }}
         >
@@ -118,7 +120,7 @@ export default function LoginPage() {
   const { token } = theme.useToken();
 
   return (
-    <div style={{ 
+    <div suppressHydrationWarning style={{ 
       minHeight: '100vh', 
       display: 'flex', 
       alignItems: 'center', 

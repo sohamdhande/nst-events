@@ -1,5 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert';
+
+// Use a dynamic port to avoid EADDRINUSE
+process.env.PORT = '0';
+
 import { bootstrap, gracefulShutdown } from '../../src/index';
 
 test('Graceful Shutdown Lifecycle', async (t) => {

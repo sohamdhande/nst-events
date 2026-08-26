@@ -11,6 +11,7 @@ import { useEvents, Event } from '../../../hooks/useEvents';
 import { useEventLifecycle } from '../../../hooks/useEventLifecycle';
 import { useNotifications, Notification } from '../../../hooks/useNotifications';
 import { resolveManagementAction, ManagementAction } from '../../../lib/action-utils';
+import { resolveEventLockState } from '../../../lib/event-utils';
 import { CurrentUser, ClubMembership } from '../../../hooks/useCurrentUser';
 
 const { Title, Text } = Typography;
@@ -128,7 +129,7 @@ function ActionRequiredSection({ currentUser }: { currentUser: CurrentUser }) {
       title: 'Action',
       key: 'action',
       render: (_: unknown, record: ManagementAction) => (
-        <Space direction="vertical" size={0}>
+        <Space orientation="vertical" size={0}>
           <Text strong style={{ fontSize: 13, color: token.colorPrimary }}>{record.label}</Text>
           <Text type="secondary" style={{ fontSize: 12 }}>{record.description}</Text>
         </Space>
@@ -354,18 +355,17 @@ export default function DashboardPage() {
     const canLock = (isGlobalAdmin || isClubAdmin || isMentor) && record.state === 'PUBLISHED';
     const canUnlock = (isGlobalAdmin || isClubAdmin || isMentor) && record.state === 'PUBLISHED';
 
-    // DO NOT compute permanent lock from device time per spec. Just use isLocked from backend.
-    const isEffectivelyLocked = record.isLocked;
+    const lockState = resolveEventLockState(record);
 
     const items: MenuProps['items'] = [
       { key: 'view', label: <Link href={`/events/${record.id}`}>View Event</Link> }
     ];
 
     const lifecycleItems: MenuProps['items'] = [];
-    if (canEdit && !isEffectivelyLocked) lifecycleItems.push({ key: 'edit', label: <Link href={`/events/${record.id}/edit`}>Edit</Link> });
-    if (canSubmit && !isEffectivelyLocked) lifecycleItems.push({ key: 'submit', label: 'Submit for Approval', onClick: () => submitMutation.mutate(record.id) });
-    if (canEventApprove && !isEffectivelyLocked) lifecycleItems.push({ key: 'approve', label: 'Approve', onClick: () => approveMutation.mutate(record.id) });
-    if (canEventReject && !isEffectivelyLocked) {
+    if (canEdit && lockState === 'UNLOCKED') lifecycleItems.push({ key: 'edit', label: <Link href={`/events/${record.id}/edit`}>Edit</Link> });
+    if (canSubmit && lockState === 'UNLOCKED') lifecycleItems.push({ key: 'submit', label: 'Submit for Approval', onClick: () => submitMutation.mutate(record.id) });
+    if (canEventApprove && lockState === 'UNLOCKED') lifecycleItems.push({ key: 'approve', label: 'Approve', onClick: () => approveMutation.mutate(record.id) });
+    if (canEventReject && lockState === 'UNLOCKED') {
       lifecycleItems.push({
         key: 'reject',
         label: 'Reject',
@@ -378,8 +378,8 @@ export default function DashboardPage() {
         },
       });
     }
-    if (canLock && !isEffectivelyLocked && !record.isLocked) lifecycleItems.push({ key: 'lock', label: 'Lock', onClick: () => lockMutation.mutate(record.id) });
-    if (canUnlock && record.isLocked) lifecycleItems.push({ key: 'unlock', label: 'Unlock', onClick: () => unlockMutation.mutate(record.id) });
+    if (canLock && lockState === 'UNLOCKED') lifecycleItems.push({ key: 'lock', label: 'Lock', onClick: () => lockMutation.mutate(record.id) });
+    if (canUnlock && lockState === 'MANUALLY_LOCKED') lifecycleItems.push({ key: 'unlock', label: 'Unlock', onClick: () => unlockMutation.mutate(record.id) });
 
     if (lifecycleItems.length > 0) {
       items.push({ type: 'divider' });

@@ -5,6 +5,7 @@ import { validate } from '../../middleware/validate';
 import { ConflictError } from '../../lib/errors';
 import {
   CreateClubSchema,
+  UpdateClubSchema,
   UpdateClubStatusSchema,
   AddMemberSchema,
   UpdateMemberRoleSchema,
@@ -77,6 +78,24 @@ router.post(
     try {
       const club = await clubsService.createClub(req.user!.id, req.body);
       res.status(201).json({ id: club.id, name: club.name, status: club.status });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+router.patch(
+  '/:id',
+  authenticate,
+  requireClubRole((req) => req.params.id, ['CLUB_ADMIN']),
+  validate(UpdateClubSchema),
+  async (req, res, next) => {
+    try {
+      const club = await clubsService.updateClub(req.user!.id, req.params.id, req.body);
+      if (!club) {
+        return res.status(404).json({ error: 'Club not found' });
+      }
+      res.json(club);
     } catch (err) {
       next(err);
     }

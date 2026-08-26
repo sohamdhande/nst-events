@@ -173,7 +173,7 @@ describe('Phase 15C: Application-Role RLS Enforcement', () => {
       });
     } catch (e: any) {
       errorCaught = true;
-      assert.ok(e.message.includes('Unauthorized modification of global_role') || e.message.includes('Unauthorized: global_role is immutable to the application database role.'));
+      assert.ok(e.message.includes('Unauthorized modification of global_role') || e.message.includes('only PLATFORM_ADMIN can mutate global roles') || e.message.includes('global_role mutation requires app.user_id context'));
     }
     assert.ok(errorCaught, 'Phase 15A trigger did not fire for nst_app');
   });

@@ -14,8 +14,21 @@ export interface CurrentUser {
   email: string;
   full_name: string | null;
   avatar_url: string | null;
-  global_role: 'STUDENT' | 'FACULTY_ADMIN' | 'PLATFORM_ADMIN';
+  global_role: 'STUDENT' | 'FACULTY_MENTOR' | 'FACULTY_ADMIN' | 'PLATFORM_ADMIN';
   club_memberships: ClubMembership[];
+  academic_profile: {
+    batch: {
+      id: string;
+      program: {
+        id: string;
+        name: string;
+        code: string;
+      };
+      admission_year: number;
+      graduation_year: number;
+    };
+    assignment_source: string;
+  } | null;
 }
 
 export function useCurrentUser() {

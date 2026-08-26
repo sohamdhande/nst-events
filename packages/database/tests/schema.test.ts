@@ -18,6 +18,7 @@ test('Database Connection & Schema Contract Verification', async (t) => {
 
   await t.test('Enums exist and match canonical definitions', () => {
     assert.strictEqual(GlobalRole.STUDENT, 'STUDENT');
+    assert.strictEqual(GlobalRole.FACULTY_MENTOR, 'FACULTY_MENTOR');
     assert.strictEqual(GlobalRole.FACULTY_ADMIN, 'FACULTY_ADMIN');
     assert.strictEqual(GlobalRole.PLATFORM_ADMIN, 'PLATFORM_ADMIN');
 

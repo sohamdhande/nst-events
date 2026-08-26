@@ -5,7 +5,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+  url= env("DATABASE_URL")
 }
 
 model User {
@@ -21,6 +21,8 @@ model User {
   updatedAt                 DateTime?                   @updatedAt @map("updated_at") @db.Timestamptz(6)
   /// Soft delete — NULL means active
   deletedAt                 DateTime?                   @map("deleted_at") @db.Timestamptz(6)
+  /// Incremented on role/access mutation to immediately invalidate existing JWTs
+  securityVersion           Int                         @default(1) @map("security_version")
   announcements             Announcement[]
   disputesReviewed          AttendanceDispute[]         @relation("DisputeReviewedBy")
   disputesFiled             AttendanceDispute[]         @relation("DisputeUser")
@@ -574,10 +576,31 @@ view geometry_columns {
   @@ignore
 }
 
+/// A student authorized by their institutional email domain to access the platform.
+/// Exists independently of User to allow pre-authorization before first login.
+model AuthorizedStudent {
+  id              String          @id @default(uuid()) @db.Uuid
+  normalizedEmail String          @unique @map("normalized_email")
+  status          DirectoryStatus @default(ACTIVE)
+  createdAt       DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime?       @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdBy       String?         @map("created_by") @db.Uuid
+  updatedBy       String?         @map("updated_by") @db.Uuid
+
+  @@map("authorized_students")
+}
+
+/// Access status of a user in the student directory.
+enum DirectoryStatus {
+  ACTIVE
+  REVOKED
+}
+
 /// Global platform-wide role. Single source of truth for
 /// system-level authorization. Do NOT merge with ClubRole.
 enum GlobalRole {
   STUDENT
+  FACULTY_MENTOR
   FACULTY_ADMIN
   PLATFORM_ADMIN
 }

@@ -121,7 +121,7 @@ NST-Events follows a clean, high-density institutional design system, built for 
 
 The following are explicitly deferred. File uploads have partial schema groundwork already in place (see below); the others have no architecture or schema work done yet.
 
-- File uploads (avatars, banners, media) V1 uses default/generated fallback assets
+- **File uploads (avatars, media)**: V1 uses default/generated fallback assets. However, **Club Branding (Banners)** is the approved pilot for the future upload architecture and is planned for V1.
 - Certificate generation and verification
 - Club recruitment workflows
 - Event media galleries

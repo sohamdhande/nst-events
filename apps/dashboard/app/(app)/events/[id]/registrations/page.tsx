@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Card, Button, Alert, Typography, Table, Tag, Breadcrumb, Space, Select, Grid, Flex, Empty, theme } from 'antd';
 import { useEventDetail } from '../../../../../hooks/useEventDetail';
 import { useRegistrationsList, Registration } from '../../../../../hooks/useRegistrations';
+import { resolveEventLockState } from '../../../../../lib/event-utils';
 
 const { Title, Text } = Typography;
 const { useBreakpoint } = Grid;
@@ -57,7 +58,7 @@ export default function RegistrationsManagementPage({ params }: { params: Promis
       title: 'Participant',
       key: 'participant',
       render: (_: unknown, record: Registration) => (
-        <Space direction="vertical" size={0}>
+        <Space orientation="vertical" size={0}>
           <Text strong>{record.user.fullName || 'Unknown'}</Text>
           <Text type="secondary" style={{ fontSize: 12 }}>{record.user.email}</Text>
         </Space>
@@ -86,7 +87,7 @@ export default function RegistrationsManagementPage({ params }: { params: Promis
     }
   ];
 
-  const isEffectivelyLocked = event.isLocked;
+  const lockState = event ? resolveEventLockState(event) : 'UNLOCKED';
 
   return (
     <div style={{ maxWidth: 1400, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 24 }}>
@@ -101,14 +102,17 @@ export default function RegistrationsManagementPage({ params }: { params: Promis
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 16 }}>
         <Space align="center" wrap>
           <Title level={2} style={{ margin: 0 }}>Registrations</Title>
-          {isEffectivelyLocked && (
-            <Tag color="red" bordered={false} style={{ fontSize: 14, padding: '4px 8px' }}>LOCKED — READ-ONLY</Tag>
+          {lockState === 'MANUALLY_LOCKED' && (
+            <Tag color="red" variant="filled" style={{ fontSize: 14, padding: '4px 8px' }}>LOCKED — READ-ONLY</Tag>
+          )}
+          {lockState === 'PERMANENTLY_LOCKED' && (
+            <Tag color="red" variant="filled" style={{ fontSize: 14, padding: '4px 8px' }}>PERMANENTLY LOCKED — READ-ONLY</Tag>
           )}
         </Space>
       </div>
 
       <Card size="small" variant="borderless" styles={{ body: { padding: 16 } }}>
-        <Space split={<Text type="secondary">|</Text>} wrap>
+        <Space separator={<Text type="secondary">|</Text>} wrap>
           <Text strong>Registered: <Text type="secondary" style={{ fontWeight: 'normal' }}>{event.registrationCount}</Text></Text>
           <Text strong>Capacity: <Text type="secondary" style={{ fontWeight: 'normal' }}>{event.maxCapacity ?? 'Unlimited'}</Text></Text>
           {event.maxCapacity !== null && (

@@ -9,6 +9,7 @@ import { useEventDetail } from '../../../../../hooks/useEventDetail';
 import { useAttendance, useGenerateQr, useCreateSession, useUpdateSession, useManualAttendance, AttendanceRecord } from '../../../../../hooks/useAttendance';
 import { useCurrentUser } from '../../../../../hooks/useCurrentUser';
 import { getWebAuthStore } from '../../../../../lib/auth-store';
+import { resolveEventLockState } from '../../../../../lib/event-utils';
 
 const { Title, Text } = Typography;
 const { useBreakpoint } = Grid;
@@ -89,10 +90,8 @@ export default function AttendancePage({ params }: { params: Promise<{ id: strin
 
   const activeSession = useMemo(() => sessions.find(s => s.id === activeSessionId), [sessions, activeSessionId]);
   
-  const isEffectivelyLocked = useMemo(() => {
-    if (!event) return false;
-    return event.isLocked;
-  }, [event]);
+  const lockState = event ? resolveEventLockState(event) : 'UNLOCKED';
+  const isEffectivelyLocked = lockState !== 'UNLOCKED';
   
   const sessionStatus = useMemo(() => {
     if (!activeSession) return undefined;
@@ -485,7 +484,7 @@ export default function AttendancePage({ params }: { params: Promise<{ id: strin
         <Space align="center" wrap>
           <Title level={2} style={{ margin: 0 }}>Attendance</Title>
           {isEffectivelyLocked && (
-            <Tag color="red" bordered={false} style={{ fontSize: 14, padding: '4px 8px' }}>LOCKED — READ-ONLY</Tag>
+            <Tag color="red" variant="filled" style={{ fontSize: 14, padding: '4px 8px' }}>LOCKED — READ-ONLY</Tag>
           )}
         </Space>
         

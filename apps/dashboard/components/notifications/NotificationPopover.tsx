@@ -145,7 +145,7 @@ export function NotificationPopover() {
       content={content}
       trigger="click"
       placement="bottomRight"
-      overlayInnerStyle={{ padding: 0 }}
+      styles={{ content: { padding: 0 } }}
       arrow={false}
     >
       <Badge count={isUnreadError ? 0 : (unreadData?.unread_count || 0)} size="small" offset={[-4, 4]}>

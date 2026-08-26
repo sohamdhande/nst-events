@@ -82,7 +82,7 @@ export default function ApprovalsPage() {
     Modal.confirm({
       title: 'Approve Event',
       content: (
-        <Space direction="vertical" size="small" style={{ width: '100%', marginTop: 16 }}>
+        <Space orientation="vertical" size="small" style={{ width: '100%', marginTop: 16 }}>
           <Text strong>{event.title}</Text>
           <Text type="secondary">Club: {event.eventClubs?.[0]?.club.name || '-'}</Text>
           <Text type="secondary">Date: {formatDateTime(event.startTime)}</Text>

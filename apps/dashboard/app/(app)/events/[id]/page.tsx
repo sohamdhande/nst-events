@@ -7,6 +7,7 @@ import { notFound } from 'next/navigation';
 import { Card, Skeleton, Alert, Typography, Row, Col, Tag, Space, Button, Breadcrumb, theme, Popconfirm, Modal, Input, App } from 'antd';
 import { LockOutlined, UnlockOutlined, CheckCircleOutlined, CloseCircleOutlined, SendOutlined, EditOutlined, IdcardOutlined, QrcodeOutlined, RightOutlined, TeamOutlined } from '@ant-design/icons';
 import { useEventDetail, EventDetail } from '../../../../hooks/useEventDetail';
+import { resolveEventLockState } from '../../../../lib/event-utils';
 import { useEventLiveUpdates } from '../../../../hooks/useEventLiveUpdates';
 import { useCurrentUser } from '../../../../hooks/useCurrentUser';
 import { useEventLifecycle } from '../../../../hooks/useEventLifecycle';
@@ -144,7 +145,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
     ? 'Unlimited spots' 
     : `${Math.max(0, event.maxCapacity - event.registrationCount)} spots left`;
 
-  const isEffectivelyLocked = event.isLocked;
+  const lockState = resolveEventLockState(event);
   const anyMutationPending = submitMutation.isPending || approveMutation.isPending || rejectMutation.isPending || lockMutation.isPending || unlockMutation.isPending;
 
   const handleReject = () => {
@@ -305,19 +306,31 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
     }
 
     if (event.state === 'PUBLISHED') {
-      if (auth.canLock || auth.canUnlock) {
+      const showUnlock = lockState === 'MANUALLY_LOCKED' && auth.canUnlock;
+      const showLock = lockState === 'UNLOCKED' && auth.canLock;
+      const hasPermission = auth.isGlobalAdmin || auth.isClubAdmin || auth.isMentor;
+      
+      if (showLock || showUnlock || (lockState === 'PERMANENTLY_LOCKED' && hasPermission)) {
+        let subtitleText = 'This event is live and editable.';
+        if (lockState === 'MANUALLY_LOCKED') {
+          subtitleText = 'This event is locked and read-only.';
+        } else if (lockState === 'PERMANENTLY_LOCKED') {
+          subtitleText = 'This event is permanently locked and read-only.';
+        }
+
         return (
           <Card style={{ marginBottom: 24 }}>
             <Space align="center" style={{ width: '100%', justifyContent: 'space-between' }}>
               <Space orientation="vertical" size={0}>
                 <Text strong>Event Lifecycle</Text>
-                <Text type="secondary">This event is live.</Text>
+                <Text type="secondary">{subtitleText}</Text>
               </Space>
-              {event.isLocked ? (
+              {showUnlock && (
                 <Button 
+                  type="primary"
                   icon={<UnlockOutlined />} 
                   loading={unlockMutation.isPending} 
-                  disabled={anyMutationPending || isEffectivelyLocked}
+                  disabled={anyMutationPending}
                   onClick={() => unlockMutation.mutate(eventId, {
                     onSuccess: () => message.success('Event unlocked'),
                     onError: (err) => message.error(err.message || 'Failed to unlock')
@@ -325,12 +338,14 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
                 >
                   Unlock Event
                 </Button>
-              ) : (
+              )}
+              {showLock && (
                 <Button 
+                  type="primary"
                   danger 
                   icon={<LockOutlined />} 
                   loading={lockMutation.isPending} 
-                  disabled={anyMutationPending || isEffectivelyLocked}
+                  disabled={anyMutationPending}
                   onClick={() => lockMutation.mutate(eventId, {
                     onSuccess: () => message.success('Event locked'),
                     onError: (err) => message.error(err.message || 'Failed to lock')
@@ -477,10 +492,12 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
       </Row>
       <div style={{ marginTop: 16, paddingTop: 16, borderTop: `1px solid ${token.colorBorderSecondary}` }}>
         <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 4 }}>LOCK STATUS</Text>
-        {isEffectivelyLocked ? (
+        {lockState === 'UNLOCKED' ? (
+          <Text type="success" strong><UnlockOutlined /> UNLOCKED — Active mutations allowed.</Text>
+        ) : lockState === 'MANUALLY_LOCKED' ? (
           <Text type="warning" strong><LockOutlined /> LOCKED — READ-ONLY. Registration and team operations are frozen.</Text>
         ) : (
-          <Text type="success" strong><UnlockOutlined /> UNLOCKED — Active mutations allowed.</Text>
+          <Text type="danger" strong><LockOutlined /> PERMANENTLY LOCKED — READ-ONLY. Registration and team operations are frozen.</Text>
         )}
       </div>
       {event.registrationType === 'TEAM' && (
@@ -532,7 +549,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
               type="warning"
               showIcon
               action={
-                !isEffectivelyLocked && (
+                lockState === 'UNLOCKED' && (
                   <Link href={`/events/${event.id}/teams`}>
                     <Button size="small" type="default">Manage Teams</Button>
                   </Link>
@@ -592,7 +609,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
           )}
 
           {renderEventSummary()}
-          {!isEffectivelyLocked && renderLifecyclePanel()}
+          {renderLifecyclePanel()}
           {renderOperationsNav()}
 
           <Card title="Event Description" style={{ marginBottom: 24 }}>
@@ -604,13 +621,18 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
 
         {/* Sidebar Column */}
         <Col xs={24} lg={8}>
-          <Space direction="vertical" size="large" style={{ width: '100%', position: 'sticky', top: 24 }}>
+          <Space orientation="vertical" size="large" style={{ width: '100%', position: 'sticky', top: 24 }}>
             {/* Operational Status Card */}
             <Card title="OPERATIONAL STATUS" size="small">
-              <Space direction="vertical" size="middle" style={{ width: '100%' }}>
-                {isEffectivelyLocked && (
+              <Space orientation="vertical" size="middle" style={{ width: '100%' }}>
+                {lockState === 'MANUALLY_LOCKED' && (
+                  <Tag color="warning" style={{ width: '100%', margin: 0, padding: 8, fontSize: 13, textAlign: 'center' }}>
+                    <LockOutlined /> LOCKED — READ-ONLY
+                  </Tag>
+                )}
+                {lockState === 'PERMANENTLY_LOCKED' && (
                   <Tag color="error" style={{ width: '100%', margin: 0, padding: 8, fontSize: 13, textAlign: 'center' }}>
-                    <LockOutlined /> LOCKED
+                    <LockOutlined /> PERMANENTLY LOCKED — READ-ONLY
                   </Tag>
                 )}
                 
@@ -620,7 +642,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
                   </Tag>
                 )}
 
-                {!isEffectivelyLocked && event.below_minimum_team_count && event.below_minimum_team_count > 0 ? (
+                {lockState === 'UNLOCKED' && event.below_minimum_team_count && event.below_minimum_team_count > 0 ? (
                   <Tag color="warning" style={{ width: '100%', margin: 0, padding: 8, fontSize: 13, textAlign: 'center' }}>
                     NEEDS ATTENTION
                   </Tag>
@@ -633,7 +655,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
                 )}
 
                 {/* Healthy fallback */}
-                {(!isEffectivelyLocked && event.state === 'PUBLISHED' && (!event.below_minimum_team_count || event.below_minimum_team_count === 0) && (event.maxCapacity === null || event.registrationCount / event.maxCapacity < 0.9)) && (
+                {(lockState === 'UNLOCKED' && event.state === 'PUBLISHED' && (!event.below_minimum_team_count || event.below_minimum_team_count === 0) && (event.maxCapacity === null || event.registrationCount / event.maxCapacity < 0.9)) && (
                   <Tag color="success" style={{ width: '100%', margin: 0, padding: 8, fontSize: 13, textAlign: 'center' }}>
                     <CheckCircleOutlined /> HEALTHY
                   </Tag>

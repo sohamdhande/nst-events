@@ -55,7 +55,7 @@ function getPageTitle(pathname: string): string {
   if (/^\/events\/[^/]+\/edit$/.test(pathname)) return 'Edit Event';
   if (/^\/events\/[^/]+\/register$/.test(pathname)) return 'Register';
   if (/^\/events\/[^/]+$/.test(pathname)) return 'Event Detail';
-  if (/^\/clubs\/[^/]+$/.test(pathname)) return 'Club Detail';
+  if (/^\/clubs\/[^/]+$/.test(pathname)) return '';
   if (/^\/admin\/users\/[^/]+$/.test(pathname)) return 'User Detail';
 
   // Fallback: capitalize first segment
@@ -185,13 +185,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   ] : [];
 
   return (
-    <Layout style={{ minHeight: '100vh' }}>
+    <Layout style={{ height: '100vh', overflow: 'hidden' }}>
       <Sider 
         breakpoint="lg" 
         collapsedWidth="0"
         theme="dark"
         width={220}
-        style={{ borderRight: `1px solid ${token.colorBorderSecondary}` }}
+        style={{ borderRight: `1px solid ${token.colorBorderSecondary}`, overflow: 'auto', height: '100vh' }}
       >
         <div style={{ height: 48, display: 'flex', alignItems: 'center', padding: '0 16px', borderBottom: `1px solid ${token.colorBorderSecondary}` }}>
           <Text style={{ color: '#FFFFFF', fontWeight: 600, fontSize: 14, letterSpacing: -0.2 }}>NST Events</Text>

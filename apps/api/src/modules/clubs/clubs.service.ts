@@ -1,16 +1,17 @@
 import { ClubRole, ClubStatus, withUserContext, Prisma, prisma } from '@nst/database';
-import { ForbiddenError } from '../../lib/errors';
+import { ForbiddenError, ConflictError } from '../../lib/errors';
 import { enqueueNotification } from '../notifications/notifications.producer';
 
 export const createClub = async (
   callerId: string,
-  data: { name: string; description?: string; initial_admin_id: string }
+  data: { name: string; description?: string; initial_admin_id: string; banner_url?: string | null }
 ) => {
   return withUserContext(callerId, async (tx) => {
     return tx.club.create({
       data: {
         name: data.name,
         description: data.description,
+        ...(data.banner_url && { bannerUrl: data.banner_url }),
         status: 'ACTIVE',
         memberships: {
           create: {
@@ -20,6 +21,69 @@ export const createClub = async (
         },
       },
     });
+  });
+};
+
+export const updateClub = async (
+  callerId: string,
+  clubId: string,
+  data: { name?: string; description?: string | null; banner_url?: string | null }
+) => {
+  return withUserContext(callerId, async (tx) => {
+    const club = await tx.club.findUnique({
+      where: { id: clubId },
+      include: {
+        memberships: {
+          where: { deletedAt: null },
+        },
+        _count: {
+          select: { eventClubs: true },
+        },
+      },
+    });
+
+    if (!club || club.deletedAt) return null;
+
+    try {
+      const updated = await tx.club.update({
+        where: { id: clubId },
+        data: {
+          ...(data.name !== undefined && { name: data.name }),
+          ...(data.description !== undefined && { description: data.description }),
+          ...(data.banner_url !== undefined && { bannerUrl: data.banner_url }),
+        },
+      });
+
+      const userIds = club.memberships.map((m) => m.userId);
+      const profiles = await tx.publicProfile.findMany({
+        where: { id: { in: userIds } },
+        select: { id: true, fullName: true, avatarUrl: true },
+      });
+      const profileMap = new Map(profiles.map((p) => [p.id, p]));
+
+      return {
+        id: updated.id,
+        name: updated.name,
+        description: updated.description,
+        banner_url: updated.bannerUrl,
+        status: updated.status,
+        event_count: club._count.eventClubs,
+        members: club.memberships.map((m) => {
+          const profile = profileMap.get(m.userId) || { fullName: 'Unknown', avatarUrl: null };
+          return {
+            user_id: m.userId,
+            role: m.role,
+            full_name: profile.fullName,
+            avatar_url: profile.avatarUrl,
+          };
+        }),
+      };
+    } catch (err: any) {
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
+        throw new ConflictError('Club name already exists');
+      }
+      throw err;
+    }
   });
 };
 

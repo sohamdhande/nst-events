@@ -9,10 +9,13 @@ import {
 import { 
   ReloadOutlined, MoreOutlined
 } from '@ant-design/icons';
+import { resolveEventLockState } from '../../../lib/event-utils';
 import { useEvents, Event } from '../../../hooks/useEvents';
 import { useClubs } from '../../../hooks/useClubs';
 import { useCurrentUser } from '../../../hooks/useCurrentUser';
 import { useEventLifecycle } from '../../../hooks/useEventLifecycle';
+
+import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 
 const { Title, Text } = Typography;
 const { useToken } = theme;
@@ -42,10 +45,40 @@ export default function EventsPage() {
   );
   const canCreateEvent = isPlatformAdmin || isFacultyAdmin || hasClubAdminRole;
 
-  // Filter State
-  const [searchQuery, setSearchQuery] = useState('');
-  const [filterState, setFilterState] = useState<string | undefined>(undefined);
-  const [filterClubId, setFilterClubId] = useState<string | undefined>(undefined);
+  // Filter State (URL as source of truth)
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+
+  const searchQuery = searchParams.get('q') || '';
+  const filterState = searchParams.get('filter_state') || undefined;
+  const filterClubId = searchParams.get('filter_club_id') || undefined;
+
+  const [localSearch, setLocalSearch] = useState(searchQuery);
+
+  React.useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setLocalSearch(searchQuery);
+  }, [searchQuery]);
+
+  const updateFilters = (updates: Record<string, string | undefined>, action: 'push' | 'replace' = 'push') => {
+    const newParams = new URLSearchParams(searchParams.toString());
+    Object.entries(updates).forEach(([key, value]) => {
+      if (value) {
+        newParams.set(key, value);
+      } else {
+        newParams.delete(key);
+      }
+    });
+    newParams.delete('cursor'); // Reset cursor on filter change
+    
+    const url = `${pathname}${newParams.toString() ? '?' + newParams.toString() : ''}`;
+    if (action === 'replace') {
+      router.replace(url);
+    } else {
+      router.push(url);
+    }
+  };
 
   // Queries
   const { data, isLoading, isError, refetch, isFetching } = useEvents({
@@ -60,9 +93,12 @@ export default function EventsPage() {
   const { submitMutation, approveMutation, rejectMutation, lockMutation, unlockMutation } = useEventLifecycle();
 
   const handleResetFilters = () => {
-    setSearchQuery('');
-    setFilterState(undefined);
-    setFilterClubId(undefined);
+    router.push(pathname);
+  };
+
+  const handleClearClubFilter = (e?: React.MouseEvent<HTMLElement>) => {
+    e?.preventDefault();
+    updateFilters({ filter_club_id: undefined });
   };
 
   const hasActiveFilters = Boolean(searchQuery || filterState || filterClubId);
@@ -125,10 +161,7 @@ export default function EventsPage() {
 
   const getActionMenu = (record: Event): MenuProps['items'] => {
     const auth = getActionAuth(record);
-    const now = new Date().getTime();
-    const lockDeadline = record.lock_deadline ? new Date(record.lock_deadline).getTime() : new Date(record.endTime).getTime() + 24*60*60*1000;
-    const isPermanentlyLocked = now >= lockDeadline;
-    const isEffectivelyLocked = record.isLocked || isPermanentlyLocked;
+    const lockState = resolveEventLockState(record);
 
     const items: MenuProps['items'] = [
       {
@@ -138,27 +171,27 @@ export default function EventsPage() {
     ];
 
     const lifecycleItems: MenuProps['items'] = [];
-    if (auth.canEdit && !isEffectivelyLocked) {
+    if (auth.canEdit && lockState === 'UNLOCKED') {
       lifecycleItems.push({
         key: 'edit',
         label: <Link href={`/events/${record.id}/edit`}>Edit</Link>,
       });
     }
-    if (auth.canSubmit && !isEffectivelyLocked) {
+    if (auth.canSubmit && lockState === 'UNLOCKED') {
       lifecycleItems.push({
         key: 'submit',
         label: 'Submit for Approval',
         onClick: () => submitMutation.mutate(record.id),
       });
     }
-    if (auth.canApprove && !isEffectivelyLocked) {
+    if (auth.canApprove && lockState === 'UNLOCKED') {
       lifecycleItems.push({
         key: 'approve',
         label: 'Approve',
         onClick: () => approveMutation.mutate(record.id),
       });
     }
-    if (auth.canReject && !isEffectivelyLocked) {
+    if (auth.canReject && lockState === 'UNLOCKED') {
       lifecycleItems.push({
         key: 'reject',
         label: 'Reject',
@@ -171,14 +204,14 @@ export default function EventsPage() {
         },
       });
     }
-    if (auth.canLock && !isEffectivelyLocked && !record.isLocked) {
+    if (auth.canLock && lockState === 'UNLOCKED') {
       lifecycleItems.push({
         key: 'lock',
         label: 'Lock',
         onClick: () => lockMutation.mutate(record.id),
       });
     }
-    if (auth.canUnlock && record.isLocked && !isPermanentlyLocked) {
+    if (auth.canUnlock && lockState === 'MANUALLY_LOCKED') {
       lifecycleItems.push({
         key: 'unlock',
         label: 'Unlock',
@@ -312,13 +345,8 @@ export default function EventsPage() {
       title: 'Lock',
       key: 'lock',
       render: (_: unknown, record: Event) => {
-        const now = new Date().getTime();
-        const lockDeadline = record.lock_deadline ? new Date(record.lock_deadline).getTime() : new Date(record.endTime).getTime() + 24*60*60*1000;
-        let lockState = 'UNLOCKED';
-        if (now >= lockDeadline) lockState = 'PERMANENTLY LOCKED';
-        else if (record.isLocked) lockState = 'LOCKED';
-        
-        return <Text type={lockState !== 'UNLOCKED' ? 'secondary' : undefined}>{lockState}</Text>;
+        const lockState = resolveEventLockState(record);
+        return <Text type={lockState !== 'UNLOCKED' ? 'secondary' : undefined}>{lockState.replace('_', ' ')}</Text>;
       }
     },
     {
@@ -339,6 +367,17 @@ export default function EventsPage() {
         <div>
           <Title level={2} style={{ margin: 0 }}>Events</Title>
           <Text type="secondary">Manage event lifecycle, registration, teams, and attendance.</Text>
+          {filterClubId && (
+            <div style={{ marginTop: 8 }}>
+              <Tag 
+                closable 
+                onClose={handleClearClubFilter}
+                style={{ padding: '4px 8px', fontSize: 13, display: 'inline-flex', alignItems: 'center' }}
+              >
+                Showing events organized by {clubsData?.data?.find(c => c.id === filterClubId)?.name || 'selected club'}
+              </Tag>
+            </div>
+          )}
         </div>
         {canCreateEvent && (
           <Link href="/events/create">
@@ -359,9 +398,11 @@ export default function EventsPage() {
           style={{ width: '100%' }}
         >
           <Input.Search
+            value={localSearch}
+            onChange={(e) => setLocalSearch(e.target.value)}
             placeholder="Search events..."
             allowClear
-            onSearch={setSearchQuery}
+            onSearch={(val) => updateFilters({ q: val || undefined }, 'replace')}
             style={{ width: isMobile ? '100%' : 250 }}
           />
           
@@ -370,7 +411,7 @@ export default function EventsPage() {
             allowClear
             style={{ width: isMobile ? '100%' : 160 }}
             value={filterState}
-            onChange={setFilterState}
+            onChange={(val) => updateFilters({ filter_state: val || undefined })}
             options={[
               { label: 'Draft', value: 'DRAFT' },
               { label: 'Pending Approval', value: 'PENDING_APPROVAL' },
@@ -386,7 +427,7 @@ export default function EventsPage() {
             showSearch
             style={{ width: isMobile ? '100%' : 220 }}
             value={filterClubId}
-            onChange={setFilterClubId}
+            onChange={(val) => updateFilters({ filter_club_id: val || undefined })}
             loading={isLoadingClubs}
             filterOption={(input, option) => 
               (option?.label ?? '').toString().toLowerCase().includes(input.toLowerCase())

@@ -1,10 +1,14 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useClubs } from '../../../hooks/useClubs';
 import { useCurrentUser } from '../../../hooks/useCurrentUser';
-import { Card, Input, Typography, Tag, Space, Alert, Skeleton, Row, Col, Empty, Button } from 'antd';
-import { SearchOutlined, TeamOutlined, CalendarOutlined } from '@ant-design/icons';
+import { Card, Input, Typography, Tag, Space, Alert, Skeleton, Row, Col, Empty, Button, theme, Dropdown } from 'antd';
+import { SearchOutlined, TeamOutlined, CalendarOutlined, PlusOutlined, MoreOutlined, EditOutlined } from '@ant-design/icons';
+import { CreateClubModal } from './CreateClubModal';
+import { EditClubModal } from './EditClubModal';
+import { ClubListItem } from '../../../hooks/useClubs';
 
 const { Title, Text, Paragraph } = Typography;
 
@@ -23,12 +27,24 @@ function useDebounce<T>(value: T, delay: number): T {
 
 export default function ClubsDirectoryPage() {
   const { data: currentUser } = useCurrentUser();
+  const router = useRouter();
   const [searchTerm, setSearchTerm] = useState('');
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [editingClub, setEditingClub] = useState<ClubListItem | null>(null);
+  const { token } = theme.useToken();
 
   const { data, isLoading, error, refetch } = useClubs(debouncedSearchTerm);
 
   const isPlatformAdmin = currentUser?.global_role === 'PLATFORM_ADMIN';
+  const isFacultyAdmin = currentUser?.global_role === 'FACULTY_ADMIN';
+
+  const canEditClub = (clubId: string) => {
+    if (isPlatformAdmin || isFacultyAdmin) return true;
+    return currentUser?.club_memberships.some(
+      (m) => m.club_id === clubId && m.role === 'CLUB_ADMIN'
+    ) ?? false;
+  };
 
   return (
     <div style={{ maxWidth: 1200, margin: '0 auto' }}>
@@ -38,7 +54,13 @@ export default function ClubsDirectoryPage() {
           <Text type="secondary">View all clubs on the platform.</Text>
         </div>
         {isPlatformAdmin && (
-          <Button type="primary">Create Club</Button>
+          <Button 
+            type="primary" 
+            icon={<PlusOutlined />} 
+            onClick={() => setIsCreateModalOpen(true)}
+          >
+            Create Club
+          </Button>
         )}
       </div>
 
@@ -81,15 +103,24 @@ export default function ClubsDirectoryPage() {
           description={
             debouncedSearchTerm
               ? `No clubs found matching "${debouncedSearchTerm}".`
-              : 'There are no clubs available yet.'
+              : isPlatformAdmin 
+                ? 'No clubs available. Create your first club.' 
+                : 'There are no clubs available yet.'
           }
-        />
+        >
+          {isPlatformAdmin && !debouncedSearchTerm && (
+            <Button type="primary" onClick={() => setIsCreateModalOpen(true)}>
+              Create Club
+            </Button>
+          )}
+        </Empty>
       ) : (
         <Row gutter={[24, 24]}>
           {data.data.map((club) => (
             <Col xs={24} md={12} lg={8} key={club.id}>
               <Card
                 hoverable
+                onClick={() => router.push(`/clubs/${club.id}`)}
                 style={{ height: '100%', display: 'flex', flexDirection: 'column' }}
                 styles={{ body: { flex: 1, display: 'flex', flexDirection: 'column', padding: 0 } }}
               >
@@ -108,7 +139,7 @@ export default function ClubsDirectoryPage() {
                   <div
                     style={{
                       height: 120,
-                      backgroundColor: '#f0f2f5',
+                      backgroundColor: token.colorFillQuaternary,
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -135,16 +166,37 @@ export default function ClubsDirectoryPage() {
                       {club.status}
                     </Tag>
 
-                    <Space size="middle" style={{ fontSize: 12, color: '#8c8c8c' }}>
-                      <Space size="small">
-                        <CalendarOutlined />
-                        <span>{club.event_count} Events</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                      <Space size="middle" style={{ fontSize: 12, color: '#8c8c8c' }}>
+                        <Space size="small">
+                          <CalendarOutlined />
+                          <span>{club.event_count} Events</span>
+                        </Space>
+                        <Space size="small">
+                          <TeamOutlined />
+                          <span>{club.member_count} Members</span>
+                        </Space>
                       </Space>
-                      <Space size="small">
-                        <TeamOutlined />
-                        <span>{club.member_count} Members</span>
-                      </Space>
-                    </Space>
+                      {canEditClub(club.id) && (
+                        <div onClick={(e) => e.stopPropagation()}>
+                          <Dropdown
+                            menu={{
+                              items: [
+                                {
+                                  key: 'edit',
+                                  label: 'Edit Club',
+                                  icon: <EditOutlined />,
+                                  onClick: () => setEditingClub(club),
+                                },
+                              ],
+                            }}
+                            trigger={['click']}
+                          >
+                            <Button type="text" icon={<MoreOutlined />} aria-label="Club Actions" />
+                          </Dropdown>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               </Card>
@@ -152,6 +204,18 @@ export default function ClubsDirectoryPage() {
           ))}
         </Row>
       )}
+
+      {isPlatformAdmin && (
+        <CreateClubModal 
+          open={isCreateModalOpen} 
+          onClose={() => setIsCreateModalOpen(false)} 
+        />
+      )}
+      <EditClubModal
+        open={!!editingClub}
+        onClose={() => setEditingClub(null)}
+        club={editingClub}
+      />
     </div>
   );
 }

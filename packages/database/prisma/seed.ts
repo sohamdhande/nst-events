@@ -60,7 +60,7 @@ async function main() {
   const userStudent5 = await upsertUser('student05@adypu.edu.in', 'gsub-s5', 'Student 05', GlobalRole.STUDENT);
   const userClubAdmin = await upsertUser('clubadmin@adypu.edu.in', 'gsub-ca', 'Club Admin User', GlobalRole.STUDENT);
   const userCoreMember = await upsertUser('coremember@adypu.edu.in', 'gsub-cm', 'Core Member User', GlobalRole.STUDENT);
-  const userFacultyMentor = await upsertUser('facultymentor@adypu.edu.in', 'gsub-fm', 'Faculty Mentor User', GlobalRole.FACULTY_ADMIN);
+  const userFacultyMentor = await upsertUser('facultymentor@adypu.edu.in', 'gsub-fm', 'Faculty Mentor User', GlobalRole.FACULTY_MENTOR);
 
   console.log('  ✓ Created/verified users\n');
 

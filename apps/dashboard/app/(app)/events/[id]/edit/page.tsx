@@ -328,7 +328,7 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
                           />
                         </Form.Item>
                         {regType === 'TEAM' && (
-                          <div style={{ padding: 16, backgroundColor: '#fafafa', borderRadius: 8, border: '1px solid #f0f0f0' }}>
+                          <div style={{ padding: 16, backgroundColor: 'var(--ant-color-fill-alter)', borderRadius: 8, border: '1px solid var(--ant-color-border-secondary)' }}>
                             <Row gutter={16}>
                               <Col xs={24} md={12}>
                                 <Form.Item

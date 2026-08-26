@@ -10,8 +10,17 @@ import {
   UpdateEventInput,
   CreateSessionInput,
   UpdateSessionInput,
+  EventLockState,
 } from './events.schema';
 import { enqueueNotification } from '../notifications/notifications.producer';
+
+export const calculateLockState = (isLocked: boolean, endTime: Date, dbNow: Date): EventLockState => {
+  const finalDeadline = endTime.getTime() + 24 * 60 * 60 * 1000;
+  if (dbNow.getTime() >= finalDeadline) {
+    return 'PERMANENTLY_LOCKED';
+  }
+  return isLocked ? 'MANUALLY_LOCKED' : 'UNLOCKED';
+};
 
 export const createEvent = async (callerId: string, data: CreateEventInput): Promise<any> => {
   return withUserContext(callerId, async (tx) => {
@@ -167,6 +176,9 @@ export const listEvents = async (callerId: string, query: ListEventsQuery): Prom
       `;
       const attentionMap = new Map(attentionResult.map((a) => [a.event_id, a.below_minimum_team_count]));
       
+      const timeResult = await tx.$queryRaw<{ now: Date }[]>`SELECT now() as now`;
+      const dbNow = timeResult[0].now;
+
       finalItems = items.map((item) => {
         const { eventAudienceBatches, ...rest } = item;
         return {
@@ -174,6 +186,7 @@ export const listEvents = async (callerId: string, query: ListEventsQuery): Prom
           audienceBatchIds: eventAudienceBatches.map(b => b.batchId),
           location_geofence: geoMap.get(item.id) || null,
           lock_deadline: new Date(item.endTime.getTime() + 24 * 60 * 60 * 1000).toISOString(),
+          lock_state: calculateLockState(item.isLocked, item.endTime, dbNow),
           below_minimum_team_count: attentionMap.get(item.id) || 0,
         };
       });
@@ -192,6 +205,7 @@ type GetEventByIdResponse = Prisma.EventGetPayload<{
 }> & {
   location_geofence: any;
   lock_deadline: string;
+  lock_state: EventLockState;
   audienceBatchIds?: string[];
   below_minimum_team_count: number;
 };
@@ -234,6 +248,9 @@ export const getEventById = async (callerId: string, eventId: string): Promise<G
       GROUP BY e.id
     `;
     
+    const timeResult = await tx.$queryRaw<{ now: Date }[]>`SELECT now() as now`;
+    const dbNow = timeResult[0].now;
+
     const { eventAudienceBatches, ...eventRest } = event;
     
     return {
@@ -241,6 +258,7 @@ export const getEventById = async (callerId: string, eventId: string): Promise<G
       audienceBatchIds: eventAudienceBatches.map(b => b.batchId),
       location_geofence: geo[0]?.geojson ? JSON.parse(geo[0].geojson) : null,
       lock_deadline: new Date(event.endTime.getTime() + 24 * 60 * 60 * 1000).toISOString(),
+      lock_state: calculateLockState(event.isLocked, event.endTime, dbNow),
       below_minimum_team_count: attentionResult[0]?.below_minimum_team_count || 0,
     };
   });

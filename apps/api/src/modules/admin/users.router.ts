@@ -3,7 +3,7 @@ import { prisma } from '../../lib/prisma';
 import { authenticate } from '../../middleware/authenticate';
 import { requireRole } from '../../middleware/authorize';
 import { validate } from '../../middleware/validate';
-import { listAdminUsersSchema, updateAdminUserRoleSchema, updateAcademicBatchSchema } from './users.schema';
+import { listAdminUsersSchema, updateAdminUserRoleSchema, updateAcademicBatchSchema, provisionUserSchema } from './users.schema';
 import { adminUsersService } from './users.service';
 
 export const adminUsersRouter: Router = Router();
@@ -54,6 +54,23 @@ adminUsersRouter.post(
       res.status(200).json(result);
     } catch (err) {
       console.error("ADMIN_BATCH_ERR:", err); next(err);
+    }
+  }
+);
+
+// POST /v1/admin/users/provision
+adminUsersRouter.post(
+  '/provision',
+  authenticate,
+  requireRole(['PLATFORM_ADMIN']),
+  validate(provisionUserSchema),
+  async (req, res, next) => {
+    try {
+      const adminId = req.user!.id;
+      const result = await adminUsersService.provisionUser(adminId, req.body);
+      res.status(200).json(result);
+    } catch (err) {
+      console.error("ADMIN_PROVISION_ERR:", err); next(err);
     }
   }
 );

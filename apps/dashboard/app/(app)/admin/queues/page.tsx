@@ -213,7 +213,7 @@ export default function QueuesManagementPage() {
               title="Dead Lettered" 
               value={statsData?.dead_letter_count ?? '-'} 
               loading={isStatsLoading} 
-              valueStyle={{ color: 'var(--ant-color-error)' }}
+              styles={{ content: { color: 'var(--ant-color-error)' } }}
             />
           </Card>
         </Col>

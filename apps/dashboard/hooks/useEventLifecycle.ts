@@ -40,6 +40,10 @@ export function useEventLifecycle() {
   const unlockMutation = useMutation({
     mutationFn: (eventId: string) => apiClient(`/v1/events/${eventId}/unlock`, { method: 'POST' }),
     onSuccess,
+    onError: (_err, eventId) => {
+      queryClient.invalidateQueries({ queryKey: ['event', eventId] });
+      queryClient.invalidateQueries({ queryKey: ['events', 'list'] });
+    }
   });
 
   return {

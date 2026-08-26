@@ -2,6 +2,7 @@ import { Event } from '../hooks/useEvents';
 import { QueueStats } from '../hooks/useQueueMonitoring';
 import { Notification } from '../hooks/useNotifications';
 import { resolveNotificationTarget } from './notification-utils';
+import { resolveEventLockState } from './event-utils';
 
 export type ActionPriority = 'HIGH' | 'MEDIUM' | 'LOW';
 
@@ -92,6 +93,22 @@ export function resolveManagementActions(source: ManagementActionSource): Manage
         label: 'Teams Require Attention',
         description: `${event.below_minimum_team_count} team${event.below_minimum_team_count === 1 ? ' is' : 's are'} below minimum`,
         href: `/events/${event.id}/teams`,
+        actionable: true,
+        sourceType: 'EVENT',
+        timestamp: event.startTime || now
+      });
+    }
+
+    // Unlock Action
+    const lockState = resolveEventLockState(event as Pick<Event, 'lock_state'>);
+    const canUnlock = (isGlobalAdmin || isClubAdmin || isMentor) && event.state === 'PUBLISHED';
+    if (canUnlock && lockState === 'MANUALLY_LOCKED') {
+      actions.push({
+        id: `event-${event.id}-unlock`,
+        priority: 'HIGH',
+        label: 'Unlock Event',
+        description: `${event.title} is manually locked`,
+        href: `/events/${event.id}`,
         actionable: true,
         sourceType: 'EVENT',
         timestamp: event.startTime || now

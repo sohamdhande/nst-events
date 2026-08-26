@@ -1,6 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '../lib/api';
 
+export type EventLockState = 'UNLOCKED' | 'MANUALLY_LOCKED' | 'PERMANENTLY_LOCKED';
+
 export interface Event {
   id: string;
   title: string;
@@ -18,6 +20,7 @@ export interface Event {
   audience: 'ALL_STUDENTS' | 'SPECIFIC_BATCHES';
   audienceBatchIds?: string[];
   lock_deadline: string;
+  lock_state: EventLockState;
   below_minimum_team_count?: number;
   metadata?: Record<string, unknown>;
   eventClubs?: { clubId: string; isPrimary: boolean; club: { id: string; name: string } }[];

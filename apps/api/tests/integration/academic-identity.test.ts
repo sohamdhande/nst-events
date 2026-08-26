@@ -31,6 +31,8 @@ test('Phase UI-14D Academic Identity Integration', async (t) => {
     await adminPrisma.teamInvitation.deleteMany({});
     await adminPrisma.team.deleteMany({});
     await adminPrisma.event.deleteMany({});
+    await adminPrisma.clubMembership.deleteMany({});
+    await adminPrisma.club.deleteMany({});
     await adminPrisma.user.deleteMany({});
 
     // Setup base users
@@ -66,6 +68,15 @@ test('Phase UI-14D Academic Identity Integration', async (t) => {
     });
     studentId = st.id;
     studentToken = signJwt(st.id);
+
+    // Setup Student Directory for login tests
+    await adminPrisma.authorizedStudent.createMany({
+      data: [
+        { normalizedEmail: 'e25b070564@adypu.edu.in', status: 'ACTIVE' },
+        { normalizedEmail: 'student@adypu.edu.in', status: 'ACTIVE' },
+        { normalizedEmail: 'e25c999@adypu.edu.in', status: 'ACTIVE' }
+      ]
+    });
   });
 
   t.afterEach(() => {
@@ -77,6 +88,9 @@ test('Phase UI-14D Academic Identity Integration', async (t) => {
     await adminPrisma.academicBatch.deleteMany({});
     await adminPrisma.academicProgram.deleteMany({});
     await adminPrisma.event.deleteMany({});
+    await adminPrisma.clubMembership.deleteMany({});
+    await adminPrisma.club.deleteMany({});
+    await adminPrisma.authorizedStudent.deleteMany({});
     await adminPrisma.user.deleteMany({});
     await prisma.$disconnect();
     await adminPrisma.$disconnect();

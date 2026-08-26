@@ -5,6 +5,7 @@ import { createTeam, inviteMember, acceptInvitation, declineInvitation, cancelIn
 import { getPendingTeamInvitations } from '../../src/modules/users/users.service';
 import { searchEligibleInvitees } from '../../src/modules/registrations/registrations.service';
 import { ForbiddenError, BadRequestError } from '../../src/lib/errors';
+import { AssignmentSource } from '@nst/database';
 
 describe('Team Invitations & Discovery Integration Tests', () => {
   let eventId: string;
@@ -51,10 +52,10 @@ describe('Team Invitations & Discovery Integration Tests', () => {
     const batch2 = await prisma.academicBatch.create({ data: { programId: program.id, admissionYear: 2023, graduationYear: 2027 } });
 
     // Profiles: leader, m1, m3 in batch 1; m2 in batch 2
-    await prisma.userAcademicProfile.create({ data: { userId: leaderId, batchId: batchId, assignmentSource: 'INSTITUTIONAL_EMAIL_INFERENCE' } });
-    await prisma.userAcademicProfile.create({ data: { userId: member1Id, batchId: batchId, assignmentSource: 'INSTITUTIONAL_EMAIL_INFERENCE' } });
-    await prisma.userAcademicProfile.create({ data: { userId: member2Id, batchId: batch2.id, assignmentSource: 'INSTITUTIONAL_EMAIL_INFERENCE' } });
-    await prisma.userAcademicProfile.create({ data: { userId: member3Id, batchId: batchId, assignmentSource: 'INSTITUTIONAL_EMAIL_INFERENCE' } });
+    await prisma.userAcademicProfile.create({ data: { userId: leaderId, batchId: batchId, assignmentSource: AssignmentSource.INSTITUTIONAL_EMAIL_INFERENCE } });
+    await prisma.userAcademicProfile.create({ data: { userId: member1Id, batchId: batchId, assignmentSource: AssignmentSource.INSTITUTIONAL_EMAIL_INFERENCE } });
+    await prisma.userAcademicProfile.create({ data: { userId: member2Id, batchId: batch2.id, assignmentSource: AssignmentSource.INSTITUTIONAL_EMAIL_INFERENCE } });
+    await prisma.userAcademicProfile.create({ data: { userId: member3Id, batchId: batchId, assignmentSource: AssignmentSource.INSTITUTIONAL_EMAIL_INFERENCE } });
 
     // Create event targeted at batch 1
     const event = await prisma.event.create({

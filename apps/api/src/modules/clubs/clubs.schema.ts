@@ -6,6 +6,30 @@ export const CreateClubSchema = z.object({
     name: z.string().min(1),
     description: z.string().optional(),
     initial_admin_id: z.string().uuid(),
+    banner_url: z.string()
+      .url()
+      .refine(val => val.startsWith('http://') || val.startsWith('https://'), {
+        message: 'Invalid URL scheme. Only http/https allowed.',
+      })
+      .nullable()
+      .optional(),
+  }),
+});
+
+export const UpdateClubSchema = z.object({
+  params: z.object({ id: z.string().uuid() }),
+  body: z.object({
+    name: z.string().min(1).optional(),
+    description: z.string().nullable().optional(),
+    banner_url: z.string()
+      .url()
+      .refine(val => val.startsWith('http://') || val.startsWith('https://'), {
+        message: 'Invalid URL scheme. Only http/https allowed.',
+      })
+      .nullable()
+      .optional(),
+  }).strict().refine(data => Object.keys(data).length > 0, {
+    message: 'At least one mutable field must be provided',
   }),
 });
 

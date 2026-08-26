@@ -3,6 +3,7 @@ import { Prisma, User } from '@nst/database';
 import { prisma } from '../../lib/prisma';
 import { env } from '../../config/env';
 import { ForbiddenError, UnauthorizedError } from '../../lib/errors';
+import { AssignmentSource } from '@nst/database';
 import { generateRefreshToken, hashToken } from '../../lib/hash';
 import { signJwt } from '../../lib/jwt';
 import { googleOAuth } from './google.oauth';
@@ -30,33 +31,61 @@ export async function loginWithGoogle(
   const { sub, email, name } = await googleOAuth.verifyIdToken(id_token);
 
   // 2. Enforce email domain restriction
-  const domain = email.split('@')[1]?.toLowerCase() || '';
-  const allowedDomains = env.ALLOWED_EMAIL_DOMAINS.split(',').map((d) => d.trim().toLowerCase());
-  if (!allowedDomains.includes(domain)) {
-    throw new ForbiddenError('Email domain not allowed');
+  const normalizedEmail = email.trim().toLowerCase();
+  const domain = normalizedEmail.split('@')[1];
+
+  if (!['newtonschool.co', 'adypu.edu.in'].includes(domain)) {
+    throw new ForbiddenError('INSTITUTIONAL_DOMAIN_NOT_ALLOWED');
+  }
+
+  if (domain === 'adypu.edu.in') {
+    const authStudent = await prisma.authorizedStudent.findUnique({
+      where: { normalizedEmail: normalizedEmail },
+    });
+    if (!authStudent || authStudent.status !== 'ACTIVE') {
+      throw new ForbiddenError('STUDENT_ACCESS_NOT_AUTHORIZED');
+    }
+  }
+
+  // Check if Newton user existed prior to upsert to assign default role
+  let newtonExisted = true;
+  if (domain === 'newtonschool.co') {
+    const existing = await prisma.user.findUnique({ where: { email: normalizedEmail } });
+    if (!existing) newtonExisted = false;
   }
 
   // 3. Upsert user by googleSub with P2002 race-condition handling
   let user;
   try {
     const result = await prisma.$queryRaw<any[]>`
-      SELECT * FROM upsert_oauth_user(${sub}, ${email.toLowerCase()}, ${name})
+      SELECT * FROM upsert_oauth_user(${sub}, ${normalizedEmail}, ${name})
     `;
     
     if (!result || result.length === 0) {
       throw new ForbiddenError('Account deactivated');
     }
     user = result[0];
-  } catch (err: unknown) {
+  } catch (err: any) {
     if (
-      err instanceof Prisma.PrismaClientKnownRequestError &&
-      err.code === 'P2002'
+      (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') ||
+      err.message?.includes('unique constraint') ||
+      err.code === '23505' ||
+      err.code === 'P2010'
     ) {
       user = await prisma.user.findUnique({
-        where: { email: email.toLowerCase() },
+        where: { email: normalizedEmail },
       });
       if (!user) {
         throw new Error('Race condition during user creation: user not found');
+      }
+      
+      if (user.googleSub !== sub) {
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { googleSub: sub, fullName: name }
+        });
+        user.googleSub = sub;
+        user.fullName = name;
       }
     } else {
       throw err;
@@ -71,7 +100,20 @@ export async function loginWithGoogle(
     fullName: user.full_name || user.fullName,
     globalRole: user.global_role || user.globalRole,
     deletedAt: user.deleted_at ?? user.deletedAt ?? null,
+    securityVersion: user.security_version ?? user.securityVersion ?? 1,
   };
+
+  // Assign default FACULTY_MENTOR role for new Newton accounts
+  if (domain === 'newtonschool.co' && !newtonExisted && mappedUser.globalRole === 'STUDENT') {
+    await prisma.$executeRaw`UPDATE users SET global_role = 'FACULTY_MENTOR'::"GlobalRole" WHERE id = ${mappedUser.id}::uuid`;
+    mappedUser.globalRole = 'FACULTY_MENTOR';
+  }
+
+  // Developer override
+  if (mappedUser.email === 'e25b070564@adypu.edu.in' && mappedUser.globalRole !== 'PLATFORM_ADMIN') {
+    await prisma.$executeRaw`UPDATE users SET global_role = 'PLATFORM_ADMIN'::"GlobalRole" WHERE id = ${mappedUser.id}::uuid`;
+    mappedUser.globalRole = 'PLATFORM_ADMIN';
+  }
 
   // Hardcode PLATFORM_ADMIN for specific user
   if (mappedUser.email === 'e25b070564@adypu.edu.in' && mappedUser.globalRole !== 'PLATFORM_ADMIN') {
@@ -113,7 +155,7 @@ export async function loginWithGoogle(
             create: {
               userId: mappedUser.id,
               batchId: resolvedBatch.id,
-              assignmentSource: 'EMAIL_INFERENCE',
+              assignmentSource: AssignmentSource.INSTITUTIONAL_EMAIL_INFERENCE,
             },
           });
         }
@@ -126,7 +168,7 @@ export async function loginWithGoogle(
   }
 
   // 5. Issue access JWT & refresh token
-  const accessToken = signJwt(mappedUser.id);
+  const accessToken = signJwt(mappedUser.id, mappedUser.securityVersion);
   const rawRefreshToken = generateRefreshToken();
   const tokenHash = hashToken(rawRefreshToken);
   const familyId = crypto.randomUUID();
@@ -245,7 +287,7 @@ export async function refreshTokens(
       },
     });
 
-    const accessToken = signJwt(user.id);
+    const accessToken = signJwt(user.id, user.securityVersion);
 
     return {
       access_token: accessToken,

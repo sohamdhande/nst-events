@@ -15,6 +15,7 @@ import { notificationsRouter } from './modules/notifications/notifications.route
 import { adminQueueRouter } from './modules/admin/queue.router';
 import { adminUsersRouter } from './modules/admin/users.router';
 import { adminAuditLogsRouter } from './modules/admin/audit-logs.router';
+import { adminStudentsRouter } from './modules/admin/students.router';
 import { adminTeamsRouter } from './modules/admin/teams.router';
 import { adminAcademicProgramsRouter } from './modules/admin/academic-programs.router';
 import { adminAcademicBatchesRouter } from './modules/admin/academic-batches.router';
@@ -85,6 +86,7 @@ export function createApp(): Express {
   app.use('/v1/admin/leaderboard', adminLeaderboardRouter);
   app.use('/v1/admin/users', adminUsersRouter);
   app.use('/v1/admin/audit-logs', adminAuditLogsRouter);
+  app.use('/v1/admin/students', adminStudentsRouter);
   app.use('/v1/admin/teams', adminTeamsRouter);
   app.use('/v1/admin/academic-programs', adminAcademicProgramsRouter);
   app.use('/v1/admin/academic-batches', adminAcademicBatchesRouter);

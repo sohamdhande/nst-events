@@ -81,7 +81,7 @@ export default function NotificationsPage() {
       render: (_: unknown, record: Notification) => {
         const date = new Date(record.createdAt);
         return (
-          <Space direction="vertical" size={0}>
+          <Space orientation="vertical" size={0}>
             <Text>{date.toLocaleDateString()}</Text>
             <Text type="secondary" style={{ fontSize: 12 }}>
               {date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
