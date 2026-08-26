@@ -39,12 +39,12 @@ export default function EventsPage() {
   const isMobile = !screens.md;
 
   const { data: currentUser } = useCurrentUser();
-  const isPlatformAdmin = currentUser?.global_role === 'PLATFORM_ADMIN';
-  const isFacultyAdmin = currentUser?.global_role === 'FACULTY_ADMIN';
+  const hasPlatformAdminRole = currentUser?.global_role === 'PLATFORM_ADMIN';
+  const hasFacultyAdminRole = currentUser?.global_role === 'FACULTY_ADMIN';
   const hasClubAdminRole = currentUser?.club_memberships?.some(
     m => m.role === 'CLUB_ADMIN' || m.role === 'CORE_MEMBER'
   );
-  const canCreateEvent = isPlatformAdmin(currentUser) || isFacultyAdmin(currentUser) || hasClubAdminRole;
+  const canCreateEvent = hasPlatformAdminRole || hasFacultyAdminRole || hasClubAdminRole;
 
   // Filter State (URL as source of truth)
   const searchParams = useSearchParams();

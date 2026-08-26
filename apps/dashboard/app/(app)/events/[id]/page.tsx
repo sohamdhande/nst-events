@@ -70,17 +70,17 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
     const canManageRegistrations = isGlobalAdmin || isClubAdmin || isCoreMember || isMentor;
     const canManageTeams = canManageRegistrations && event?.registrationType === 'TEAM';
     const canManageAttendance = isGlobalAdmin || isClubAdmin || isCoreMember || isMentor;
-    const canEdit = canManageEvent(currentUser, event) && event?.state === 'DRAFT';
-    const canSubmit = canManageEvent(currentUser, event) && event?.state === 'DRAFT';
-    const canApprove = canApproveEvent(currentUser, event) && event?.state === 'PENDING_APPROVAL';
-    const canReject = canApproveEvent(currentUser, event) && event?.state === 'PENDING_APPROVAL';
-    const canLock = canLockEvent(currentUser, event) && event?.state === 'PUBLISHED';
-    const canUnlock = canLockEvent(currentUser, event) && event?.state === 'PUBLISHED';
+    const canEdit = canManageEvent(currentUser, event as any) && event?.state === 'DRAFT';
+    const canSubmit = canManageEvent(currentUser, event as any) && event?.state === 'DRAFT';
+    const canApprove = canApproveEvent(currentUser, event as any) && event?.state === 'PENDING_APPROVAL';
+    const canReject = canApproveEvent(currentUser, event as any) && event?.state === 'PENDING_APPROVAL';
+    const canLock = canLockEvent(currentUser, event as any) && event?.state === 'PUBLISHED';
+    const canUnlock = canLockEvent(currentUser, event as any) && event?.state === 'PUBLISHED';
 
     return {
       isGlobalAdmin,
       isClubAdmin,
-      isEventEditor: canManageEvent(currentUser, event),
+      isEventEditor: canManageEvent(currentUser, event as any),
       isMentor,
       isCoreMember,
       canManageRegistrations,
