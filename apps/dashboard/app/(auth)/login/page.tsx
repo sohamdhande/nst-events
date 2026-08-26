@@ -98,7 +98,7 @@ function LoginContent() {
         Sign in with Google
       </Button>
 
-      <Divider suppressHydrationWarning style={{ margin: '24px 0', borderColor: token.colorBorderSecondary }}>
+      <Divider style={{ margin: '24px 0', borderColor: token.colorBorderSecondary }}>
         <Text type="secondary" style={{ fontSize: 12 }}>STUDENT ACCESS</Text>
       </Divider>
 
