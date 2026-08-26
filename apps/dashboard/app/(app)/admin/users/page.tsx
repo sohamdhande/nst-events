@@ -230,8 +230,8 @@ export default function UserManagementPage() {
       title: 'Administrative Role',
       key: 'role',
       render: (_: unknown, user: AdminUser) => {
-        let isGlobalAdmin = ['PLATFORM_ADMIN', 'FACULTY_ADMIN', 'FACULTY_MENTOR'].includes(user.globalRole);
-        let isClubAdmin = user.clubMemberships && user.clubMemberships.length > 0;
+        const isGlobalAdmin = ['PLATFORM_ADMIN', 'FACULTY_ADMIN', 'FACULTY_MENTOR'].includes(user.globalRole);
+        const isClubAdmin = user.clubMemberships && user.clubMemberships.length > 0;
         
         let status: 'success' | 'warning' | 'error' | 'default' | 'processing' = 'default';
         let label: string = user.globalRole;
