@@ -221,6 +221,10 @@ export const addMember = async (
           role,
         },
       });
+      await tx.user.update({
+        where: { id: userId },
+        data: { securityVersion: { increment: 1 } },
+      });
       return { id: membership.id, user_id: membership.userId, role: membership.role };
     } catch (err: any) {
       if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
@@ -251,6 +255,10 @@ export const updateMemberRole = async (
       const updated = await tx.clubMembership.update({
         where: { id: membership.id },
         data: { role },
+      });
+      await tx.user.update({
+        where: { id: userId },
+        data: { securityVersion: { increment: 1 } },
       });
 
       const club = await tx.club.findUnique({
@@ -299,6 +307,10 @@ export const removeMember = async (callerId: string, clubId: string, userId: str
       await tx.clubMembership.update({
         where: { id: membership.id },
         data: { deletedAt: new Date() },
+      });
+      await tx.user.update({
+        where: { id: userId },
+        data: { securityVersion: { increment: 1 } },
       });
       return true;
     } catch (err: any) {

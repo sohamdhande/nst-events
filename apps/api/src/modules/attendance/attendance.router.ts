@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import rateLimit from 'express-rate-limit';
 import { authenticate } from '../../middleware/authenticate';
-import { requireEventRole, requireRole } from '../../middleware/authorize';
+import { canManageEvent, requireRole } from '../../middleware/authorize';
 import { validate } from '../../middleware/validate';
 import { 
   generateQrSchema, markAttendanceSchema, syncOfflineSchema,
@@ -55,7 +55,7 @@ attendanceRouter.post(
   '/attendance/generate-qr',
   authenticate,
   validate(generateQrSchema),
-  requireEventRole(getEventIdFromSession, ['CLUB_ADMIN', 'CORE_MEMBER']),
+  canManageEvent(getEventIdFromSession),
   generateQrRateLimit,
   async (req, res, next) => {
     try {
@@ -115,7 +115,7 @@ attendanceRouter.get(
   '/events/:id/attendance',
   authenticate,
   validate(getEventAttendanceSchema),
-  requireEventRole((req) => req.params.id, ['CLUB_ADMIN', 'CORE_MEMBER', 'FACULTY_MENTOR']),
+  canManageEvent((req) => req.params.id, ['CLUB_ADMIN', 'CORE_MEMBER', 'FACULTY_MENTOR']),
   async (req, res, next) => {
     try {
       const result = await attendanceService.getEventAttendance(req.user!.id, req.params.id, req.query);
@@ -130,7 +130,7 @@ attendanceRouter.get(
 attendanceRouter.get(
   '/events/:id/attendance/export',
   authenticate,
-  requireEventRole((req) => req.params.id, ['CLUB_ADMIN', 'CORE_MEMBER', 'FACULTY_MENTOR']),
+  canManageEvent((req) => req.params.id, ['CLUB_ADMIN', 'CORE_MEMBER', 'FACULTY_MENTOR']),
   async (req, res, next) => {
     try {
       const csvData = await attendanceService.exportEventAttendance(req.user!.id, req.params.id);

@@ -12,7 +12,7 @@ export const adminUsersRouter: Router = Router();
 adminUsersRouter.get(
   '/',
   authenticate,
-  requireRole(['PLATFORM_ADMIN']),
+  requireRole(['PLATFORM_ADMIN', 'FACULTY_ADMIN']),
   validate(listAdminUsersSchema),
   async (req, res, next) => {
     try {

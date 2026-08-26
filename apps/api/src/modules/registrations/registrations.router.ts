@@ -1,6 +1,6 @@
 import { Router, Request } from 'express';
 import { authenticate } from '../../middleware/authenticate';
-import { requireEventRole } from '../../middleware/authorize';
+import { canManageEvent } from '../../middleware/authorize';
 import { validate } from '../../middleware/validate';
 import * as registrationsService from './registrations.service';
 import * as teamsService from '../teams/teams.service';
@@ -80,7 +80,7 @@ router.get('/events/:id/invitee-search',
 router.get('/events/:id/registrations',
   authenticate,
   validate(ParamEventIdSchema),
-  requireEventRole((req: Request) => req.params.id, ['CLUB_ADMIN', 'CORE_MEMBER']),
+  canManageEvent((req: Request) => req.params.id),
   validate(ListRegistrationsQuerySchema),
   async (req, res, next) => {
     try {

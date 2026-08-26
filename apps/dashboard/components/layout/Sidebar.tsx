@@ -7,14 +7,15 @@ import { cn } from '../../lib/utils';
 import { ContextSwitcher } from '../ui/ContextSwitcher';
 
 import { useCurrentUser } from '../../hooks/useCurrentUser';
+import { isPlatformAdmin, isFacultyAdmin, canViewStudentDirectory } from '../../lib/auth-helpers';
 
 export function Sidebar() {
   const pathname = usePathname();
   const { data: currentUser } = useCurrentUser();
 
-  const isPlatformAdmin = currentUser?.global_role === 'PLATFORM_ADMIN';
-  const isFacultyAdmin = currentUser?.global_role === 'FACULTY_ADMIN';
-  const isAdmin = isPlatformAdmin || isFacultyAdmin;
+  const platformAdmin = isPlatformAdmin(currentUser);
+  const facultyAdmin = isFacultyAdmin(currentUser);
+  const adminAccess = platformAdmin || facultyAdmin;
 
   const links = [
     { href: '/dashboard', label: 'Dashboard' },
@@ -24,15 +25,19 @@ export function Sidebar() {
     { href: '/profile', label: 'Profile' },
   ];
 
-  if (isAdmin) {
+  if (adminAccess) {
     links.push({ href: '/admin', label: 'Admin Hub' });
     links.push({ href: '/admin/approvals', label: 'Approvals' });
-    links.push({ href: '/admin/users', label: 'Users & Roles' });
+    
+    if (canViewStudentDirectory(currentUser)) {
+      links.push({ href: '/admin/users', label: 'Users & Roles' });
+    }
+
     links.push({ href: '/admin/academic-programs', label: 'Academic Programs' });
     links.push({ href: '/admin/academic-batches', label: 'Academic Batches' });
   }
 
-  if (isPlatformAdmin) {
+  if (platformAdmin) {
     links.push({ href: '/admin/audit-logs', label: 'Audit Logs' });
     links.push({ href: '/admin/queues', label: 'Queue Monitoring' });
   }

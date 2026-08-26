@@ -2,10 +2,6 @@ import { Request, Response, NextFunction } from 'express';
 import { GlobalRole, ClubRole, withUserContext } from '@nst/database';
 import { ForbiddenError } from '../lib/errors';
 
-// Shared constants to ensure Express role checks do not drift from the RLS policies.
-// The RLS policy for `club_memberships` uses exactly these bypass global roles.
-export const GLOBAL_ADMIN_ROLES: GlobalRole[] = ['PLATFORM_ADMIN', 'FACULTY_ADMIN'];
-
 /**
  * Ensures the authenticated user has one of the specified global roles.
  * Live resolution via withUserContext.
@@ -36,24 +32,17 @@ export const requireRole = (roles: GlobalRole[]) => {
 };
 
 /**
- * Ensures the authenticated user has one of the specified club roles for a given club_id,
- * or possesses a global bypass role.
- * Live resolution via withUserContext.
+ * Ensures the authenticated user can manage club details.
+ * Allows PLATFORM_ADMIN, FACULTY_ADMIN globally, and CLUB_ADMIN for the specific club.
  */
-export const requireClubRole = (
-  getClubId: (req: Request) => string | Promise<string>,
-  roles: ClubRole[]
+export const canManageClubDetails = (
+  getClubId: (req: Request) => string | Promise<string>
 ) => {
   return async (req: Request, _res: Response, next: NextFunction) => {
     try {
-      if (!req.user?.id) {
-        throw new ForbiddenError('Unauthorized access');
-      }
-
+      if (!req.user?.id) throw new ForbiddenError('Unauthorized access');
       const clubId = await getClubId(req);
-      if (!clubId) {
-        throw new ForbiddenError('Club ID is required for this operation');
-      }
+      if (!clubId) throw new ForbiddenError('Club ID is required for this operation');
 
       await withUserContext(req.user.id, async (tx) => {
         const user = await tx.user.findUnique({
@@ -61,26 +50,22 @@ export const requireClubRole = (
           select: { globalRole: true },
         });
 
-        if (!user) {
-          throw new ForbiddenError('User not found');
-        }
+        if (!user) throw new ForbiddenError('User not found');
 
-        // 1. Global Bypass Check (Matches RLS exactly)
-        if (GLOBAL_ADMIN_ROLES.includes(user.globalRole)) {
+        if (['PLATFORM_ADMIN', 'FACULTY_ADMIN'].includes(user.globalRole)) {
           return;
         }
 
-        // 2. Club-Scoped Role Check (Matches RLS exactly)
         const membership = await tx.clubMembership.findFirst({
           where: {
             clubId,
             userId: req.user!.id,
             deletedAt: null,
+            role: 'CLUB_ADMIN',
           },
-          select: { role: true },
         });
 
-        if (!membership || !roles.includes(membership.role)) {
+        if (!membership) {
           throw new ForbiddenError('Insufficient club role');
         }
       });
@@ -93,24 +78,19 @@ export const requireClubRole = (
 };
 
 /**
- * Ensures the authenticated user has one of the specified club roles in EVERY club attached to the request,
- * or possesses a global bypass role.
- * Live resolution via withUserContext.
+ * Ensures the authenticated user can manage club memberships.
+ * Allows PLATFORM_ADMIN globally, and specified roles (default: CLUB_ADMIN) for the specific club.
+ * Excludes FACULTY_ADMIN from global bypass.
  */
-export const requireAllClubRoles = (
-  getClubIds: (req: Request) => string[] | Promise<string[]>,
-  roles: ClubRole[]
+export const canManageClubMembers = (
+  getClubId: (req: Request) => string | Promise<string>,
+  allowedRoles: ClubRole[] = ['CLUB_ADMIN']
 ) => {
   return async (req: Request, _res: Response, next: NextFunction) => {
     try {
-      if (!req.user?.id) {
-        throw new ForbiddenError('Unauthorized access');
-      }
-
-      const clubIds = await getClubIds(req);
-      if (!clubIds || clubIds.length === 0) {
-        throw new ForbiddenError('Club IDs are required for this operation');
-      }
+      if (!req.user?.id) throw new ForbiddenError('Unauthorized access');
+      const clubId = await getClubId(req);
+      if (!clubId) throw new ForbiddenError('Club ID is required for this operation');
 
       await withUserContext(req.user.id, async (tx) => {
         const user = await tx.user.findUnique({
@@ -118,29 +98,23 @@ export const requireAllClubRoles = (
           select: { globalRole: true },
         });
 
-        if (!user) {
-          throw new ForbiddenError('User not found');
-        }
+        if (!user) throw new ForbiddenError('User not found');
 
-        // 1. Global Bypass Check (Matches RLS exactly)
-        if (GLOBAL_ADMIN_ROLES.includes(user.globalRole)) {
+        if (user.globalRole === 'PLATFORM_ADMIN') {
           return;
         }
 
-        // 2. Club-Scoped Role Check for ALL clubs
-        for (const clubId of clubIds) {
-          const membership = await tx.clubMembership.findFirst({
-            where: {
-              clubId,
-              userId: req.user!.id,
-              deletedAt: null,
-            },
-            select: { role: true },
-          });
+        const membership = await tx.clubMembership.findFirst({
+          where: {
+            clubId,
+            userId: req.user!.id,
+            deletedAt: null,
+            role: { in: allowedRoles },
+          },
+        });
 
-          if (!membership || !roles.includes(membership.role)) {
-            throw new ForbiddenError(`Insufficient club role for club ${clubId}`);
-          }
+        if (!membership) {
+          throw new ForbiddenError('Insufficient club role');
         }
       });
 
@@ -150,12 +124,15 @@ export const requireAllClubRoles = (
     }
   };
 };
+
 /**
- * Ensures the authenticated user has one of the specified club roles in ANY club attached to the event.
+ * Ensures the authenticated user can manage events.
+ * Allows PLATFORM_ADMIN, FACULTY_ADMIN globally.
+ * Allows specified roles (default: CLUB_ADMIN, CORE_MEMBER) in the PRIMARY club of the event.
  */
-export const requireEventRole = (
+export const canManageEvent = (
   getEventId: (req: Request) => string | Promise<string>,
-  roles: ClubRole[]
+  allowedRoles: ClubRole[] = ['CLUB_ADMIN', 'CORE_MEMBER']
 ) => {
   return async (req: Request, _res: Response, next: NextFunction) => {
     try {
@@ -168,25 +145,142 @@ export const requireEventRole = (
           where: { id: req.user!.id },
           select: { globalRole: true },
         });
+
         if (!user) throw new ForbiddenError('User not found');
-        if (GLOBAL_ADMIN_ROLES.includes(user.globalRole)) return;
+
+        if (['PLATFORM_ADMIN', 'FACULTY_ADMIN'].includes(user.globalRole)) {
+          return;
+        }
 
         const hasRole = await tx.eventClub.findFirst({
           where: {
             eventId,
+            isPrimary: true, // MUST BE PRIMARY CLUB
             club: {
               memberships: {
                 some: {
                   userId: req.user!.id,
                   deletedAt: null,
-                  role: { in: roles },
+                  role: { in: allowedRoles },
                 },
               },
             },
           },
         });
-        if (!hasRole) throw new ForbiddenError('Insufficient club role for this event');
+
+        if (!hasRole) {
+          throw new ForbiddenError('Insufficient primary club role for this event');
+        }
       });
+
+      next();
+    } catch (error) {
+      next(error);
+    }
+  };
+};
+
+/**
+ * Ensures the authenticated user can approve events.
+ * Allows PLATFORM_ADMIN, FACULTY_ADMIN globally.
+ * Allows FACULTY_MENTOR in the PRIMARY club of the event.
+ */
+export const canApproveEvent = (
+  getEventId: (req: Request) => string | Promise<string>
+) => {
+  return async (req: Request, _res: Response, next: NextFunction) => {
+    try {
+      if (!req.user?.id) throw new ForbiddenError('Unauthorized access');
+      const eventId = await getEventId(req);
+      if (!eventId) throw new ForbiddenError('Event ID is required');
+
+      await withUserContext(req.user.id, async (tx) => {
+        const user = await tx.user.findUnique({
+          where: { id: req.user!.id },
+          select: { globalRole: true },
+        });
+
+        if (!user) throw new ForbiddenError('User not found');
+
+        if (['PLATFORM_ADMIN', 'FACULTY_ADMIN'].includes(user.globalRole)) {
+          return;
+        }
+
+        const hasRole = await tx.eventClub.findFirst({
+          where: {
+            eventId,
+            isPrimary: true,
+            club: {
+              memberships: {
+                some: {
+                  userId: req.user!.id,
+                  deletedAt: null,
+                  role: 'FACULTY_MENTOR',
+                },
+              },
+            },
+          },
+        });
+
+        if (!hasRole) {
+          throw new ForbiddenError('Insufficient primary club role for this event');
+        }
+      });
+
+      next();
+    } catch (error) {
+      next(error);
+    }
+  };
+};
+
+/**
+ * Ensures the authenticated user can lock/unlock events.
+ * Allows PLATFORM_ADMIN, FACULTY_ADMIN globally.
+ * Allows CLUB_ADMIN, CORE_MEMBER, FACULTY_MENTOR in the PRIMARY club of the event.
+ */
+export const canLockEvent = (
+  getEventId: (req: Request) => string | Promise<string>
+) => {
+  return async (req: Request, _res: Response, next: NextFunction) => {
+    try {
+      if (!req.user?.id) throw new ForbiddenError('Unauthorized access');
+      const eventId = await getEventId(req);
+      if (!eventId) throw new ForbiddenError('Event ID is required');
+
+      await withUserContext(req.user.id, async (tx) => {
+        const user = await tx.user.findUnique({
+          where: { id: req.user!.id },
+          select: { globalRole: true },
+        });
+
+        if (!user) throw new ForbiddenError('User not found');
+
+        if (['PLATFORM_ADMIN', 'FACULTY_ADMIN'].includes(user.globalRole)) {
+          return;
+        }
+
+        const hasRole = await tx.eventClub.findFirst({
+          where: {
+            eventId,
+            isPrimary: true,
+            club: {
+              memberships: {
+                some: {
+                  userId: req.user!.id,
+                  deletedAt: null,
+                  role: { in: ['CLUB_ADMIN', 'CORE_MEMBER', 'FACULTY_MENTOR'] },
+                },
+              },
+            },
+          },
+        });
+
+        if (!hasRole) {
+          throw new ForbiddenError('Insufficient primary club role for this event');
+        }
+      });
+
       next();
     } catch (error) {
       next(error);

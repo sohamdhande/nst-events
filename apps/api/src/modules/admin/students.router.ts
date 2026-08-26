@@ -10,10 +10,11 @@ import { requireRole } from '../../middleware/authorize';
 
 export const adminStudentsRouter: Router = Router();
 
-adminStudentsRouter.use(authenticate, requireRole(['PLATFORM_ADMIN']));
 
 adminStudentsRouter.get(
   '/',
+  authenticate,
+  requireRole(['PLATFORM_ADMIN', 'FACULTY_ADMIN']),
   validate(
     z.object({
       query: z.object({
@@ -36,6 +37,8 @@ adminStudentsRouter.get(
 
 adminStudentsRouter.post(
   '/',
+  authenticate,
+  requireRole(['PLATFORM_ADMIN']),
   validate(
     z.object({
       body: z.object({
@@ -56,6 +59,8 @@ adminStudentsRouter.post(
 
 adminStudentsRouter.post(
   '/import',
+  authenticate,
+  requireRole(['PLATFORM_ADMIN']),
   (req, res, next) => {
     const bb = busboy({ headers: req.headers, limits: { fileSize: 2 * 1024 * 1024 } }); // 2MB limit
     const emails: string[] = [];
@@ -131,6 +136,8 @@ adminStudentsRouter.post(
 
 adminStudentsRouter.delete(
   '/:id',
+  authenticate,
+  requireRole(['PLATFORM_ADMIN']),
   async (req, res, next) => {
     try {
       await studentsService.removeStudent(req.user!.id, req.params.id);

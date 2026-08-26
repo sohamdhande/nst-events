@@ -1,7 +1,7 @@
 import { withUserContext } from '@nst/database';
 import { prisma } from '../../lib/prisma';
 import { NotFoundError, UnprocessableEntityError, ForbiddenError, BadRequestError } from '../../lib/errors';
-import { GLOBAL_ADMIN_ROLES } from '../../middleware/authorize';
+// Removed GLOBAL_ADMIN_ROLES
 import { Prisma, Event, AttendanceSession } from '@nst/database';
 import crypto from 'crypto';
 import {
@@ -36,7 +36,7 @@ export const createEvent = async (callerId: string, data: CreateEventInput): Pro
     });
     if (!user) throw new ForbiddenError('User not found');
 
-    if (!GLOBAL_ADMIN_ROLES.includes(user.globalRole)) {
+    if (!['PLATFORM_ADMIN', 'FACULTY_ADMIN'].includes(user.globalRole)) {
       for (const club of data.club_ids) {
         const membership = await tx.clubMembership.findFirst({
           where: { clubId: club.club_id, userId: callerId, deletedAt: null },

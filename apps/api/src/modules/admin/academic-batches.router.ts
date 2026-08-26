@@ -9,7 +9,7 @@ export const adminAcademicBatchesRouter: Router = Router();
 adminAcademicBatchesRouter.post(
   '/',
   authenticate,
-  requireRole(['PLATFORM_ADMIN', 'FACULTY_ADMIN']),
+  requireRole(['PLATFORM_ADMIN']),
   async (req, res, next) => {
     try {
       const callerId = req.user!.id;
@@ -30,7 +30,7 @@ adminAcademicBatchesRouter.post(
 adminAcademicBatchesRouter.patch(
   '/:batchId',
   authenticate,
-  requireRole(['PLATFORM_ADMIN', 'FACULTY_ADMIN']),
+  requireRole(['PLATFORM_ADMIN']),
   async (req, res, next) => {
     try {
       const callerId = req.user!.id;

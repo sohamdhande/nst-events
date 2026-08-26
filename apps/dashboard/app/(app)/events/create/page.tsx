@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useState } from 'react';
-import { 
-  Form, Input, Button, Select, DatePicker, InputNumber, 
-  Card, Breadcrumb, Typography, Space, Row, Col, Alert, Result 
+import {
+  Form, Input, Button, Select, DatePicker, InputNumber,
+  Card, Breadcrumb, Typography, Space, Row, Col, Alert, Result
 } from 'antd';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -18,7 +18,7 @@ const { RangePicker } = DatePicker;
 export default function CreateEventPage() {
   const router = useRouter();
   const [form] = Form.useForm();
-  
+
   const { data: currentUser, isLoading: isLoadingUser } = useCurrentUser();
   const { data: clubsData, isLoading: isLoadingClubs } = useClubs();
   const { data: batchesData, isLoading: isLoadingBatches } = useAcademicBatches();
@@ -31,8 +31,8 @@ export default function CreateEventPage() {
   const [submitApprovalError, setSubmitApprovalError] = useState<string | null>(null);
 
   const isGlobalAdmin = ['PLATFORM_ADMIN', 'FACULTY_ADMIN'].includes(currentUser?.global_role || '');
-  
-  const eligibleClubs = isGlobalAdmin 
+
+  const eligibleClubs = isGlobalAdmin
     ? (clubsData?.data?.map(c => ({ id: c.id, name: c.name })) || [])
     : (currentUser?.club_memberships?.filter(m => m.role === 'CLUB_ADMIN' || m.role === 'CORE_MEMBER').map(m => ({ id: m.club_id, name: m.club_name })) || []);
 
@@ -52,6 +52,7 @@ export default function CreateEventPage() {
     maximum_team_size?: number;
     max_capacity?: number;
     club_id: string;
+    collaborating_club_ids?: string[];
     audience: 'ALL_STUDENTS' | 'SPECIFIC_BATCHES';
     audience_batch_ids?: string[];
   }
@@ -78,7 +79,15 @@ export default function CreateEventPage() {
           audience: values.audience,
           audience_batch_ids: values.audience === 'SPECIFIC_BATCHES' ? values.audience_batch_ids : undefined,
           max_capacity: values.max_capacity,
-          club_ids: [{ club_id: values.club_id, is_primary: true }],
+          club_ids: [
+            { club_id: values.club_id, is_primary: true },
+            ...(values.collaborating_club_ids ?? [])
+              .filter((id) => id !== values.club_id)
+              .map((id) => ({
+                club_id: id,
+                is_primary: false,
+              })),
+          ],
           metadata: values.registration_type === 'TEAM' ? {
             minimum_team_size: values.minimum_team_size,
             maximum_team_size: values.maximum_team_size,
@@ -143,11 +152,11 @@ export default function CreateEventPage() {
       )}
 
       {submitApprovalError && createdEventId && (
-        <Alert 
-          type="warning" 
-          title="Event draft created, but submission for approval failed." 
-          description={submitApprovalError} 
-          showIcon 
+        <Alert
+          type="warning"
+          title="Event draft created, but submission for approval failed."
+          description={submitApprovalError}
+          showIcon
           action={
             <Space>
               <Link href={`/events/${createdEventId}`}>
@@ -177,6 +186,14 @@ export default function CreateEventPage() {
           }
           if (changedValues.audience === 'ALL_STUDENTS') {
             form.setFieldsValue({ audience_batch_ids: undefined });
+          }
+          if (changedValues.club_id) {
+            const currentCollaborators = form.getFieldValue('collaborating_club_ids') || [];
+            if (currentCollaborators.includes(changedValues.club_id)) {
+              form.setFieldsValue({
+                collaborating_club_ids: currentCollaborators.filter((id: string) => id !== changedValues.club_id),
+              });
+            }
           }
         }}
       >
@@ -258,7 +275,7 @@ export default function CreateEventPage() {
                           name="registration_type"
                           label="Registration Type"
                           extra={
-                            regType === 'TEAM' 
+                            regType === 'TEAM'
                               ? "Participants must register through a team."
                               : "Participants register individually."
                           }
@@ -310,10 +327,10 @@ export default function CreateEventPage() {
                                 </Form.Item>
                               </Col>
                             </Row>
-                            <Alert 
-                              type="info" 
-                              title="Individual registration is not permitted for team events." 
-                              showIcon 
+                            <Alert
+                              type="info"
+                              title="Individual registration is not permitted for team events."
+                              showIcon
                             />
                           </div>
                         )}
@@ -349,10 +366,42 @@ export default function CreateEventPage() {
                     placeholder="Select a club"
                     options={eligibleClubs.map(c => ({ label: c.name, value: c.id }))}
                     showSearch
-                    filterOption={(input, option) => 
+                    filterOption={(input, option) =>
                       (option?.label ?? '').toString().toLowerCase().includes(input.toLowerCase())
                     }
                   />
+                </Form.Item>
+                <Form.Item
+                  noStyle
+                  shouldUpdate={(prev, curr) => prev.club_id !== curr.club_id}
+                >
+                  {({ getFieldValue }) => {
+                    const primaryClubId = getFieldValue('club_id');
+                    const collabs = eligibleClubs.filter(c => c.id !== primaryClubId);
+
+                    return (
+                      <Form.Item
+                        name="collaborating_club_ids"
+                        label="Collaborating Clubs"
+                        extra={
+                          collabs.length > 0
+                            ? "Select other Clubs collaborating on this event."
+                            : "No other eligible Clubs available."
+                        }
+                      >
+                        <Select
+                          mode="multiple"
+                          placeholder="Select collaborating clubs"
+                          options={collabs.map(c => ({ label: c.name, value: c.id }))}
+                          disabled={collabs.length === 0}
+                          showSearch
+                          filterOption={(input, option) =>
+                            (option?.label ?? '').toString().toLowerCase().includes(input.toLowerCase())
+                          }
+                        />
+                      </Form.Item>
+                    );
+                  }}
                 </Form.Item>
               </Col>
               <Col xs={24} md={12}>
@@ -425,7 +474,7 @@ export default function CreateEventPage() {
                           placeholder="Select batches"
                           options={batchesData?.map(b => ({ label: b.display_name, value: b.id }))}
                           showSearch
-                          filterOption={(input, option) => 
+                          filterOption={(input, option) =>
                             (option?.label ?? '').toString().toLowerCase().includes(input.toLowerCase())
                           }
                         />
@@ -474,7 +523,7 @@ export default function CreateEventPage() {
               <Link href="/events">
                 <Button disabled={isPending}>Cancel</Button>
               </Link>
-              <Button 
+              <Button
                 onClick={() => {
                   form.validateFields().then(values => handleFinish(values, 'DRAFT'));
                 }}
@@ -483,7 +532,7 @@ export default function CreateEventPage() {
               >
                 Save Draft
               </Button>
-              <Button 
+              <Button
                 type="primary"
                 onClick={() => {
                   form.validateFields().then(values => handleFinish(values, 'SUBMIT'));

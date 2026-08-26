@@ -10,6 +10,7 @@ import { useClubs } from '../../../../hooks/useClubs';
 import { Input, Button, Table, Badge, Modal, Select, Tag, Dropdown, Tabs, Upload, message, Skeleton, Result, Tooltip, Popover } from 'antd';
 import { SearchOutlined, UploadOutlined, ExclamationCircleOutlined, InfoCircleOutlined } from '@ant-design/icons';
 import { AdminPageHeader } from '../../../../components/admin/AdminPageHeader';
+import { canViewStudentDirectory, canManageStudentDirectory } from '../../../../lib/auth-helpers';
 
 const ROLE_OPTIONS = [
   { value: 'STUDENT', label: 'Student' },
@@ -72,17 +73,19 @@ export default function UserManagementPage() {
   };
 
   // Auth Gate
-  if (!isUserLoading && (!currentUser || currentUser.global_role !== 'PLATFORM_ADMIN')) {
+  if (!isUserLoading && !canViewStudentDirectory(currentUser)) {
     return (
       <div className="max-w-6xl mx-auto py-12">
         <Result
           status="403"
           title="Permission Denied"
-          subTitle="You do not have permission to manage Users & Roles."
+          subTitle="You do not have permission to view Users & Roles."
         />
       </div>
     );
   }
+
+  const isPlatformAdmin = canManageStudentDirectory(currentUser);
 
   const rawUsers = usersData?.pages.flatMap(page => page.data) || [];
   
@@ -321,7 +324,7 @@ export default function UserManagementPage() {
           });
         } 
         if (items.length === 0) return null;
-        return <Dropdown menu={{ items }} trigger={['click']}><Button size="small">Actions ▾</Button></Dropdown>;
+        return isPlatformAdmin ? <Dropdown menu={{ items }} trigger={['click']}><Button size="small">Actions ▾</Button></Dropdown> : null;
       },
       align: 'right' as const,
     },
@@ -341,8 +344,8 @@ export default function UserManagementPage() {
         {status === 'ACTIVE' ? 'Active' : 'Revoked'}
       </span>
     )},
-    { title: 'Actions', key: 'actions', render: (_: unknown, row: AuthorizedStudent) => row.status === 'ACTIVE' && (
-      <Button danger size="small" type="text" onClick={() => handleRevokeStudent(row.id)}>Remove</Button>
+    { title: 'Actions', key: 'actions', render: (_: unknown, row: AuthorizedStudent) => row.status === 'ACTIVE' && isPlatformAdmin && (
+        <Button danger size="small" type="text" onClick={() => handleRevokeStudent(row.id)}>Remove</Button>
     ), align: 'right' as const }
   ];
 
@@ -358,8 +361,12 @@ export default function UserManagementPage() {
               <p className="text-sm m-0" style={{ opacity: 0.65 }}>Manage NST student eligibility and academic identity.</p>
             </div>
             <div className="flex flex-wrap gap-2">
-              <Button type="primary" onClick={() => setAddStudentModalOpen(true)}>Add Student</Button>
-              <Button icon={<UploadOutlined />} onClick={() => setImportModalOpen(true)}>Import CSV</Button>
+            {isPlatformAdmin && (
+              <>
+                <Button type="primary" onClick={() => setAddStudentModalOpen(true)}>Add Student</Button>
+                <Button icon={<UploadOutlined />} onClick={() => setImportModalOpen(true)}>Import CSV</Button>
+              </>
+            )}
             </div>
           </div>
           
@@ -415,11 +422,9 @@ export default function UserManagementPage() {
               <h2 className="text-lg font-semibold m-0">Admin Roles</h2>
               <p className="text-sm m-0" style={{ opacity: 0.65 }}>Manage platform-wide authorization.</p>
             </div>
-            {currentUser?.global_role === 'PLATFORM_ADMIN' && (
-              <div className="flex flex-wrap gap-2">
+              {isPlatformAdmin && (
                 <Button type="primary" onClick={() => setAddUserModalOpen(true)}>Add User</Button>
-              </div>
-            )}
+              )}
           </div>
           <div style={{ borderColor: 'var(--ant-color-border-secondary)' }} className="p-4 border-b flex gap-4">
             <Input 

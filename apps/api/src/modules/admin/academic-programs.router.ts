@@ -9,7 +9,7 @@ export const adminAcademicProgramsRouter: Router = Router();
 adminAcademicProgramsRouter.post(
   '/',
   authenticate,
-  requireRole(['PLATFORM_ADMIN', 'FACULTY_ADMIN']),
+  requireRole(['PLATFORM_ADMIN']),
   async (req, res, next) => {
     try {
       const callerId = req.user!.id;
@@ -26,7 +26,7 @@ adminAcademicProgramsRouter.post(
 adminAcademicProgramsRouter.patch(
   '/:programId',
   authenticate,
-  requireRole(['PLATFORM_ADMIN', 'FACULTY_ADMIN']),
+  requireRole(['PLATFORM_ADMIN']),
   async (req, res, next) => {
     try {
       const callerId = req.user!.id;

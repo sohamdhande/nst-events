@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { authenticate } from '../../middleware/authenticate';
-import { requireRole, requireClubRole } from '../../middleware/authorize';
+import { requireRole, canManageClubDetails, canManageClubMembers } from '../../middleware/authorize';
 import { validate } from '../../middleware/validate';
 import { ConflictError } from '../../lib/errors';
 import {
@@ -87,7 +87,7 @@ router.post(
 router.patch(
   '/:id',
   authenticate,
-  requireClubRole((req) => req.params.id, ['CLUB_ADMIN']),
+  canManageClubDetails((req) => req.params.id),
   validate(UpdateClubSchema),
   async (req, res, next) => {
     try {
@@ -127,9 +127,7 @@ router.patch(
 router.post(
   '/:id/members',
   authenticate,
-  requireClubRole((req) => req.params.id, [
-    'CLUB_ADMIN',
-  ]),
+  canManageClubMembers((req) => req.params.id, ['CLUB_ADMIN']),
   validate(AddMemberSchema),
   async (req, res, next) => {
     try {
@@ -153,10 +151,7 @@ router.post(
 router.patch(
   '/:id/members/:userId',
   authenticate,
-  requireClubRole((req) => req.params.id, [
-    'CLUB_ADMIN',
-    'FACULTY_MENTOR',
-  ]),
+  canManageClubMembers((req) => req.params.id, ['CLUB_ADMIN', 'FACULTY_MENTOR']),
   validate(UpdateMemberRoleSchema),
   async (req, res, next) => {
     try {
@@ -179,9 +174,7 @@ router.patch(
 router.delete(
   '/:id/members/:userId',
   authenticate,
-  requireClubRole((req) => req.params.id, [
-    'CLUB_ADMIN',
-  ]),
+  canManageClubMembers((req) => req.params.id, ['CLUB_ADMIN']),
   async (req, res, next) => {
     try {
       const deleted = await clubsService.removeMember(

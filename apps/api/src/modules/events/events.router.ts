@@ -1,6 +1,6 @@
 import { Router, Request } from 'express';
 import { authenticate } from '../../middleware/authenticate';
-import { requireClubRole, requireAllClubRoles, requireEventRole } from '../../middleware/authorize';
+import { canManageEvent, canApproveEvent, canLockEvent } from '../../middleware/authorize';
 import { validate } from '../../middleware/validate';
 import { prisma } from '../../lib/prisma';
 import { NotFoundError } from '../../lib/errors';
@@ -79,7 +79,7 @@ router.patch(
   '/:id',
   authenticate,
   validate(ParamIdSchema),
-  requireEventRole((req: Request) => req.params.id, ['CLUB_ADMIN']),
+  canManageEvent((req: Request) => req.params.id),
   validate(UpdateEventSchema),
   async (req, res, next) => {
     try {
@@ -95,7 +95,7 @@ router.delete(
   '/:id',
   authenticate,
   validate(ParamIdSchema),
-  requireEventRole((req: Request) => req.params.id, ['CLUB_ADMIN']),
+  canManageEvent((req: Request) => req.params.id, ['CLUB_ADMIN']),
   async (req, res, next) => {
     try {
       await eventsService.deleteEvent(req.user!.id, req.params.id);
@@ -114,7 +114,7 @@ router.post(
   '/:id/submit-for-approval',
   authenticate,
   validate(ParamIdSchema),
-  requireEventRole((req: Request) => req.params.id, ['CLUB_ADMIN', 'CORE_MEMBER']),
+  canManageEvent((req: Request) => req.params.id),
   async (req, res, next) => {
     try {
       const result = await eventsService.submitForApproval(req.user!.id, req.params.id);
@@ -129,7 +129,7 @@ router.post(
   '/:id/approve',
   authenticate,
   validate(ParamIdSchema),
-  requireEventRole((req: Request) => req.params.id, ['FACULTY_MENTOR']),
+  canApproveEvent((req: Request) => req.params.id),
   async (req, res, next) => {
     try {
       const result = await eventsService.approveEvent(req.user!.id, req.params.id);
@@ -144,7 +144,7 @@ router.post(
   '/:id/reject',
   authenticate,
   validate(ParamIdSchema),
-  requireEventRole((req: Request) => req.params.id, ['FACULTY_MENTOR']),
+  canApproveEvent((req: Request) => req.params.id),
   validate(RejectEventSchema),
   async (req, res, next) => {
     try {
@@ -164,7 +164,7 @@ router.post(
   '/:id/lock',
   authenticate,
   validate(ParamIdSchema),
-  requireEventRole((req: Request) => req.params.id, ['CLUB_ADMIN', 'FACULTY_MENTOR']),
+  canLockEvent((req: Request) => req.params.id),
   async (req, res, next) => {
     try {
       const result = await eventsService.lockEvent(req.user!.id, req.params.id);
@@ -179,7 +179,7 @@ router.post(
   '/:id/unlock',
   authenticate,
   validate(ParamIdSchema),
-  requireEventRole((req: Request) => req.params.id, ['CLUB_ADMIN', 'FACULTY_MENTOR']),
+  canLockEvent((req: Request) => req.params.id),
   async (req, res, next) => {
     try {
       const result = await eventsService.unlockEvent(req.user!.id, req.params.id);
@@ -258,7 +258,7 @@ router.post(
   '/:id/sessions',
   authenticate,
   validate(ParamIdSchema),
-  requireEventRole((req: Request) => req.params.id, ['CLUB_ADMIN', 'CORE_MEMBER']),
+  canManageEvent((req: Request) => req.params.id),
   validate(CreateSessionSchema),
   async (req, res, next) => {
     try {
@@ -274,7 +274,7 @@ router.patch(
   '/:id/sessions/:sessionId',
   authenticate,
   validate(ParamSessionIdSchema),
-  requireEventRole((req: Request) => req.params.id, ['CLUB_ADMIN', 'CORE_MEMBER']),
+  canManageEvent((req: Request) => req.params.id),
   validate(UpdateSessionSchema),
   async (req, res, next) => {
     try {

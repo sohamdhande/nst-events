@@ -1,6 +1,7 @@
 import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert';
 import { prisma } from '../../src/lib/prisma';
+import { adminPrisma } from '../helpers/adminDb';
 import { adminUsersService } from '../../src/modules/admin/users.service';
 import { authService } from '../../src/modules/auth/auth.service';
 import { randomUUID } from 'crypto';
@@ -10,25 +11,31 @@ describe('WEB-54C Admin Provisioning and Directory (Backend)', () => {
   let clubId = randomUUID();
   
   before(async () => {
+    // Clean up
+    await adminPrisma.$executeRaw`DELETE FROM club_memberships WHERE user_id IN (SELECT id FROM users WHERE email IN ('test-student@adypu.edu.in', 'test-clubadmin@adypu.edu.in'))`;
+    await adminPrisma.$executeRaw`DELETE FROM users WHERE email IN ('test-student@adypu.edu.in', 'test-clubadmin@adypu.edu.in')`;
+
     // Create a mock admin user
-    await prisma.$executeRaw`
+    await adminPrisma.$executeRaw`
       INSERT INTO users (id, google_sub, email, full_name, global_role) 
       VALUES (${adminUserId}::uuid, ${randomUUID()}, ${randomUUID() + '@newtonschool.co'}, 'Admin', 'PLATFORM_ADMIN'::"GlobalRole")
     `;
     
     // Create a mock club
-    await prisma.$executeRaw`
+    await adminPrisma.$executeRaw`
       INSERT INTO clubs (id, name, description)
-      VALUES (${clubId}::uuid, 'Test Club', 'Test')
+      VALUES (${clubId}::uuid, ${'Test Club ' + randomUUID()}, 'Test')
     `;
   });
 
   after(async () => {
-    await prisma.clubMembership.deleteMany({ where: { clubId } });
-    await prisma.club.delete({ where: { id: clubId } });
+  await adminPrisma.$executeRaw`DELETE FROM club_memberships WHERE user_id IN (SELECT id FROM users WHERE email IN ('test-student@adypu.edu.in', 'test-clubadmin@adypu.edu.in'))`;
+  await adminPrisma.$executeRaw`DELETE FROM users WHERE email IN ('test-student@adypu.edu.in', 'test-clubadmin@adypu.edu.in')`;
+  await prisma.clubMembership.deleteMany({ where: { clubId } });
+  try { await prisma.club.delete({ where: { id: clubId } }); } catch (e) {}
     await prisma.user.deleteMany({ where: { email: { contains: 'test-' } } });
     await prisma.authorizedStudent.deleteMany({ where: { normalizedEmail: { contains: 'test-' } } });
-    await prisma.user.delete({ where: { id: adminUserId } });
+    try { await prisma.user.delete({ where: { id: adminUserId } }); } catch (e) {}
     await prisma.$disconnect();
   });
 
@@ -43,17 +50,17 @@ describe('WEB-54C Admin Provisioning and Directory (Backend)', () => {
     const studentId = randomUUID();
     const clubAdminId = randomUUID();
     
-    await prisma.$executeRaw`
+    await adminPrisma.$executeRaw`
       INSERT INTO users (id, google_sub, email, full_name, global_role) 
       VALUES (${studentId}::uuid, ${randomUUID()}, ${'test-student@adypu.edu.in'}, 'Student', 'STUDENT'::"GlobalRole")
     `;
     
-    await prisma.$executeRaw`
+    await adminPrisma.$executeRaw`
       INSERT INTO users (id, google_sub, email, full_name, global_role) 
       VALUES (${clubAdminId}::uuid, ${randomUUID()}, ${'test-clubadmin@adypu.edu.in'}, 'Club Admin', 'STUDENT'::"GlobalRole")
     `;
     
-    await prisma.$executeRaw`
+    await adminPrisma.$executeRaw`
       INSERT INTO club_memberships (id, user_id, club_id, role)
       VALUES (${randomUUID()}::uuid, ${clubAdminId}::uuid, ${clubId}::uuid, 'CLUB_ADMIN'::"ClubRole")
     `;
@@ -119,7 +126,7 @@ describe('WEB-54C Admin Provisioning and Directory (Backend)', () => {
     const testEmail = `test-handoff-${Date.now()}@adypu.edu.in`;
     const realGoogleSub = `real-sub-${Date.now()}`;
     
-    await prisma.$executeRaw`
+    await adminPrisma.$executeRaw`
       INSERT INTO authorized_students (id, normalized_email, status)
       VALUES (${randomUUID()}::uuid, ${testEmail}, 'ACTIVE'::"DirectoryStatus")
     `;

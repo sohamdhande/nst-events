@@ -11,6 +11,7 @@ import { resolveEventLockState } from '../../../../lib/event-utils';
 import { useEventLiveUpdates } from '../../../../hooks/useEventLiveUpdates';
 import { useCurrentUser } from '../../../../hooks/useCurrentUser';
 import { useEventLifecycle } from '../../../../hooks/useEventLifecycle';
+import { canManageEvent, canApproveEvent, canLockEvent, isPlatformAdmin, isFacultyAdmin } from '../../../../lib/auth-helpers';
 
 const { Title, Text, Paragraph } = Typography;
 const { TextArea } = Input;
@@ -48,48 +49,38 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
 
   const auth = useMemo(() => {
     let isGlobalAdmin = false;
-    let isClubAdmin = false;
-    let isEventEditor = false;
     let isMentor = false;
     let isCoreMember = false;
+    let isClubAdmin = false;
 
     if (currentUser && event) {
-      if (currentUser.global_role === 'PLATFORM_ADMIN' || currentUser.global_role === 'FACULTY_ADMIN') {
+      if (isPlatformAdmin(currentUser) || isFacultyAdmin(currentUser)) {
         isGlobalAdmin = true;
       }
       
-      const userAdminClubs = currentUser.club_memberships
-        .filter(m => m.role === 'CLUB_ADMIN') 
-        .map(m => m.club_id);
-
-      const userCoreClubs = currentUser.club_memberships
-        .filter(m => m.role === 'CORE_MEMBER') 
-        .map(m => m.club_id);
-      
-      const userMentorClubs = currentUser.club_memberships
-        .filter(m => m.role === 'FACULTY_MENTOR') 
-        .map(m => m.club_id);
-
-      isClubAdmin = event.eventClubs?.some(ec => userAdminClubs.includes(ec.clubId)) ?? false;
-      isCoreMember = event.eventClubs?.some(ec => userCoreClubs.includes(ec.clubId)) ?? false;
-      isEventEditor = isGlobalAdmin || isClubAdmin;
-      isMentor = event.eventClubs?.some(ec => userMentorClubs.includes(ec.clubId)) ?? false;
+      const primaryClubId = event.eventClubs?.find((ec) => ec.isPrimary)?.clubId;
+      if (primaryClubId) {
+        const primaryRole = currentUser.club_memberships.find(m => m.club_id === primaryClubId)?.role;
+        isClubAdmin = primaryRole === 'CLUB_ADMIN';
+        isCoreMember = primaryRole === 'CORE_MEMBER';
+        isMentor = primaryRole === 'FACULTY_MENTOR';
+      }
     }
 
     const canManageRegistrations = isGlobalAdmin || isClubAdmin || isCoreMember || isMentor;
     const canManageTeams = canManageRegistrations && event?.registrationType === 'TEAM';
     const canManageAttendance = isGlobalAdmin || isClubAdmin || isCoreMember || isMentor;
-    const canEdit = isEventEditor && event?.state === 'DRAFT';
-    const canSubmit = isClubAdmin && event?.state === 'DRAFT';
-    const canApprove = (isGlobalAdmin || isMentor) && event?.state === 'PENDING_APPROVAL';
-    const canReject = (isGlobalAdmin || isMentor) && event?.state === 'PENDING_APPROVAL';
-    const canLock = (isGlobalAdmin || isClubAdmin || isMentor) && event?.state === 'PUBLISHED';
-    const canUnlock = (isGlobalAdmin || isClubAdmin || isMentor) && event?.state === 'PUBLISHED';
+    const canEdit = canManageEvent(currentUser, event) && event?.state === 'DRAFT';
+    const canSubmit = canManageEvent(currentUser, event) && event?.state === 'DRAFT';
+    const canApprove = canApproveEvent(currentUser, event) && event?.state === 'PENDING_APPROVAL';
+    const canReject = canApproveEvent(currentUser, event) && event?.state === 'PENDING_APPROVAL';
+    const canLock = canLockEvent(currentUser, event) && event?.state === 'PUBLISHED';
+    const canUnlock = canLockEvent(currentUser, event) && event?.state === 'PUBLISHED';
 
     return {
       isGlobalAdmin,
       isClubAdmin,
-      isEventEditor,
+      isEventEditor: canManageEvent(currentUser, event),
       isMentor,
       isCoreMember,
       canManageRegistrations,

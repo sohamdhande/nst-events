@@ -1,6 +1,6 @@
 import { Router, Request } from 'express';
 import { authenticate } from '../../middleware/authenticate';
-import { requireEventRole } from '../../middleware/authorize';
+import { canManageEvent } from '../../middleware/authorize';
 import { validate } from '../../middleware/validate';
 import * as adminTeamsService from './teams.service';
 import { z } from 'zod';
@@ -29,7 +29,7 @@ const router = Router();
 router.post('/:id/promote-waitlist',
   authenticate,
   validate(ParamTeamIdSchema),
-  requireEventRole(getEventIdFromTeam, ['CLUB_ADMIN']),
+  canManageEvent(getEventIdFromTeam, ['CLUB_ADMIN']),
   async (req, res, next) => {
     try {
       const result = await adminTeamsService.manualWaitlistPromotion(req.user!.id, req.params.id);
@@ -43,7 +43,7 @@ router.post('/:id/promote-waitlist',
 router.post('/:id/cancel',
   authenticate,
   validate(ParamTeamIdSchema),
-  requireEventRole(getEventIdFromTeam, ['CLUB_ADMIN']),
+  canManageEvent(getEventIdFromTeam, ['CLUB_ADMIN']),
   async (req, res, next) => {
     try {
       const result = await adminTeamsService.cancelTeam(req.user!.id, req.params.id);
@@ -57,7 +57,7 @@ router.post('/:id/cancel',
 router.delete('/:id/members/:userId',
   authenticate,
   validate(RemoveMemberSchema),
-  requireEventRole(getEventIdFromTeam, ['CLUB_ADMIN']),
+  canManageEvent(getEventIdFromTeam, ['CLUB_ADMIN']),
   async (req, res, next) => {
     try {
       await adminTeamsService.removeMember(req.user!.id, req.params.id, req.params.userId);
@@ -71,7 +71,7 @@ router.delete('/:id/members/:userId',
 router.post('/:id/transfer-leadership',
   authenticate,
   validate(TransferLeadershipSchema),
-  requireEventRole(getEventIdFromTeam, ['CLUB_ADMIN']),
+  canManageEvent(getEventIdFromTeam, ['CLUB_ADMIN']),
   async (req, res, next) => {
     try {
       const result = await adminTeamsService.transferLeadership(req.user!.id, req.params.id, req.body.new_leader_id);
@@ -89,7 +89,7 @@ const CancelInvitationSchema = z.object({
 router.get('/:id/invitations',
   authenticate,
   validate(ParamTeamIdSchema),
-  requireEventRole(getEventIdFromTeam, ['CLUB_ADMIN']),
+  canManageEvent(getEventIdFromTeam, ['CLUB_ADMIN']),
   async (req, res, next) => {
     try {
       const result = await adminTeamsService.getSentTeamInvitations(req.user!.id, req.params.id);
@@ -103,7 +103,7 @@ router.get('/:id/invitations',
 router.delete('/:id/invitations/:invitationId',
   authenticate,
   validate(CancelInvitationSchema),
-  requireEventRole(getEventIdFromTeam, ['CLUB_ADMIN']),
+  canManageEvent(getEventIdFromTeam, ['CLUB_ADMIN']),
   async (req, res, next) => {
     try {
       await adminTeamsService.cancelInvitation(req.user!.id, req.params.id, req.params.invitationId);

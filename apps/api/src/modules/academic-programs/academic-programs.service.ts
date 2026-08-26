@@ -1,6 +1,6 @@
 import { withUserContext } from '@nst/database';
 import { ForbiddenError, ValidationError, NotFoundError } from '../../lib/errors';
-import { GLOBAL_ADMIN_ROLES } from '../../middleware/authorize';
+// Removed GLOBAL_ADMIN_ROLES
 
 export const academicProgramsService = {
   async getAcademicPrograms(callerId: string) {
@@ -16,7 +16,7 @@ export const academicProgramsService = {
       }
 
       let isAuthorized = false;
-      if (GLOBAL_ADMIN_ROLES.includes(user.globalRole)) {
+      if (user.globalRole === 'PLATFORM_ADMIN') {
         isAuthorized = true;
       } else {
         const hasClubRole = await tx.clubMembership.findFirst({
