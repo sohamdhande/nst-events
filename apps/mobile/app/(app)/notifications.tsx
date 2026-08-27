@@ -89,7 +89,7 @@ export default function NotificationsScreen() {
           renderItem={renderItem}
           contentContainerStyle={{ padding: 16 }}
           refreshControl={
-            <RefreshControl refreshing={isRefetching} onRefresh={refetch} />
+            <RefreshControl refreshing={isRefetching} onRefresh={async () => { await refetch(); }} />
           }
           onEndReached={() => {
             if (hasNextPage && !isFetchingNextPage) {
@@ -109,7 +109,7 @@ export default function NotificationsScreen() {
               <View className="py-4" accessibilityRole="progressbar">
                 <Skeleton height={80} />
               </View>
-            ) : null
+            ) : undefined
           }
         />
       )}

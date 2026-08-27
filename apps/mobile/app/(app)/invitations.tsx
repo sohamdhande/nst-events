@@ -22,7 +22,7 @@ export default function InvitationsScreen() {
     <ScrollView 
       className="flex-1 bg-gray-50 p-4" 
       accessibilityRole="scrollbar"
-      refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} />}
+      refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={async () => { await refetch(); }} />}
     >
       {!isOnline && <Banner message="You are currently offline." type="error" accessibilityRole="alert" />}
 

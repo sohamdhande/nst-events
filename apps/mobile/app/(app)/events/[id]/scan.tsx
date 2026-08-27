@@ -3,14 +3,12 @@ import { View, Text, StyleSheet, Button, ActivityIndicator, Alert } from 'react-
 import { Camera, CameraView, useCameraPermissions } from 'expo-camera';
 import * as Location from 'expo-location';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { fetchClient } from '../../../src/api/client';
-import { useAuthStore } from '../../../src/store/auth';
+import { apiClient } from '../../../../src/infrastructure/api';
 import { Platform } from 'react-native';
 
 export default function ScanAttendanceScreen() {
   const { id: eventId } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const token = useAuthStore((state) => state.token);
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -75,10 +73,10 @@ export default function ScanAttendanceScreen() {
         app_version: '1.0.0', // Standardize app version for now
       };
 
-      const result = await fetchClient('/attendance/mark', {
+      const result = await apiClient('/v1/attendance/mark', {
         method: 'POST',
         body: JSON.stringify(payload),
-      }, token);
+      });
 
       Alert.alert(
         'Success',
@@ -119,7 +117,7 @@ export default function ScanAttendanceScreen() {
         </View>
       ) : (
         <CameraView
-          style={StyleSheet.absoluteFillObject}
+          style={StyleSheet.absoluteFill}
           facing="back"
           onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
           barcodeScannerSettings={{

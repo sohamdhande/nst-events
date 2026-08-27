@@ -18,7 +18,6 @@ export const prisma: PrismaClient = new PrismaClient({
 // Initialize Expo SDK
 export const expo = new Expo({
   accessToken: config.EXPO_ACCESS_TOKEN,
-  useFcmV1: true,
 });
 
 const app = express();

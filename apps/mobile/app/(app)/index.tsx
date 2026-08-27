@@ -83,7 +83,7 @@ export default function AppHomeScreen() {
           }}
           onEndReachedThreshold={0.5}
           refreshControl={
-            <RefreshControl refreshing={isRefetching} onRefresh={refetch} />
+            <RefreshControl refreshing={isRefetching} onRefresh={async () => { await refetch(); }} />
           }
         />
       )}
