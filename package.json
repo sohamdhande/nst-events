@@ -27,9 +27,11 @@
     "packages/*"
   ],
   "dependencies": {
+    "@prisma/client": "5.22.0",
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.2",
     "jsdom": "^30.0.1",
+    "prisma": "5.22.0",
     "vitest": "^4.1.11"
   }
 }

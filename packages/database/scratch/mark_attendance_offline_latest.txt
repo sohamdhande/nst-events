@@ -1,0 +1,5 @@
+                                                                          List of functions
+ Schema | Name | Result data type | Argument data types | Type | Volatility | Parallel | Owner | Security | Access privileges | Language | Source code | Description 
+--------+------+------------------+---------------------+------+------------+----------+-------+----------+-------------------+----------+-------------+-------------
+(0 rows)
+

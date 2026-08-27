@@ -23,12 +23,12 @@
     "test:e2e": "ts-node --project tsconfig.seed.json tests/schema.test.ts"
   },
   "dependencies": {
-    "@prisma/client": "7.9.1"
+    "@prisma/client": "5.22.0"
   },
   "devDependencies": {
     "@nst/config": "workspace:*",
     "@types/node": "26.2.0",
-    "prisma": "7.9.1",
+    "prisma": "5.22.0",
     "ts-node": "10.9.2",
     "typescript": "7.0.2"
   },

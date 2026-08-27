@@ -82,13 +82,8 @@ describe('Phase 26G: GPS Consistency', () => {
     });
 
     await adminPrisma.$executeRawUnsafe(`
-      INSERT INTO attendance_sessions (id, event_id, title, start_time, end_time, open_at, close_at, qr_secret, created_by, geofence_radius)
-      VALUES ('${sessionId}', '${eventId}', 'SG', now() - interval '1 hour', now() + interval '1 hour', now() - interval '1 hour', now() + interval '1 hour', 'SECRET', '${admin}', 50)
-    `);
-
-    // Set location geofence
-    await adminPrisma.$executeRawUnsafe(`
-      UPDATE events SET location_geofence = ST_SetSRID(ST_MakePoint(${validLng}, ${validLat}), 4326) WHERE id = '${eventId}'
+      INSERT INTO attendance_sessions (id, event_id, title, start_time, end_time, open_at, close_at, qr_secret, created_by, geofence_radius, venue_latitude, venue_longitude)
+      VALUES ('${sessionId}', '${eventId}', 'SG', now() - interval '1 hour', now() + interval '1 hour', now() - interval '1 hour', now() + interval '1 hour', 'SECRET', '${admin}', 50, ${validLat}, ${validLng})
     `);
 
     await adminPrisma.eventRegistration.create({

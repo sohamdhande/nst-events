@@ -1,0 +1,63 @@
+                           Table "public.attendance_sessions"
+      Column       |           Type           | Collation | Nullable |      Default      
+-------------------+--------------------------+-----------+----------+-------------------
+ id                | uuid                     |           | not null | 
+ event_id          | uuid                     |           | not null | 
+ title             | text                     |           | not null | 
+ start_time        | timestamp with time zone |           | not null | 
+ end_time          | timestamp with time zone |           | not null | 
+ open_at           | timestamp with time zone |           | not null | 
+ close_at          | timestamp with time zone |           | not null | 
+ geofence_radius   | double precision         |           | not null | 50
+ created_at        | timestamp with time zone |           | not null | CURRENT_TIMESTAMP
+ updated_at        | timestamp with time zone |           |          | 
+ deleted_at        | timestamp with time zone |           |          | 
+ qr_secret         | text                     |           | not null | 
+ created_by        | uuid                     |           | not null | 
+ venue_latitude    | double precision         |           |          | 
+ venue_longitude   | double precision         |           |          | 
+ location_accuracy | double precision         |           |          | 
+Indexes:
+    "attendance_sessions_pkey" PRIMARY KEY, btree (id)
+    "attendance_sessions_event_id_idx" btree (event_id)
+Check constraints:
+    "attendance_sessions_open_close_check" CHECK (open_at < close_at)
+    "attendance_sessions_time_check" CHECK (start_time < end_time)
+Foreign-key constraints:
+    "attendance_sessions_created_by_fkey" FOREIGN KEY (created_by) REFERENCES users(id) ON UPDATE CASCADE ON DELETE RESTRICT
+    "attendance_sessions_event_id_fkey" FOREIGN KEY (event_id) REFERENCES events(id) ON UPDATE CASCADE ON DELETE RESTRICT
+Referenced by:
+    TABLE "attendance_disputes" CONSTRAINT "attendance_disputes_session_id_fkey" FOREIGN KEY (session_id) REFERENCES attendance_sessions(id) ON UPDATE CASCADE ON DELETE RESTRICT
+    TABLE "attendance_records" CONSTRAINT "attendance_records_session_id_fkey" FOREIGN KEY (session_id) REFERENCES attendance_sessions(id) ON UPDATE CASCADE ON DELETE RESTRICT
+    TABLE "consumed_qr_signatures" CONSTRAINT "consumed_qr_signatures_session_id_fkey" FOREIGN KEY (session_id) REFERENCES attendance_sessions(id) ON UPDATE CASCADE ON DELETE CASCADE
+Policies:
+    POLICY "Allow DELETE on attendance_sessions" FOR DELETE
+      USING ((EXISTS ( SELECT 1
+   FROM users u
+  WHERE ((u.id = current_user_id()) AND (u.global_role = ANY (ARRAY['PLATFORM_ADMIN'::"GlobalRole", 'FACULTY_ADMIN'::"GlobalRole"]))))))
+    POLICY "Allow INSERT on attendance_sessions" FOR INSERT
+      WITH CHECK (((EXISTS ( SELECT 1
+   FROM event_clubs ec
+  WHERE ((ec.event_id = ec.event_id) AND (ec.is_primary = true) AND has_club_role(ec.club_id, current_user_id(), ARRAY['CLUB_ADMIN'::text, 'CORE_MEMBER'::text])))) OR (EXISTS ( SELECT 1
+   FROM users u
+  WHERE ((u.id = current_user_id()) AND (u.global_role = ANY (ARRAY['PLATFORM_ADMIN'::"GlobalRole", 'FACULTY_ADMIN'::"GlobalRole"])))))))
+    POLICY "Allow SELECT on attendance_sessions" FOR SELECT
+      USING (((EXISTS ( SELECT 1
+   FROM events e
+  WHERE ((e.id = attendance_sessions.event_id) AND (((e.state = 'PUBLISHED'::"EventState") AND (e.visibility = 'PUBLIC'::"EventVisibility")) OR (EXISTS ( SELECT 1
+           FROM event_clubs ec
+          WHERE ((ec.event_id = e.id) AND is_active_club_member(ec.club_id, current_user_id())))))))) OR (EXISTS ( SELECT 1
+   FROM users u
+  WHERE ((u.id = current_user_id()) AND (u.global_role = ANY (ARRAY['PLATFORM_ADMIN'::"GlobalRole", 'FACULTY_ADMIN'::"GlobalRole"])))))))
+    POLICY "Allow UPDATE on attendance_sessions" FOR UPDATE
+      USING (((EXISTS ( SELECT 1
+   FROM event_clubs ec
+  WHERE ((ec.event_id = ec.event_id) AND (ec.is_primary = true) AND has_club_role(ec.club_id, current_user_id(), ARRAY['CLUB_ADMIN'::text, 'CORE_MEMBER'::text])))) OR (EXISTS ( SELECT 1
+   FROM users u
+  WHERE ((u.id = current_user_id()) AND (u.global_role = ANY (ARRAY['PLATFORM_ADMIN'::"GlobalRole", 'FACULTY_ADMIN'::"GlobalRole"])))))))
+      WITH CHECK (((EXISTS ( SELECT 1
+   FROM event_clubs ec
+  WHERE ((ec.event_id = ec.event_id) AND (ec.is_primary = true) AND has_club_role(ec.club_id, current_user_id(), ARRAY['CLUB_ADMIN'::text, 'CORE_MEMBER'::text])))) OR (EXISTS ( SELECT 1
+   FROM users u
+  WHERE ((u.id = current_user_id()) AND (u.global_role = ANY (ARRAY['PLATFORM_ADMIN'::"GlobalRole", 'FACULTY_ADMIN'::"GlobalRole"])))))))
+

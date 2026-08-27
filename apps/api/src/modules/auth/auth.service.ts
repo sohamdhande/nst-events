@@ -1,5 +1,5 @@
 import crypto from 'crypto';
-import { Prisma, User } from '@nst/database';
+import { Prisma, User, withUserContext } from '@nst/database';
 import { prisma } from '../../lib/prisma';
 import { env } from '../../config/env';
 import { ForbiddenError, UnauthorizedError } from '../../lib/errors';
@@ -103,86 +103,67 @@ export async function loginWithGoogle(
     securityVersion: user.security_version ?? user.securityVersion ?? 1,
   };
 
-  // Assign default FACULTY_MENTOR role for new Newton accounts
-  if (domain === 'newtonschool.co' && !newtonExisted && mappedUser.globalRole === 'STUDENT') {
-    await prisma.$executeRaw`UPDATE users SET global_role = 'FACULTY_MENTOR'::"GlobalRole" WHERE id = ${mappedUser.id}::uuid`;
-    mappedUser.globalRole = 'FACULTY_MENTOR';
-  }
-
-  // Developer override
-  if (mappedUser.email === 'e25b070564@adypu.edu.in' && mappedUser.globalRole !== 'PLATFORM_ADMIN') {
-    await prisma.$executeRaw`UPDATE users SET global_role = 'PLATFORM_ADMIN'::"GlobalRole" WHERE id = ${mappedUser.id}::uuid`;
-    mappedUser.globalRole = 'PLATFORM_ADMIN';
-  }
-
-  // Hardcode PLATFORM_ADMIN for specific user
-  if (mappedUser.email === 'e25b070564@adypu.edu.in' && mappedUser.globalRole !== 'PLATFORM_ADMIN') {
-    await prisma.$executeRaw`UPDATE users SET global_role = 'PLATFORM_ADMIN'::"GlobalRole" WHERE id = ${mappedUser.id}::uuid`;
-    mappedUser.globalRole = 'PLATFORM_ADMIN';
-  }
-
   // 4. Reject if soft-deleted
   if (mappedUser.deletedAt !== null) {
     throw new ForbiddenError('Account deactivated');
   }
 
-  // 4b. Academic Profile First-Login Assignment
-  // Idempotent and concurrency-safe using upsert/transaction on UserAcademicProfile.
-  try {
-    const existingProfile = await prisma.userAcademicProfile.findUnique({
-      where: { userId: mappedUser.id },
-    });
+  // Wrap subsequent operations in user context since the user is now identified
+  const { accessToken, rawRefreshToken } = await withUserContext(mappedUser.id, async (tx) => {
+    // Assign default FACULTY_MENTOR role for new Newton accounts
+    if (domain === 'newtonschool.co' && !newtonExisted && mappedUser.globalRole === 'STUDENT') {
+      await tx.$executeRaw`UPDATE users SET global_role = 'FACULTY_MENTOR'::"GlobalRole" WHERE id = ${mappedUser.id}::uuid`;
+      mappedUser.globalRole = 'FACULTY_MENTOR';
+    }
 
-    if (!existingProfile) {
-      const inference = parseAdypuEmail(mappedUser.email);
-      if (inference) {
-        // Resolve exactly one batch
-        const candidateBatches = await prisma.academicBatch.findMany({
-          where: {
-            admissionYear: inference.admissionYear,
-            program: {
-              code: inference.prefix,
-            },
-          },
-        });
+    // 4b. Academic Profile First-Login Assignment
+    try {
+      const existingProfile = await tx.userAcademicProfile.findUnique({
+        where: { userId: mappedUser.id },
+      });
 
-        // Hard invariant: only auto-assign if exactly ONE batch matches
-        if (candidateBatches.length === 1) {
-          const resolvedBatch = candidateBatches[0];
-          await prisma.userAcademicProfile.upsert({
-            where: { userId: mappedUser.id },
-            update: {}, // Never overwrite an existing profile here
-            create: {
-              userId: mappedUser.id,
-              batchId: resolvedBatch.id,
-              assignmentSource: AssignmentSource.INSTITUTIONAL_EMAIL_INFERENCE,
+      if (!existingProfile) {
+        const inference = parseAdypuEmail(mappedUser.email);
+        if (inference) {
+          const candidateBatches = await tx.academicBatch.findMany({
+            where: {
+              admissionYear: inference.admissionYear,
+              program: { code: inference.prefix },
             },
           });
+
+          if (candidateBatches.length === 1) {
+            await tx.userAcademicProfile.create({
+              data: {
+                userId: mappedUser.id,
+                batchId: candidateBatches[0].id,
+                assignmentSource: AssignmentSource.INSTITUTIONAL_EMAIL_INFERENCE,
+              },
+            });
+          }
         }
       }
+    } catch (err) {
+      console.error('Failed to assign academic profile on login:', err);
     }
-  } catch (err) {
-    // If academic assignment fails for any concurrency reason, log and proceed.
-    // We do not fail the login if academic assignment fails.
-    console.error('Failed to assign academic profile on login:', err);
-  }
 
-  // 5. Issue access JWT & refresh token
-  const accessToken = signJwt(mappedUser.id, mappedUser.securityVersion);
-  const rawRefreshToken = generateRefreshToken();
-  const tokenHash = hashToken(rawRefreshToken);
-  const familyId = crypto.randomUUID();
-  const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
+    // 5. Issue access JWT & refresh token
+    const token = signJwt(mappedUser.id, mappedUser.securityVersion);
+    const refresh = generateRefreshToken();
+    const tokenHash = hashToken(refresh);
+    
+    await tx.refreshToken.create({
+      data: {
+        userId: mappedUser.id,
+        tokenHash,
+        familyId: crypto.randomUUID(),
+        expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+        userAgent: userAgent || null,
+        ipAddress: ipAddress || null,
+      },
+    });
 
-  await prisma.refreshToken.create({
-    data: {
-      userId: mappedUser.id,
-      tokenHash,
-      familyId,
-      expiresAt,
-      userAgent: userAgent || null,
-      ipAddress: ipAddress || null,
-    },
+    return { accessToken: token, rawRefreshToken: refresh };
   });
 
   return {

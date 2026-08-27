@@ -3,13 +3,14 @@
 import React, { use, useState, useEffect, useMemo, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Card, Button, Skeleton, Alert, Typography, Table, Badge, Breadcrumb, Space, Modal, Form, Input, Select, QRCode, Row, Col, InputNumber, App, Tag, Grid, Flex, Empty } from 'antd';
+import { Card, Button, Skeleton, Alert, Typography, Table, Badge, Breadcrumb, Space, Modal, Form, Input, Select, QRCode, Row, Col, InputNumber, App, Tag, Grid, Flex, Empty, DatePicker } from 'antd';
 import { QrcodeOutlined, DownloadOutlined, PlusOutlined, SyncOutlined, CloseOutlined } from '@ant-design/icons';
 import { useEventDetail } from '../../../../../hooks/useEventDetail';
 import { useAttendance, useGenerateQr, useCreateSession, useUpdateSession, useManualAttendance, AttendanceRecord } from '../../../../../hooks/useAttendance';
 import { useCurrentUser } from '../../../../../hooks/useCurrentUser';
 import { getWebAuthStore } from '../../../../../lib/auth-store';
 import { resolveEventLockState } from '../../../../../lib/event-utils';
+import dayjs from 'dayjs';
 
 const { Title, Text } = Typography;
 const { useBreakpoint } = Grid;
@@ -38,6 +39,8 @@ export default function AttendancePage({ params }: { params: Promise<{ id: strin
 
   const sessions = useMemo(() => event?.attendanceSessions || [], [event?.attendanceSessions]);
   
+  const canMarkManually = currentUser?.global_role === 'PLATFORM_ADMIN';
+  
   const [activeSessionId, setActiveSessionId] = useState<string | undefined>(undefined);
   
   useEffect(() => {
@@ -59,7 +62,50 @@ export default function AttendancePage({ params }: { params: Promise<{ id: strin
   } = useAttendance(eventId, activeSessionId ?? undefined);
 
   const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [isCapturingLocation, setIsCapturingLocation] = useState(false);
+  const [sessionLocation, setSessionLocation] = useState<{ latitude: number; longitude: number; accuracy: number } | null>(null);
+  const [locationError, setLocationError] = useState<string | null>(null);
   const [form] = Form.useForm();
+  
+  useEffect(() => {
+    if (createModalOpen && event && event.startTime && event.endTime) {
+      const start = dayjs(event.startTime);
+      const end = dayjs(event.endTime);
+      form.setFieldsValue({
+        title: '',
+        start_time: start,
+        end_time: end,
+        open_at: start.subtract(15, 'minute'),
+        close_at: end.add(15, 'minute'),
+        geofence_radius: 50
+      });
+      setSessionLocation(null);
+      setLocationError(null);
+      setIsCapturingLocation(true);
+      
+      if ('geolocation' in navigator) {
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            setSessionLocation({
+              latitude: position.coords.latitude,
+              longitude: position.coords.longitude,
+              accuracy: position.coords.accuracy,
+            });
+            setIsCapturingLocation(false);
+          },
+          (error) => {
+            console.error('Geolocation error:', error);
+            setLocationError(error.message || 'Failed to capture location');
+            setIsCapturingLocation(false);
+          },
+          { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+        );
+      } else {
+        setLocationError('Geolocation is not supported by this browser');
+        setIsCapturingLocation(false);
+      }
+    }
+  }, [createModalOpen, event, form]);
   
   const [manualModalOpen, setManualModalOpen] = useState(false);
   const [manualForm] = Form.useForm();
@@ -392,14 +438,23 @@ export default function AttendancePage({ params }: { params: Promise<{ id: strin
     });
   };
 
-  const handleCreateSessionSubmit = (values: { title: string, start_time: string, end_time: string, open_at: string, close_at: string, geofence_radius?: number }) => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const handleCreateSessionSubmit = (values: any) => {
+    if (!sessionLocation) {
+      message.error("Location is required to create a geofenced session");
+      return;
+    }
+
     const payload = {
       title: values.title,
-      start_time: new Date(values.start_time).toISOString(),
-      end_time: new Date(values.end_time).toISOString(),
-      open_at: new Date(values.open_at).toISOString(),
-      close_at: new Date(values.close_at).toISOString(),
+      start_time: values.start_time.toISOString(),
+      end_time: values.end_time.toISOString(),
+      open_at: values.open_at.toISOString(),
+      close_at: values.close_at.toISOString(),
       geofence_radius: values.geofence_radius || 50,
+      venue_latitude: sessionLocation.latitude,
+      venue_longitude: sessionLocation.longitude,
+      location_accuracy: sessionLocation.accuracy,
     };
     
     if (new Date(payload.start_time) >= new Date(payload.end_time)) {
@@ -489,7 +544,7 @@ export default function AttendancePage({ params }: { params: Promise<{ id: strin
         </Space>
         
         <Space>
-          {!isEffectivelyLocked && activeSessionId && auth.canManageAttendance && sessionStatus === 'ACTIVE' && (
+          {!isEffectivelyLocked && activeSessionId && canMarkManually && sessionStatus === 'ACTIVE' && (
             <Button 
               type="primary" 
               onClick={() => setManualModalOpen(true)}
@@ -709,26 +764,26 @@ export default function AttendancePage({ params }: { params: Promise<{ id: strin
           
           <Row gutter={16}>
             <Col span={12}>
-              <Form.Item name="start_time" label="Start Time" rules={[{ required: true }]}>
-                <Input type="datetime-local" />
+              <Form.Item name="start_time" label="Start Time" rules={[{ required: true, message: 'Required' }]}>
+                <DatePicker showTime format="YYYY-MM-DD HH:mm" style={{ width: '100%' }} />
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item name="end_time" label="End Time" rules={[{ required: true }]}>
-                <Input type="datetime-local" />
+              <Form.Item name="end_time" label="End Time" rules={[{ required: true, message: 'Required' }]}>
+                <DatePicker showTime format="YYYY-MM-DD HH:mm" style={{ width: '100%' }} />
               </Form.Item>
             </Col>
           </Row>
 
           <Row gutter={16}>
             <Col span={12}>
-              <Form.Item name="open_at" label="Attendance Open At" rules={[{ required: true }]}>
-                <Input type="datetime-local" />
+              <Form.Item name="open_at" label="Attendance Open At" rules={[{ required: true, message: 'Required' }]}>
+                <DatePicker showTime format="YYYY-MM-DD HH:mm" style={{ width: '100%' }} />
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item name="close_at" label="Attendance Close At" rules={[{ required: true }]}>
-                <Input type="datetime-local" />
+              <Form.Item name="close_at" label="Attendance Close At" rules={[{ required: true, message: 'Required' }]}>
+                <DatePicker showTime format="YYYY-MM-DD HH:mm" style={{ width: '100%' }} />
               </Form.Item>
             </Col>
           </Row>
@@ -736,6 +791,27 @@ export default function AttendancePage({ params }: { params: Promise<{ id: strin
           <Form.Item name="geofence_radius" label="Geofence Radius (meters)" initialValue={50} rules={[{ required: true }]}>
             <InputNumber min={10} max={1000} style={{ width: '100%' }} />
           </Form.Item>
+
+          <div style={{ marginTop: 16 }}>
+            {isCapturingLocation ? (
+              <Alert type="info" message="Detecting current location..." showIcon />
+            ) : locationError ? (
+              <Alert type="error" message="Location required" description={locationError} showIcon />
+            ) : sessionLocation ? (
+              <Alert 
+                type="success" 
+                message="Location detected" 
+                description={
+                  <div style={{ fontSize: 13, marginTop: 4 }}>
+                    <Text strong>Latitude:</Text> {sessionLocation.latitude.toFixed(6)} <br/>
+                    <Text strong>Longitude:</Text> {sessionLocation.longitude.toFixed(6)} <br/>
+                    <Text strong>Accuracy:</Text> {Math.round(sessionLocation.accuracy)}m
+                  </div>
+                } 
+                showIcon 
+              />
+            ) : null}
+          </div>
         </Form>
       </Modal>
 

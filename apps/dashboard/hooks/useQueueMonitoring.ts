@@ -33,11 +33,12 @@ export interface DeadLetterResponse {
   };
 }
 
-export function useQueueMonitoringStats() {
+export function useQueueMonitoringStats(options?: { enabled?: boolean }) {
   return useQuery<QueueStats, Error>({
     queryKey: ['admin-queues', 'stats'],
     queryFn: () => apiClient('/v1/admin/queue/monitoring'),
     staleTime: 0,
+    enabled: options?.enabled,
   });
 }
 

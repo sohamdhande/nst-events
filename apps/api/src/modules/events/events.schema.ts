@@ -109,6 +109,9 @@ export const CreateSessionSchema = z.object({
     open_at: z.string().datetime(),
     close_at: z.string().datetime(),
     geofence_radius: z.number().positive().default(50),
+    venue_latitude: z.number().min(-90).max(90).optional(),
+    venue_longitude: z.number().min(-180).max(180).optional(),
+    location_accuracy: z.number().min(0).optional(),
   }),
 });
 

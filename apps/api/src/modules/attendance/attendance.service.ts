@@ -137,9 +137,16 @@ export class AttendanceService {
       // Map PostgreSQL RAISE EXCEPTION errors to HTTP 422
       const msg = error.message || '';
       if (msg.includes('MOCK_LOCATION_REJECTED')) throw new UnprocessableEntityError('MOCK_LOCATION_REJECTED');
+      if (msg.includes('LOCATION_UNAVAILABLE')) throw new UnprocessableEntityError('LOCATION_UNAVAILABLE');
+      if (msg.includes('INVALID_LOCATION')) throw new UnprocessableEntityError('INVALID_LOCATION');
+      if (msg.includes('LOCATION_UNRELIABLE')) throw new UnprocessableEntityError('LOCATION_UNRELIABLE');
       if (msg.includes('SESSION_CLOSED')) throw new UnprocessableEntityError('SESSION_CLOSED');
       if (msg.includes('EVENT_LOCKED')) throw new UnprocessableEntityError('EVENT_LOCKED');
       if (msg.includes('OUTSIDE_GEOFENCE')) throw new UnprocessableEntityError('OUTSIDE_GEOFENCE');
+      if (msg.includes('ACADEMICALLY_INELIGIBLE')) throw new UnprocessableEntityError('ACADEMICALLY_INELIGIBLE');
+      if (msg.includes('ACADEMIC_PROFILE_MISSING')) throw new UnprocessableEntityError('ACADEMIC_PROFILE_MISSING');
+      if (msg.includes('REGISTRATION_NOT_ELIGIBLE')) throw new UnprocessableEntityError('REGISTRATION_NOT_ELIGIBLE');
+      if (msg.includes('WAITLISTED')) throw new UnprocessableEntityError('WAITLISTED');
       if (msg.includes('NOT_REGISTERED')) throw new UnprocessableEntityError('NOT_REGISTERED');
       if (msg.includes('UNAUTHORIZED')) throw new UnprocessableEntityError('UNAUTHORIZED');
 
@@ -337,6 +344,10 @@ export class AttendanceService {
       if (msg.includes('UNAUTHORIZED')) throw new UnprocessableEntityError('UNAUTHORIZED');
       if (msg.includes('SESSION_CLOSED')) throw new UnprocessableEntityError('SESSION_CLOSED');
       if (msg.includes('EVENT_LOCKED')) throw new UnprocessableEntityError('EVENT_LOCKED');
+      if (msg.includes('ACADEMICALLY_INELIGIBLE')) throw new UnprocessableEntityError('ACADEMICALLY_INELIGIBLE');
+      if (msg.includes('ACADEMIC_PROFILE_MISSING')) throw new UnprocessableEntityError('ACADEMIC_PROFILE_MISSING');
+      if (msg.includes('REGISTRATION_NOT_ELIGIBLE')) throw new UnprocessableEntityError('REGISTRATION_NOT_ELIGIBLE');
+      if (msg.includes('WAITLISTED')) throw new UnprocessableEntityError('WAITLISTED');
       if (msg.includes('NOT_REGISTERED')) throw new UnprocessableEntityError('NOT_REGISTERED');
       throw error;
     }

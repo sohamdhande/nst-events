@@ -237,6 +237,12 @@ model AttendanceSession {
   closeAt              DateTime              @map("close_at") @db.Timestamptz(6)
   /// Geofence radius in metres (default 50m)
   geofenceRadius       Float                 @default(50) @map("geofence_radius")
+  /// Latitude of the venue when session was created (immutable)
+  venueLatitude        Float?                @map("venue_latitude")
+  /// Longitude of the venue when session was created (immutable)
+  venueLongitude       Float?                @map("venue_longitude")
+  /// Location accuracy of the captured venue in meters
+  locationAccuracy     Float?                @map("location_accuracy")
   createdAt            DateTime              @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt            DateTime?             @updatedAt @map("updated_at") @db.Timestamptz(6)
   deletedAt            DateTime?             @map("deleted_at") @db.Timestamptz(6)

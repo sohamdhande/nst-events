@@ -173,42 +173,50 @@ describe('Phase 26E: Device Collision Race and Hardening', () => {
     await adminPrisma.eventRegistration.create({ data: { eventId: eventId, userId: student4 }});
     await adminPrisma.$executeRawUnsafe(`ALTER TABLE users ENABLE ROW LEVEL SECURITY`);
 
-    const payloads = [
-      {
-        user_id: student3,
-        session_id: sessionId,
-        scanned_token: generateCustomQrPayload(sessionId, 'SECRET', -2),
-        scan_timestamp: new Date(Date.now() - 30000).toISOString(),
-        device_id: batchDevice,
-        gps_lat: 10,
-        gps_lng: 10,
-        gps_accuracy: 5,
-        mock_location_detected: false,
-        offline_seq: 1
-      },
-      {
-        user_id: student4, 
-        session_id: sessionId,
-        scanned_token: generateCustomQrPayload(sessionId, 'SECRET', -3),
-        scan_timestamp: new Date(Date.now() - 45000).toISOString(),
-        device_id: batchDevice,
-        gps_lat: 10,
-        gps_lng: 10,
-        gps_accuracy: 5,
-        mock_location_detected: false,
-        offline_seq: 2
-      }
-    ];
+    const payload3 = {
+      user_id: student3,
+      session_id: sessionId,
+      scanned_token: generateCustomQrPayload(sessionId, 'SECRET', -2),
+      scan_timestamp: new Date(Date.now() - 30000).toISOString(),
+      device_id: batchDevice,
+      gps_lat: 10,
+      gps_lng: 10,
+      gps_accuracy: 5,
+      mock_location_detected: false,
+      offline_seq: 1
+    };
 
-    const res = await request(app)
+    const payload4 = {
+      user_id: student4, 
+      session_id: sessionId,
+      scanned_token: generateCustomQrPayload(sessionId, 'SECRET', -3),
+      scan_timestamp: new Date(Date.now() - 45000).toISOString(),
+      device_id: batchDevice,
+      gps_lat: 10,
+      gps_lng: 10,
+      gps_accuracy: 5,
+      mock_location_detected: false,
+      offline_seq: 2
+    };
+
+    const student4Token = signJwt(student4);
+
+    const res3 = await request(app)
       .post('/v1/attendance/sync-offline')
-      .set('Authorization', `Bearer ${adminToken}`)
-      .send({ records: payloads });
+      .set('Authorization', `Bearer ${student3Token}`)
+      .send({ records: [payload3] });
 
-    if (res.status !== 200) console.log(res.body);
-    assert.strictEqual(res.status, 200);
-    if (res.body.processed !== 2) console.error('Offline failed:', res.body.errors);
-    assert.strictEqual(res.body.processed, 2);
+    const res4 = await request(app)
+      .post('/v1/attendance/sync-offline')
+      .set('Authorization', `Bearer ${student4Token}`)
+      .send({ records: [payload4] });
+
+    if (res3.status !== 200) console.log(res3.body);
+    if (res4.status !== 200) console.log(res4.body);
+    assert.strictEqual(res3.status, 200);
+    assert.strictEqual(res4.status, 200);
+    assert.strictEqual(res3.body.processed, 1);
+    assert.strictEqual(res4.body.processed, 1);
     
     const rec3 = await adminPrisma.attendanceRecord.findUnique({ where: { sessionId_userId: { sessionId, userId: student3 } } });
     const rec4 = await adminPrisma.attendanceRecord.findUnique({ where: { sessionId_userId: { sessionId, userId: student4 } } });

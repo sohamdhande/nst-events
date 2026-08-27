@@ -1,0 +1,1025 @@
+[
+  {
+    "table_name": "_prisma_migrations",
+    "rls_enabled": false,
+    "rls_forced": false
+  },
+  {
+    "table_name": "academic_batches",
+    "rls_enabled": false,
+    "rls_forced": false
+  },
+  {
+    "table_name": "academic_programs",
+    "rls_enabled": false,
+    "rls_forced": false
+  },
+  {
+    "table_name": "announcements",
+    "rls_enabled": true,
+    "rls_forced": false
+  },
+  {
+    "table_name": "attendance_disputes",
+    "rls_enabled": true,
+    "rls_forced": false
+  },
+  {
+    "table_name": "attendance_records",
+    "rls_enabled": true,
+    "rls_forced": false
+  },
+  {
+    "table_name": "attendance_sessions",
+    "rls_enabled": true,
+    "rls_forced": false
+  },
+  {
+    "table_name": "audit_logs",
+    "rls_enabled": true,
+    "rls_forced": false
+  },
+  {
+    "table_name": "authorized_students",
+    "rls_enabled": false,
+    "rls_forced": false
+  },
+  {
+    "table_name": "club_memberships",
+    "rls_enabled": true,
+    "rls_forced": false
+  },
+  {
+    "table_name": "clubs",
+    "rls_enabled": true,
+    "rls_forced": false
+  },
+  {
+    "table_name": "consumed_qr_signatures",
+    "rls_enabled": false,
+    "rls_forced": false
+  },
+  {
+    "table_name": "event_audience_batches",
+    "rls_enabled": false,
+    "rls_forced": false
+  },
+  {
+    "table_name": "event_clubs",
+    "rls_enabled": true,
+    "rls_forced": false
+  },
+  {
+    "table_name": "event_registrations",
+    "rls_enabled": true,
+    "rls_forced": false
+  },
+  {
+    "table_name": "event_results",
+    "rls_enabled": true,
+    "rls_forced": false
+  },
+  {
+    "table_name": "events",
+    "rls_enabled": true,
+    "rls_forced": false
+  },
+  {
+    "table_name": "leaderboard_scores",
+    "rls_enabled": true,
+    "rls_forced": false
+  },
+  {
+    "table_name": "leadership_handover_requests",
+    "rls_enabled": true,
+    "rls_forced": false
+  },
+  {
+    "table_name": "notification_jobs",
+    "rls_enabled": true,
+    "rls_forced": false
+  },
+  {
+    "table_name": "notification_preferences",
+    "rls_enabled": true,
+    "rls_forced": false
+  },
+  {
+    "table_name": "notifications",
+    "rls_enabled": true,
+    "rls_forced": false
+  },
+  {
+    "table_name": "push_tokens",
+    "rls_enabled": true,
+    "rls_forced": false
+  },
+  {
+    "table_name": "refresh_tokens",
+    "rls_enabled": false,
+    "rls_forced": false
+  },
+  {
+    "table_name": "spatial_ref_sys",
+    "rls_enabled": false,
+    "rls_forced": false
+  },
+  {
+    "table_name": "team_invitations",
+    "rls_enabled": false,
+    "rls_forced": false
+  },
+  {
+    "table_name": "teams",
+    "rls_enabled": true,
+    "rls_forced": false
+  },
+  {
+    "table_name": "user_academic_profiles",
+    "rls_enabled": false,
+    "rls_forced": false
+  },
+  {
+    "table_name": "users",
+    "rls_enabled": true,
+    "rls_forced": false
+  }
+]
+[
+  {
+    "schemaname": "public",
+    "tablename": "audit_logs",
+    "policyname": "Allow SELECT on audit_logs",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "cmd": "SELECT",
+    "qual": "(EXISTS ( SELECT 1\n   FROM users u\n  WHERE ((u.id = current_user_id()) AND (u.global_role = ANY (ARRAY['PLATFORM_ADMIN'::\"GlobalRole\", 'FACULTY_ADMIN'::\"GlobalRole\"])))))",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "audit_logs",
+    "policyname": "Allow INSERT on audit_logs",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "cmd": "INSERT",
+    "qual": null,
+    "with_check": "(EXISTS ( SELECT 1\n   FROM users u\n  WHERE ((u.id = current_user_id()) AND (u.global_role = ANY (ARRAY['PLATFORM_ADMIN'::\"GlobalRole\", 'FACULTY_ADMIN'::\"GlobalRole\"])))))"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "event_registrations",
+    "policyname": "Allow UPDATE on event_registrations",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "cmd": "UPDATE",
+    "qual": "((EXISTS ( SELECT 1\n   FROM event_clubs ec\n  WHERE ((ec.event_id = event_registrations.event_id) AND has_club_role(ec.club_id, current_user_id(), ARRAY['CLUB_ADMIN'::text, 'FACULTY_MENTOR'::text])))) OR (EXISTS ( SELECT 1\n   FROM users u\n  WHERE ((u.id = current_user_id()) AND (u.global_role = ANY (ARRAY['PLATFORM_ADMIN'::\"GlobalRole\", 'FACULTY_ADMIN'::\"GlobalRole\"]))))))",
+    "with_check": "((EXISTS ( SELECT 1\n   FROM event_clubs ec\n  WHERE ((ec.event_id = event_registrations.event_id) AND has_club_role(ec.club_id, current_user_id(), ARRAY['CLUB_ADMIN'::text, 'FACULTY_MENTOR'::text])))) OR (EXISTS ( SELECT 1\n   FROM users u\n  WHERE ((u.id = current_user_id()) AND (u.global_role = ANY (ARRAY['PLATFORM_ADMIN'::\"GlobalRole\", 'FACULTY_ADMIN'::\"GlobalRole\"]))))))"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "event_registrations",
+    "policyname": "Allow DELETE on event_registrations",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "cmd": "DELETE",
+    "qual": "(user_id = current_user_id())",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "event_registrations",
+    "policyname": "Allow INSERT on event_registrations",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "cmd": "INSERT",
+    "qual": null,
+    "with_check": "(user_id = current_user_id())"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "event_registrations",
+    "policyname": "Allow SELECT on event_registrations",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "cmd": "SELECT",
+    "qual": "((user_id = current_user_id()) OR (EXISTS ( SELECT 1\n   FROM event_clubs ec\n  WHERE ((ec.event_id = event_registrations.event_id) AND has_club_role(ec.club_id, current_user_id(), ARRAY['CLUB_ADMIN'::text, 'CORE_MEMBER'::text, 'FACULTY_MENTOR'::text])))) OR (EXISTS ( SELECT 1\n   FROM users u\n  WHERE ((u.id = current_user_id()) AND (u.global_role = ANY (ARRAY['PLATFORM_ADMIN'::\"GlobalRole\", 'FACULTY_ADMIN'::\"GlobalRole\"]))))))",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "attendance_sessions",
+    "policyname": "Allow UPDATE on attendance_sessions",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "cmd": "UPDATE",
+    "qual": "((EXISTS ( SELECT 1\n   FROM event_clubs ec\n  WHERE ((ec.event_id = ec.event_id) AND (ec.is_primary = true) AND has_club_role(ec.club_id, current_user_id(), ARRAY['CLUB_ADMIN'::text, 'CORE_MEMBER'::text])))) OR (EXISTS ( SELECT 1\n   FROM users u\n  WHERE ((u.id = current_user_id()) AND (u.global_role = ANY (ARRAY['PLATFORM_ADMIN'::\"GlobalRole\", 'FACULTY_ADMIN'::\"GlobalRole\"]))))))",
+    "with_check": "((EXISTS ( SELECT 1\n   FROM event_clubs ec\n  WHERE ((ec.event_id = ec.event_id) AND (ec.is_primary = true) AND has_club_role(ec.club_id, current_user_id(), ARRAY['CLUB_ADMIN'::text, 'CORE_MEMBER'::text])))) OR (EXISTS ( SELECT 1\n   FROM users u\n  WHERE ((u.id = current_user_id()) AND (u.global_role = ANY (ARRAY['PLATFORM_ADMIN'::\"GlobalRole\", 'FACULTY_ADMIN'::\"GlobalRole\"]))))))"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "attendance_sessions",
+    "policyname": "Allow INSERT on attendance_sessions",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "cmd": "INSERT",
+    "qual": null,
+    "with_check": "((EXISTS ( SELECT 1\n   FROM event_clubs ec\n  WHERE ((ec.event_id = ec.event_id) AND (ec.is_primary = true) AND has_club_role(ec.club_id, current_user_id(), ARRAY['CLUB_ADMIN'::text, 'CORE_MEMBER'::text])))) OR (EXISTS ( SELECT 1\n   FROM users u\n  WHERE ((u.id = current_user_id()) AND (u.global_role = ANY (ARRAY['PLATFORM_ADMIN'::\"GlobalRole\", 'FACULTY_ADMIN'::\"GlobalRole\"]))))))"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "attendance_sessions",
+    "policyname": "Allow DELETE on attendance_sessions",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "cmd": "DELETE",
+    "qual": "(EXISTS ( SELECT 1\n   FROM users u\n  WHERE ((u.id = current_user_id()) AND (u.global_role = ANY (ARRAY['PLATFORM_ADMIN'::\"GlobalRole\", 'FACULTY_ADMIN'::\"GlobalRole\"])))))",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "attendance_sessions",
+    "policyname": "Allow SELECT on attendance_sessions",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "cmd": "SELECT",
+    "qual": "((EXISTS ( SELECT 1\n   FROM events e\n  WHERE ((e.id = attendance_sessions.event_id) AND (((e.state = 'PUBLISHED'::\"EventState\") AND (e.visibility = 'PUBLIC'::\"EventVisibility\")) OR (EXISTS ( SELECT 1\n           FROM event_clubs ec\n          WHERE ((ec.event_id = e.id) AND is_active_club_member(ec.club_id, current_user_id())))))))) OR (EXISTS ( SELECT 1\n   FROM users u\n  WHERE ((u.id = current_user_id()) AND (u.global_role = ANY (ARRAY['PLATFORM_ADMIN'::\"GlobalRole\", 'FACULTY_ADMIN'::\"GlobalRole\"]))))))",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "attendance_records",
+    "policyname": "Allow INSERT on attendance_records",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "cmd": "INSERT",
+    "qual": null,
+    "with_check": "((marked_by = current_user_id()) OR (user_id = current_user_id()))"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "attendance_records",
+    "policyname": "Allow DELETE on attendance_records",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "cmd": "DELETE",
+    "qual": "(EXISTS ( SELECT 1\n   FROM users u\n  WHERE ((u.id = current_user_id()) AND (u.global_role = 'PLATFORM_ADMIN'::\"GlobalRole\"))))",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "attendance_records",
+    "policyname": "Allow UPDATE on attendance_records",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "cmd": "UPDATE",
+    "qual": "(EXISTS ( SELECT 1\n   FROM users u\n  WHERE ((u.id = current_user_id()) AND (u.global_role = 'PLATFORM_ADMIN'::\"GlobalRole\"))))",
+    "with_check": "(EXISTS ( SELECT 1\n   FROM users u\n  WHERE ((u.id = current_user_id()) AND (u.global_role = 'PLATFORM_ADMIN'::\"GlobalRole\"))))"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "attendance_records",
+    "policyname": "Allow SELECT on attendance_records",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "cmd": "SELECT",
+    "qual": "((user_id = current_user_id()) OR (EXISTS ( SELECT 1\n   FROM (attendance_sessions s\n     JOIN event_clubs ec ON ((s.event_id = ec.event_id)))\n  WHERE ((s.id = attendance_records.session_id) AND has_club_role(ec.club_id, current_user_id(), ARRAY['CLUB_ADMIN'::text, 'CORE_MEMBER'::text, 'FACULTY_MENTOR'::text])))) OR (EXISTS ( SELECT 1\n   FROM users u\n  WHERE ((u.id = current_user_id()) AND (u.global_role = ANY (ARRAY['PLATFORM_ADMIN'::\"GlobalRole\", 'FACULTY_ADMIN'::\"GlobalRole\"]))))))",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "attendance_disputes",
+    "policyname": "Allow UPDATE on attendance_disputes",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "cmd": "UPDATE",
+    "qual": "((EXISTS ( SELECT 1\n   FROM event_clubs ec\n  WHERE ((ec.event_id = attendance_disputes.event_id) AND has_club_role(ec.club_id, current_user_id(), ARRAY['CLUB_ADMIN'::text, 'FACULTY_MENTOR'::text])))) OR (EXISTS ( SELECT 1\n   FROM users u\n  WHERE ((u.id = current_user_id()) AND (u.global_role = ANY (ARRAY['PLATFORM_ADMIN'::\"GlobalRole\", 'FACULTY_ADMIN'::\"GlobalRole\"]))))))",
+    "with_check": "((EXISTS ( SELECT 1\n   FROM event_clubs ec\n  WHERE ((ec.event_id = attendance_disputes.event_id) AND has_club_role(ec.club_id, current_user_id(), ARRAY['CLUB_ADMIN'::text, 'FACULTY_MENTOR'::text])))) OR (EXISTS ( SELECT 1\n   FROM users u\n  WHERE ((u.id = current_user_id()) AND (u.global_role = ANY (ARRAY['PLATFORM_ADMIN'::\"GlobalRole\", 'FACULTY_ADMIN'::\"GlobalRole\"]))))))"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "attendance_disputes",
+    "policyname": "Allow INSERT on attendance_disputes",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "cmd": "INSERT",
+    "qual": null,
+    "with_check": "(user_id = current_user_id())"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "attendance_disputes",
+    "policyname": "Allow SELECT on attendance_disputes",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "cmd": "SELECT",
+    "qual": "((user_id = current_user_id()) OR (EXISTS ( SELECT 1\n   FROM event_clubs ec\n  WHERE ((ec.event_id = attendance_disputes.event_id) AND has_club_role(ec.club_id, current_user_id(), ARRAY['CLUB_ADMIN'::text, 'CORE_MEMBER'::text, 'FACULTY_MENTOR'::text])))) OR (EXISTS ( SELECT 1\n   FROM users u\n  WHERE ((u.id = current_user_id()) AND (u.global_role = ANY (ARRAY['PLATFORM_ADMIN'::\"GlobalRole\", 'FACULTY_ADMIN'::\"GlobalRole\"]))))))",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "notifications",
+    "policyname": "Worker system access to notifications",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "nst_worker"
+    ],
+    "cmd": "ALL",
+    "qual": "true",
+    "with_check": "true"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "notifications",
+    "policyname": "System can insert notifications",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "nst_app"
+    ],
+    "cmd": "INSERT",
+    "qual": null,
+    "with_check": "true"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "notifications",
+    "policyname": "Users can delete their own notifications",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "cmd": "DELETE",
+    "qual": "(user_id = current_user_id())",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "notifications",
+    "policyname": "Users can update their own notifications",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "cmd": "UPDATE",
+    "qual": "(user_id = current_user_id())",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "notifications",
+    "policyname": "Users can view their own notifications",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "cmd": "SELECT",
+    "qual": "(user_id = current_user_id())",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "notification_preferences",
+    "policyname": "Users can insert their own notification preferences",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "cmd": "INSERT",
+    "qual": null,
+    "with_check": "(user_id = current_user_id())"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "notification_preferences",
+    "policyname": "Users can view their own notification preferences",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "cmd": "SELECT",
+    "qual": "(user_id = current_user_id())",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "notification_preferences",
+    "policyname": "Users can update their own notification preferences",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "cmd": "UPDATE",
+    "qual": "(user_id = current_user_id())",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "event_results",
+    "policyname": "Allow DELETE on event_results",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "cmd": "DELETE",
+    "qual": "(EXISTS ( SELECT 1\n   FROM users u\n  WHERE ((u.id = current_user_id()) AND (u.global_role = 'PLATFORM_ADMIN'::\"GlobalRole\"))))",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "event_results",
+    "policyname": "Allow UPDATE on event_results",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "cmd": "UPDATE",
+    "qual": "((EXISTS ( SELECT 1\n   FROM event_clubs ec\n  WHERE ((ec.event_id = ec.event_id) AND has_club_role(ec.club_id, current_user_id(), ARRAY['CLUB_ADMIN'::text, 'FACULTY_MENTOR'::text])))) OR (EXISTS ( SELECT 1\n   FROM users u\n  WHERE ((u.id = current_user_id()) AND (u.global_role = ANY (ARRAY['PLATFORM_ADMIN'::\"GlobalRole\", 'FACULTY_ADMIN'::\"GlobalRole\"]))))))",
+    "with_check": "((EXISTS ( SELECT 1\n   FROM event_clubs ec\n  WHERE ((ec.event_id = ec.event_id) AND has_club_role(ec.club_id, current_user_id(), ARRAY['CLUB_ADMIN'::text, 'FACULTY_MENTOR'::text])))) OR (EXISTS ( SELECT 1\n   FROM users u\n  WHERE ((u.id = current_user_id()) AND (u.global_role = ANY (ARRAY['PLATFORM_ADMIN'::\"GlobalRole\", 'FACULTY_ADMIN'::\"GlobalRole\"]))))))"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "event_results",
+    "policyname": "Allow INSERT on event_results",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "cmd": "INSERT",
+    "qual": null,
+    "with_check": "((EXISTS ( SELECT 1\n   FROM event_clubs ec\n  WHERE ((ec.event_id = ec.event_id) AND has_club_role(ec.club_id, current_user_id(), ARRAY['CLUB_ADMIN'::text, 'FACULTY_MENTOR'::text])))) OR (EXISTS ( SELECT 1\n   FROM users u\n  WHERE ((u.id = current_user_id()) AND (u.global_role = ANY (ARRAY['PLATFORM_ADMIN'::\"GlobalRole\", 'FACULTY_ADMIN'::\"GlobalRole\"]))))))"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "event_results",
+    "policyname": "Allow SELECT on event_results",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "cmd": "SELECT",
+    "qual": "(current_user_id() IS NOT NULL)",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "leadership_handover_requests",
+    "policyname": "Enable update for participants and mentors",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "nst_app"
+    ],
+    "cmd": "UPDATE",
+    "qual": "((current_user_global_role() = ANY (ARRAY['PLATFORM_ADMIN'::text, 'FACULTY_ADMIN'::text])) OR (initiated_by = current_user_id()) OR (successor_id = current_user_id()) OR has_club_role(club_id, current_user_id(), ARRAY['FACULTY_MENTOR'::text]))",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "leadership_handover_requests",
+    "policyname": "Enable insert for club admins",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "nst_app"
+    ],
+    "cmd": "INSERT",
+    "qual": null,
+    "with_check": "has_club_role(club_id, current_user_id(), ARRAY['CLUB_ADMIN'::text])"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "leadership_handover_requests",
+    "policyname": "Enable read for club admins, faculty, platform admins, and part",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "nst_app"
+    ],
+    "cmd": "SELECT",
+    "qual": "((current_user_global_role() = ANY (ARRAY['PLATFORM_ADMIN'::text, 'FACULTY_ADMIN'::text])) OR (initiated_by = current_user_id()) OR (successor_id = current_user_id()) OR has_club_role(club_id, current_user_id(), ARRAY['CLUB_ADMIN'::text, 'FACULTY_MENTOR'::text]))",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "leaderboard_scores",
+    "policyname": "Allow SELECT on leaderboard_scores",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "cmd": "SELECT",
+    "qual": "(current_user_id() IS NOT NULL)",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "users",
+    "policyname": "Allow global admins to INSERT users",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "cmd": "INSERT",
+    "qual": null,
+    "with_check": "(current_user_global_role() = ANY (ARRAY['PLATFORM_ADMIN'::text, 'FACULTY_ADMIN'::text]))"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "users",
+    "policyname": "Allow global admins to UPDATE users",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "cmd": "UPDATE",
+    "qual": "(current_user_global_role() = ANY (ARRAY['PLATFORM_ADMIN'::text, 'FACULTY_ADMIN'::text]))",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "users",
+    "policyname": "Worker system access to users",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "nst_worker"
+    ],
+    "cmd": "SELECT",
+    "qual": "true",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "users",
+    "policyname": "Allow scoped SELECT on users",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "cmd": "SELECT",
+    "qual": "((id = current_user_id()) OR (current_user_global_role() = ANY (ARRAY['PLATFORM_ADMIN'::text, 'FACULTY_ADMIN'::text])) OR can_see_user_as_organizer(id))",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "users",
+    "policyname": "Allow users to UPDATE own profile",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "cmd": "UPDATE",
+    "qual": "(id = current_user_id())",
+    "with_check": "(id = current_user_id())"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "events",
+    "policyname": "Allow SELECT on events",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "cmd": "SELECT",
+    "qual": "((current_user_id() IS NOT NULL) AND (((state = 'PUBLISHED'::\"EventState\") AND (visibility = 'PUBLIC'::\"EventVisibility\")) OR (created_by = current_user_id()) OR (EXISTS ( SELECT 1\n   FROM event_clubs ec\n  WHERE ((ec.event_id = events.id) AND is_active_club_member(ec.club_id, current_user_id())))) OR (EXISTS ( SELECT 1\n   FROM users u\n  WHERE ((u.id = current_user_id()) AND (u.global_role = ANY (ARRAY['PLATFORM_ADMIN'::\"GlobalRole\", 'FACULTY_ADMIN'::\"GlobalRole\"])))))))",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "events",
+    "policyname": "Allow UPDATE on events",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "cmd": "UPDATE",
+    "qual": "(((state = 'DRAFT'::\"EventState\") AND (EXISTS ( SELECT 1\n   FROM event_clubs ec\n  WHERE ((ec.event_id = events.id) AND (ec.is_primary = true) AND has_club_role(ec.club_id, current_user_id(), ARRAY['CLUB_ADMIN'::text, 'CORE_MEMBER'::text]))))) OR (EXISTS ( SELECT 1\n   FROM event_clubs ec\n  WHERE ((ec.event_id = events.id) AND (ec.is_primary = true) AND has_club_role(ec.club_id, current_user_id(), ARRAY['FACULTY_MENTOR'::text])))) OR (EXISTS ( SELECT 1\n   FROM users u\n  WHERE ((u.id = current_user_id()) AND (u.global_role = ANY (ARRAY['PLATFORM_ADMIN'::\"GlobalRole\", 'FACULTY_ADMIN'::\"GlobalRole\"]))))) OR (EXISTS ( SELECT 1\n   FROM event_clubs ec\n  WHERE ((ec.event_id = events.id) AND (ec.is_primary = true) AND has_club_role(ec.club_id, current_user_id(), ARRAY['CLUB_ADMIN'::text])))))",
+    "with_check": "(((state = 'DRAFT'::\"EventState\") AND (EXISTS ( SELECT 1\n   FROM event_clubs ec\n  WHERE ((ec.event_id = events.id) AND (ec.is_primary = true) AND has_club_role(ec.club_id, current_user_id(), ARRAY['CLUB_ADMIN'::text, 'CORE_MEMBER'::text]))))) OR (EXISTS ( SELECT 1\n   FROM event_clubs ec\n  WHERE ((ec.event_id = events.id) AND (ec.is_primary = true) AND has_club_role(ec.club_id, current_user_id(), ARRAY['FACULTY_MENTOR'::text])))) OR (EXISTS ( SELECT 1\n   FROM users u\n  WHERE ((u.id = current_user_id()) AND (u.global_role = ANY (ARRAY['PLATFORM_ADMIN'::\"GlobalRole\", 'FACULTY_ADMIN'::\"GlobalRole\"]))))) OR ((deleted_at IS NOT NULL) AND (EXISTS ( SELECT 1\n   FROM event_clubs ec\n  WHERE ((ec.event_id = events.id) AND (ec.is_primary = true) AND has_club_role(ec.club_id, current_user_id(), ARRAY['CLUB_ADMIN'::text]))))))"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "events",
+    "policyname": "Allow soft-DELETE on events",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "cmd": "DELETE",
+    "qual": "(EXISTS ( SELECT 1\n   FROM users u\n  WHERE ((u.id = current_user_id()) AND (u.global_role = ANY (ARRAY['PLATFORM_ADMIN'::\"GlobalRole\", 'FACULTY_ADMIN'::\"GlobalRole\"])))))",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "events",
+    "policyname": "Allow INSERT on events",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "cmd": "INSERT",
+    "qual": null,
+    "with_check": "((state = 'DRAFT'::\"EventState\") AND ((EXISTS ( SELECT 1\n   FROM club_memberships cm\n  WHERE ((cm.user_id = current_user_id()) AND ((cm.role)::text = ANY (ARRAY['CLUB_ADMIN'::text, 'CORE_MEMBER'::text])) AND (cm.deleted_at IS NULL)))) OR (EXISTS ( SELECT 1\n   FROM users u\n  WHERE ((u.id = current_user_id()) AND (u.global_role = ANY (ARRAY['PLATFORM_ADMIN'::\"GlobalRole\", 'FACULTY_ADMIN'::\"GlobalRole\"])))))))"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "clubs",
+    "policyname": "Allow PLATFORM_ADMIN and FACULTY_ADMIN to UPDATE clubs",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "cmd": "UPDATE",
+    "qual": "(EXISTS ( SELECT 1\n   FROM users u\n  WHERE ((u.id = current_user_id()) AND (u.global_role = ANY (ARRAY['PLATFORM_ADMIN'::\"GlobalRole\", 'FACULTY_ADMIN'::\"GlobalRole\"])))))",
+    "with_check": "(EXISTS ( SELECT 1\n   FROM users u\n  WHERE ((u.id = current_user_id()) AND (u.global_role = ANY (ARRAY['PLATFORM_ADMIN'::\"GlobalRole\", 'FACULTY_ADMIN'::\"GlobalRole\"])))))"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "clubs",
+    "policyname": "Allow CLUB_ADMIN to UPDATE clubs",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "cmd": "UPDATE",
+    "qual": "has_club_role(id, current_user_id(), ARRAY['CLUB_ADMIN'::text])",
+    "with_check": "has_club_role(id, current_user_id(), ARRAY['CLUB_ADMIN'::text])"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "clubs",
+    "policyname": "Allow authenticated users to SELECT clubs",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "cmd": "SELECT",
+    "qual": "(current_user_id() IS NOT NULL)",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "club_memberships",
+    "policyname": "Allow members DELETE for Admins and Faculty",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "cmd": "DELETE",
+    "qual": "((EXISTS ( SELECT 1\n   FROM users u\n  WHERE ((u.id = current_user_id()) AND (u.global_role = 'PLATFORM_ADMIN'::\"GlobalRole\")))) OR has_club_role(club_id, current_user_id(), ARRAY['CLUB_ADMIN'::text, 'FACULTY_MENTOR'::text]))",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "club_memberships",
+    "policyname": "Allow members UPDATE for Admins and Faculty",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "cmd": "UPDATE",
+    "qual": "((EXISTS ( SELECT 1\n   FROM users u\n  WHERE ((u.id = current_user_id()) AND (u.global_role = 'PLATFORM_ADMIN'::\"GlobalRole\")))) OR has_club_role(club_id, current_user_id(), ARRAY['CLUB_ADMIN'::text, 'FACULTY_MENTOR'::text]))",
+    "with_check": "((EXISTS ( SELECT 1\n   FROM users u\n  WHERE ((u.id = current_user_id()) AND (u.global_role = 'PLATFORM_ADMIN'::\"GlobalRole\")))) OR has_club_role(club_id, current_user_id(), ARRAY['CLUB_ADMIN'::text, 'FACULTY_MENTOR'::text]))"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "club_memberships",
+    "policyname": "Allow members INSERT for Admins and Faculty",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "cmd": "INSERT",
+    "qual": null,
+    "with_check": "((EXISTS ( SELECT 1\n   FROM users u\n  WHERE ((u.id = current_user_id()) AND (u.global_role = 'PLATFORM_ADMIN'::\"GlobalRole\")))) OR has_club_role(club_id, current_user_id(), ARRAY['CLUB_ADMIN'::text, 'FACULTY_MENTOR'::text]))"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "club_memberships",
+    "policyname": "Allow members and admins to SELECT club_memberships",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "cmd": "SELECT",
+    "qual": "((EXISTS ( SELECT 1\n   FROM users u\n  WHERE ((u.id = current_user_id()) AND (u.global_role = ANY (ARRAY['PLATFORM_ADMIN'::\"GlobalRole\", 'FACULTY_ADMIN'::\"GlobalRole\"]))))) OR is_active_club_member(club_id, current_user_id()))",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "teams",
+    "policyname": "Allow INSERT on teams",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "cmd": "INSERT",
+    "qual": null,
+    "with_check": "(current_user_id() IS NOT NULL)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "teams",
+    "policyname": "Allow SELECT on teams",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "cmd": "SELECT",
+    "qual": "(current_user_id() IS NOT NULL)",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "teams",
+    "policyname": "Allow DELETE on teams",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "cmd": "DELETE",
+    "qual": "((leader_id = current_user_id()) OR (EXISTS ( SELECT 1\n   FROM users u\n  WHERE ((u.id = current_user_id()) AND (u.global_role = 'PLATFORM_ADMIN'::\"GlobalRole\")))))",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "teams",
+    "policyname": "Allow UPDATE on teams",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "cmd": "UPDATE",
+    "qual": "((leader_id = current_user_id()) OR (EXISTS ( SELECT 1\n   FROM users u\n  WHERE ((u.id = current_user_id()) AND (u.global_role = 'PLATFORM_ADMIN'::\"GlobalRole\")))))",
+    "with_check": "((leader_id = current_user_id()) OR (EXISTS ( SELECT 1\n   FROM users u\n  WHERE ((u.id = current_user_id()) AND (u.global_role = 'PLATFORM_ADMIN'::\"GlobalRole\")))))"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "notification_jobs",
+    "policyname": "System can read notification jobs",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "nst_app"
+    ],
+    "cmd": "SELECT",
+    "qual": "true",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "notification_jobs",
+    "policyname": "System can insert notification jobs",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "nst_app"
+    ],
+    "cmd": "INSERT",
+    "qual": null,
+    "with_check": "true"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "notification_jobs",
+    "policyname": "Worker system access to notification_jobs",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "nst_worker"
+    ],
+    "cmd": "ALL",
+    "qual": "true",
+    "with_check": "true"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "notification_jobs",
+    "policyname": "System can retry and replay notification jobs",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "nst_app"
+    ],
+    "cmd": "UPDATE",
+    "qual": "(status = ANY (ARRAY['FAILED'::\"NotificationJobStatus\", 'DEAD_LETTER'::\"NotificationJobStatus\"]))",
+    "with_check": "((status = 'PENDING'::\"NotificationJobStatus\") AND (attempt_count = 0) AND (last_error IS NULL) AND ((ticket_ids IS NULL) OR (ticket_ids = 'null'::jsonb)))"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "notification_jobs",
+    "policyname": "Authenticated users can enqueue jobs",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "cmd": "INSERT",
+    "qual": null,
+    "with_check": "(current_user_id() IS NOT NULL)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "push_tokens",
+    "policyname": "Worker system access to push_tokens delete",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "nst_worker"
+    ],
+    "cmd": "DELETE",
+    "qual": "true",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "push_tokens",
+    "policyname": "Worker system access to push_tokens select",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "nst_worker"
+    ],
+    "cmd": "SELECT",
+    "qual": "true",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "push_tokens",
+    "policyname": "Users can delete their own push tokens",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "cmd": "DELETE",
+    "qual": "(user_id = current_user_id())",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "push_tokens",
+    "policyname": "Users can update their own push tokens",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "cmd": "UPDATE",
+    "qual": "(user_id = current_user_id())",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "push_tokens",
+    "policyname": "Users can insert their own push tokens",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "cmd": "INSERT",
+    "qual": null,
+    "with_check": "(user_id = current_user_id())"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "push_tokens",
+    "policyname": "Users can view their own push tokens",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "cmd": "SELECT",
+    "qual": "(user_id = current_user_id())",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "announcements",
+    "policyname": "Enable update/delete for creator and admins",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "nst_app"
+    ],
+    "cmd": "UPDATE",
+    "qual": "((created_by = current_user_id()) OR (current_user_global_role() = ANY (ARRAY['PLATFORM_ADMIN'::text, 'FACULTY_ADMIN'::text])))",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "announcements",
+    "policyname": "Enable insert for club admins and platform admins",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "nst_app"
+    ],
+    "cmd": "INSERT",
+    "qual": null,
+    "with_check": "((current_user_global_role() = ANY (ARRAY['PLATFORM_ADMIN'::text, 'FACULTY_ADMIN'::text])) OR ((club_id IS NOT NULL) AND has_club_role(club_id, current_user_id(), ARRAY['CLUB_ADMIN'::text, 'FACULTY_MENTOR'::text])))"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "announcements",
+    "policyname": "Enable read for all authenticated users",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "nst_app"
+    ],
+    "cmd": "SELECT",
+    "qual": "true",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "announcements",
+    "policyname": "Enable delete for creator and admins",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "nst_app"
+    ],
+    "cmd": "DELETE",
+    "qual": "((created_by = current_user_id()) OR (current_user_global_role() = ANY (ARRAY['PLATFORM_ADMIN'::text, 'FACULTY_ADMIN'::text])))",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "event_clubs",
+    "policyname": "Allow DELETE on event_clubs",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "cmd": "DELETE",
+    "qual": "(has_club_role(club_id, current_user_id(), ARRAY['CLUB_ADMIN'::text, 'CORE_MEMBER'::text]) OR (EXISTS ( SELECT 1\n   FROM users u\n  WHERE ((u.id = current_user_id()) AND (u.global_role = ANY (ARRAY['PLATFORM_ADMIN'::\"GlobalRole\", 'FACULTY_ADMIN'::\"GlobalRole\"]))))))",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "event_clubs",
+    "policyname": "Allow UPDATE on event_clubs",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "cmd": "UPDATE",
+    "qual": "(has_club_role(club_id, current_user_id(), ARRAY['CLUB_ADMIN'::text, 'CORE_MEMBER'::text]) OR (EXISTS ( SELECT 1\n   FROM users u\n  WHERE ((u.id = current_user_id()) AND (u.global_role = ANY (ARRAY['PLATFORM_ADMIN'::\"GlobalRole\", 'FACULTY_ADMIN'::\"GlobalRole\"]))))))",
+    "with_check": "(has_club_role(club_id, current_user_id(), ARRAY['CLUB_ADMIN'::text, 'CORE_MEMBER'::text]) OR (EXISTS ( SELECT 1\n   FROM users u\n  WHERE ((u.id = current_user_id()) AND (u.global_role = ANY (ARRAY['PLATFORM_ADMIN'::\"GlobalRole\", 'FACULTY_ADMIN'::\"GlobalRole\"]))))))"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "event_clubs",
+    "policyname": "Allow INSERT on event_clubs",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "cmd": "INSERT",
+    "qual": null,
+    "with_check": "(has_club_role(club_id, current_user_id(), ARRAY['CLUB_ADMIN'::text, 'CORE_MEMBER'::text]) OR (EXISTS ( SELECT 1\n   FROM users u\n  WHERE ((u.id = current_user_id()) AND (u.global_role = ANY (ARRAY['PLATFORM_ADMIN'::\"GlobalRole\", 'FACULTY_ADMIN'::\"GlobalRole\"]))))))"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "event_clubs",
+    "policyname": "Allow SELECT on event_clubs",
+    "permissive": "PERMISSIVE",
+    "roles": [
+      "public"
+    ],
+    "cmd": "SELECT",
+    "qual": "(current_user_id() IS NOT NULL)",
+    "with_check": null
+  }
+]
+Roles: [
+  {
+    "rolname": "nst_app",
+    "rolsuper": false,
+    "rolinherit": true,
+    "rolcreaterole": false,
+    "rolcreatedb": false,
+    "rolcanlogin": true,
+    "rolreplication": false,
+    "rolbypassrls": false
+  }
+]

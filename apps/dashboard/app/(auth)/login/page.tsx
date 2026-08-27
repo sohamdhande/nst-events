@@ -98,11 +98,10 @@ function LoginContent() {
         Sign in with Google
       </Button>
 
-      <div suppressHydrationWarning>
-        <Divider style={{ margin: '24px 0', borderColor: token.colorBorderSecondary }}>
-          <Text type="secondary" suppressHydrationWarning style={{ fontSize: 12 }}>STUDENT ACCESS</Text>
-        </Divider>
-      </div>
+      {/* @ts-expect-error Ant Design types missing suppressHydrationWarning */}
+      <Divider suppressHydrationWarning style={{ margin: '24px 0', borderColor: token.colorBorderSecondary }}>
+        <Text type="secondary" suppressHydrationWarning style={{ fontSize: 12 }}>STUDENT ACCESS</Text>
+      </Divider>
 
       <Text type="secondary" style={{ fontSize: 13, display: 'block' }}>
         Are you a student? {' '}

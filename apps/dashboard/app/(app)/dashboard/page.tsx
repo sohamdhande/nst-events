@@ -53,7 +53,7 @@ function getStatusTagColor(state: string) {
 function ActionRequiredSection({ currentUser }: { currentUser: CurrentUser }) {
   const { token } = useToken();
   const { data: eventsData, isLoading: isEventsLoading, isError: isEventsError } = useEvents({ limit: 100 });
-  const { data: queueData, isLoading: isQueueLoading, isError: isQueueError } = useQueueMonitoringStats();
+  const { data: queueData, isLoading: isQueueLoading, isError: isQueueError } = useQueueMonitoringStats({ enabled: currentUser?.global_role === 'PLATFORM_ADMIN' });
   const { data: notifData, isLoading: isNotifLoading, isError: isNotifError } = useNotifications({ filter_read: false });
 
   const isGlobalAdmin = currentUser?.global_role === 'PLATFORM_ADMIN' || currentUser?.global_role === 'FACULTY_ADMIN';
@@ -163,7 +163,7 @@ function ActionRequiredSection({ currentUser }: { currentUser: CurrentUser }) {
       {/* Error isolation */}
       {(isEventsError || isQueueError || isNotifError) && (
         <Alert 
-          message="Some action sources failed to load." 
+          title="Some action sources failed to load." 
           type="warning" 
           showIcon 
           style={{ marginBottom: 12 }} 
@@ -290,7 +290,7 @@ export default function DashboardPage() {
   const { data: currentUser, isLoading: isUserLoading } = useCurrentUser();
   const { data: eventsData, isLoading: isEventsLoading, isError: isEventsError, refetch: refetchEvents } = useEvents({ limit: 100 });
   const { data: approvalsData, isLoading: isApprovalsLoading } = useApprovals();
-  const { data: queueData, isLoading: isQueueLoading } = useQueueMonitoringStats();
+  const { data: queueData, isLoading: isQueueLoading } = useQueueMonitoringStats({ enabled: currentUser?.global_role === 'PLATFORM_ADMIN' });
   const { submitMutation, approveMutation, rejectMutation, lockMutation, unlockMutation } = useEventLifecycle();
   
   if (isUserLoading) {

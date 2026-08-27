@@ -13,6 +13,7 @@ import { generateQrPayload } from '../../src/modules/attendance/totp.utils';
 describe('Phase 26B: Offline Attendance Cryptographic Integrity', () => {
   let organizerToken: string;
   let nonOrganizerToken: string;
+  let studentToken: string;
   
   let organizerId: string;
   let nonOrganizerId: string;
@@ -127,6 +128,7 @@ describe('Phase 26B: Offline Attendance Cryptographic Integrity', () => {
     // Tokens
     organizerToken = signJwt(organizerId);
     nonOrganizerToken = signJwt(nonOrganizerId);
+    studentToken = signJwt(studentId);
   });
 
   after(async () => {
@@ -153,7 +155,7 @@ describe('Phase 26B: Offline Attendance Cryptographic Integrity', () => {
 
     const res = await request(app)
       .post('/v1/attendance/sync-offline')
-      .set('Authorization', `Bearer ${organizerToken}`)
+      .set('Authorization', `Bearer ${studentToken}`)
       .send({
         records: [
           {
@@ -175,12 +177,44 @@ describe('Phase 26B: Offline Attendance Cryptographic Integrity', () => {
     assert.strictEqual(res.body.errors.length, 0);
   });
 
+  it('1B. BOLA coverage: Student token with another user_id is credited to the token owner', async () => {
+    const scanTimestamp = new Date(Date.now() + 150000).toISOString();
+    const origDateNow = Date.now;
+    Date.now = () => new Date(scanTimestamp).getTime();
+    const token = generateQrPayload(session1Id, session1Secret);
+    Date.now = origDateNow;
+
+    const res = await request(app)
+      .post('/v1/attendance/sync-offline')
+      .set('Authorization', `Bearer ${organizerToken}`) // Organizer token
+      .send({
+        records: [
+          {
+            user_id: studentId, // Payload claims it's for student
+            session_id: session1Id,
+            scanned_token: token,
+            scan_timestamp: scanTimestamp,
+            device_id: 'dev123',
+            gps_lat: 0,
+            gps_lng: 0, gps_accuracy: 5, mock_location_detected: false,
+            offline_seq: 199,
+          }
+        ]
+      });
+
+    assert.strictEqual(res.status, 200);
+    assert.strictEqual(res.body.processed, 0);
+    // Since organizer is not registered for session1, we expect NOT_REGISTERED.
+    // This proves the identity is bound to organizerToken, ignoring studentId in the payload.
+    assert.strictEqual(res.body.errors[0].error_code, 'NOT_REGISTERED');
+  });
+
   it('2. Invalid QR/TOTP -> rejection', async () => {
     const scanTimestamp = new Date(Date.now() + 200000).toISOString();
     
     const res = await request(app)
       .post('/v1/attendance/sync-offline')
-      .set('Authorization', `Bearer ${organizerToken}`)
+      .set('Authorization', `Bearer ${studentToken}`)
       .send({
         records: [
           {
@@ -216,7 +250,7 @@ describe('Phase 26B: Offline Attendance Cryptographic Integrity', () => {
 
     const res = await request(app)
       .post('/v1/attendance/sync-offline')
-      .set('Authorization', `Bearer ${organizerToken}`)
+      .set('Authorization', `Bearer ${studentToken}`)
       .send({
         records: [
           {
@@ -248,7 +282,7 @@ describe('Phase 26B: Offline Attendance Cryptographic Integrity', () => {
 
     const res = await request(app)
       .post('/v1/attendance/sync-offline')
-      .set('Authorization', `Bearer ${organizerToken}`)
+      .set('Authorization', `Bearer ${studentToken}`)
       .send({
         records: [
           {
@@ -281,7 +315,7 @@ describe('Phase 26B: Offline Attendance Cryptographic Integrity', () => {
     // Send first time
     const res1 = await request(app)
       .post('/v1/attendance/sync-offline')
-      .set('Authorization', `Bearer ${organizerToken}`)
+      .set('Authorization', `Bearer ${studentToken}`)
       .send({
         records: [
           {
@@ -308,7 +342,7 @@ describe('Phase 26B: Offline Attendance Cryptographic Integrity', () => {
     // Let's send the exact same token a SECOND time
     const res2 = await request(app)
       .post('/v1/attendance/sync-offline')
-      .set('Authorization', `Bearer ${organizerToken}`)
+      .set('Authorization', `Bearer ${studentToken}`)
       .send({
         records: [
           {
@@ -342,7 +376,7 @@ describe('Phase 26B: Offline Attendance Cryptographic Integrity', () => {
 
     const res = await request(app)
       .post('/v1/attendance/sync-offline')
-      .set('Authorization', `Bearer ${organizerToken}`)
+      .set('Authorization', `Bearer ${studentToken}`)
       .send({
         records: [
           {
