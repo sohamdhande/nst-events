@@ -108,7 +108,6 @@ export default function EventsPage() {
   const getActionAuth = (event: Event) => {
     let isGlobalAdmin = false;
     let isClubAdmin = false;
-    let isEventEditor = false;
     let isMentor = false;
     let isCoreMember = false;
 
@@ -129,14 +128,15 @@ export default function EventsPage() {
     const canManageRegistrations = isGlobalAdmin || isClubAdmin || isCoreMember || isMentor;
     const canManageTeams = canManageRegistrations && event.registrationType === 'TEAM';
     const canManageAttendance = isGlobalAdmin || isClubAdmin || isCoreMember || isMentor;
-    const canEdit = canManageEvent(currentUser, event as any) && event.state === 'DRAFT';
-    const canSubmit = canManageEvent(currentUser, event as any) && event.state === 'DRAFT';
-    const canApprove = canApproveEvent(currentUser, event as any) && event.state === 'PENDING_APPROVAL';
-    const canReject = canApproveEvent(currentUser, event as any) && event.state === 'PENDING_APPROVAL';
+    const eventParam = event as unknown as Parameters<typeof canManageEvent>[1];
+    const canEdit = canManageEvent(currentUser, eventParam) && event.state === 'DRAFT';
+    const canSubmit = canManageEvent(currentUser, eventParam) && event.state === 'DRAFT';
+    const canApprove = canApproveEvent(currentUser, eventParam) && event.state === 'PENDING_APPROVAL';
+    const canReject = canApproveEvent(currentUser, eventParam) && event.state === 'PENDING_APPROVAL';
     
     // For locks, rely on existing operations check
-    const canLock = canLockEvent(currentUser, event as any) && event.state === 'PUBLISHED';
-    const canUnlock = canLockEvent(currentUser, event as any) && event.state === 'PUBLISHED';
+    const canLock = canLockEvent(currentUser, eventParam) && event.state === 'PUBLISHED';
+    const canUnlock = canLockEvent(currentUser, eventParam) && event.state === 'PUBLISHED';
 
     return {
       canManageRegistrations,

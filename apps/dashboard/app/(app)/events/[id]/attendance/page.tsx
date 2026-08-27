@@ -79,9 +79,11 @@ export default function AttendancePage({ params }: { params: Promise<{ id: strin
         close_at: end.add(15, 'minute'),
         geofence_radius: 50
       });
-      setSessionLocation(null);
-      setLocationError(null);
-      setIsCapturingLocation(true);
+      queueMicrotask(() => {
+        setSessionLocation(null);
+        setLocationError(null);
+        setIsCapturingLocation(true);
+      });
       
       if ('geolocation' in navigator) {
         navigator.geolocation.getCurrentPosition(
@@ -101,8 +103,10 @@ export default function AttendancePage({ params }: { params: Promise<{ id: strin
           { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
         );
       } else {
-        setLocationError('Geolocation is not supported by this browser');
-        setIsCapturingLocation(false);
+        queueMicrotask(() => {
+          setLocationError('Geolocation is not supported by this browser');
+          setIsCapturingLocation(false);
+        });
       }
     }
   }, [createModalOpen, event, form]);
