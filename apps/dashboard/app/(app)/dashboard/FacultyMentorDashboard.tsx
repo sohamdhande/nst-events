@@ -7,8 +7,7 @@ import { CurrentUser, ClubMembership } from '../../../hooks/useCurrentUser';
 import { useClubAnalytics } from '../../../hooks/useClubAnalytics';
 import { useClubActivity } from '../../../hooks/useClubActivity';
 import { useClubStudentLeaderboard } from '../../../hooks/useLeaderboard';
-import { Event } from '../../../hooks/useEvents';
-import { useApprovals } from '../../../hooks/useApprovals';
+import { useApprovals, PendingEvent } from '../../../hooks/useApprovals';
 import { useAttendanceDisputes, AttendanceDispute } from '../../../hooks/useAttendance';
 import Link from 'next/link';
 
@@ -117,11 +116,11 @@ export function FacultyMentorDashboard({ currentUser }: { currentUser: CurrentUs
                   size="small"
                   columns={[
                     { title: 'Event', dataIndex: 'title', key: 'title' },
-                    { title: 'Submitted By', key: 'author', render: (_, r: Event) => r.author?.fullName || 'Unknown' },
+                    { title: 'Submitted By', key: 'author', render: (_, r: PendingEvent & { author?: { fullName: string } }) => r.author?.fullName || 'Unknown' },
                     { 
                       title: 'Action', 
                       key: 'action', 
-                      render: (_, r: Event) => <Link href={`/events/${r.id}`}><Button size="small" type="primary">Review</Button></Link> 
+                      render: (_, r: PendingEvent) => <Link href={`/events/${r.id}`}><Button size="small" type="primary">Review</Button></Link> 
                     }
                   ]}
                   locale={{ emptyText: <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="No events pending approval." /> }}
@@ -141,7 +140,7 @@ export function FacultyMentorDashboard({ currentUser }: { currentUser: CurrentUs
                   columns={[
                     { title: 'Student', key: 'student', render: (_, r: AttendanceDispute) => r.user?.fullName || r.userId },
                     { title: 'Reason', dataIndex: 'reason', key: 'reason', ellipsis: true },
-                    { title: 'Event', key: 'event', render: (_, r: AttendanceDispute) => r.event?.title || 'Unknown' },
+                    { title: 'Event', key: 'event', render: (_, r: AttendanceDispute & { event?: { title: string } }) => r.event?.title || 'Unknown' },
                     { 
                       title: 'Action', 
                       key: 'action', 
