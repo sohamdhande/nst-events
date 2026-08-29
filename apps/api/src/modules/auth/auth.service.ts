@@ -39,10 +39,10 @@ export async function loginWithGoogle(
   }
 
   if (domain === 'adypu.edu.in') {
-    const authStudent = await prisma.authorizedStudent.findUnique({
-      where: { normalizedEmail: normalizedEmail },
-    });
-    if (!authStudent || authStudent.status !== 'ACTIVE') {
+    const result = await prisma.$queryRaw<Array<{ status: string }>>`
+      SELECT * FROM lookup_authorized_student(${normalizedEmail})
+    `;
+    if (!result || result.length === 0 || result[0].status !== 'ACTIVE') {
       throw new ForbiddenError('STUDENT_ACCESS_NOT_AUTHORIZED');
     }
   }
@@ -65,13 +65,12 @@ export async function loginWithGoogle(
       throw new ForbiddenError('Account deactivated');
     }
     user = result[0];
-  } catch (err: any) {
-    if (
-      (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') ||
-      err.message?.includes('unique constraint') ||
-      err.code === '23505' ||
-      err.code === 'P2010'
-    ) {
+    } catch (err: any) {
+      console.error('UPSERT ERROR:', err);
+      if (
+        (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') ||
+        (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2010' && err.meta?.code === '23505')
+      ) {
       user = await prisma.user.findUnique({
         where: { email: normalizedEmail },
       });
@@ -110,11 +109,7 @@ export async function loginWithGoogle(
 
   // Wrap subsequent operations in user context since the user is now identified
   const { accessToken, rawRefreshToken } = await withUserContext(mappedUser.id, async (tx) => {
-    // Assign default FACULTY_MENTOR role for new Newton accounts
-    if (domain === 'newtonschool.co' && !newtonExisted && mappedUser.globalRole === 'STUDENT') {
-      await tx.$executeRaw`UPDATE users SET global_role = 'FACULTY_MENTOR'::"GlobalRole" WHERE id = ${mappedUser.id}::uuid`;
-      mappedUser.globalRole = 'FACULTY_MENTOR';
-    }
+    // The default FACULTY_MENTOR role for newtonschool.co is now assigned securely within upsert_oauth_user.
 
     // 4b. Academic Profile First-Login Assignment
     try {
@@ -133,12 +128,13 @@ export async function loginWithGoogle(
           });
 
           if (candidateBatches.length === 1) {
-            await tx.userAcademicProfile.create({
-              data: {
+            await tx.userAcademicProfile.createMany({
+              data: [{
                 userId: mappedUser.id,
                 batchId: candidateBatches[0].id,
                 assignmentSource: AssignmentSource.INSTITUTIONAL_EMAIL_INFERENCE,
-              },
+              }],
+              skipDuplicates: true,
             });
           }
         }
@@ -191,18 +187,16 @@ export async function refreshTokens(
   const tokenHash = hashToken(rawRefreshToken);
 
   return prisma.$transaction(async (tx) => {
-    // 1. SELECT ... FOR UPDATE on refresh_tokens row matched by token_hash
+    // 1. Lookup refresh token using the SECURITY DEFINER RPC
     const rows = await tx.$queryRaw<
       Array<{
         id: string;
         user_id: string;
-        token_hash: string;
         family_id: string;
         expires_at: Date;
         revoked_at: Date | null;
-        created_at: Date;
       }>
-    >`SELECT * FROM "refresh_tokens" WHERE "token_hash" = ${tokenHash} FOR UPDATE`;
+    >`SELECT * FROM lookup_refresh_token(${tokenHash})`;
 
     const existingToken = rows[0];
     if (!existingToken) {
@@ -210,6 +204,9 @@ export async function refreshTokens(
     }
 
     const now = new Date();
+
+    // Set transaction context immediately so subsequent updates pass RLS checks
+    await tx.$executeRaw`SELECT set_config('app.user_id', ${existingToken.user_id}, true)`;
 
     // 2. If revoked_at IS NOT NULL -> theft or race check
     if (existingToken.revoked_at !== null) {
@@ -239,7 +236,6 @@ export async function refreshTokens(
     }
 
     // 4. Check user soft-delete
-    await tx.$executeRaw`SELECT set_config('app.user_id', ${existingToken.user_id}, true)`;
     const user = await tx.user.findUnique({
       where: { id: existingToken.user_id },
     });
@@ -283,16 +279,7 @@ export async function logout(rawRefreshToken?: string): Promise<void> {
     return;
   }
   const tokenHash = hashToken(rawRefreshToken);
-  const tokenRow = await prisma.refreshToken.findUnique({
-    where: { tokenHash },
-    select: { id: true, revokedAt: true },
-  });
-  if (tokenRow && tokenRow.revokedAt === null) {
-    await prisma.refreshToken.update({
-      where: { id: tokenRow.id },
-      data: { revokedAt: new Date() },
-    });
-  }
+  await prisma.$executeRaw`SELECT revoke_refresh_token_by_hash(${tokenHash})`;
 }
 
 export const authService = {

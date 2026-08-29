@@ -3,55 +3,55 @@ import { enqueueNotification } from '../notifications/notifications.producer';
 import { prisma } from '../../lib/prisma';
 
 import { BadRequestError, ForbiddenError } from '../../lib/errors';
+import { mapDatabaseError } from '../../lib/errors/database-error-mapper';
 
 import { checkAudienceEligibility } from '../events/audience.service';
 
 export const registerEvent = async (userId: string, eventId: string) => {
   return withUserContext(userId, async (tx) => {
     try {
-      await checkAudienceEligibility(eventId, userId, tx);
-
       const result = await tx.$queryRaw<{ register_event: any }[]>`
         SELECT register_event(${eventId}::uuid);
       `;
       return result[0].register_event;
     } catch (err: any) {
-      if (err.message?.includes('Individual registration is not permitted for team events')) {
-        throw new BadRequestError('Individual registration is not permitted for team events');
-      }
-      throw err;
+      mapDatabaseError(err);
     }
   });
 };
 
 export const cancelRegistration = async (userId: string, eventId: string) => {
   return withUserContext(userId, async (tx) => {
-    const result = await tx.$queryRaw<{ cancel_registration: string[] }[]>`
-      SELECT cancel_registration(${eventId}::uuid, ${userId}::uuid);
-    `;
-    
-    const promotedUserIds = result[0].cancel_registration;
-    
-    if (promotedUserIds && promotedUserIds.length > 0) {
-      for (const uid of promotedUserIds) {
-        await enqueueNotification({
-          tx,
-          userId: uid,
-          type: 'WAITLIST_PROMOTED',
-          title: 'You are off the waitlist!',
-          body: 'A spot opened up and you are now registered.',
-          metadata: {
-            schema_version: 1,
-            routing: { target: 'event_details', fallback: '/events', params: { id: eventId } },
-            entity_ids: { event_id: eventId }
-          },
-          preferenceGate: 'push_enabled',
-          idempotencyString: `WAITLIST_PROMOTED:${uid}:${eventId}`
-        });
+    try {
+      const result = await tx.$queryRaw<{ cancel_registration: string[] }[]>`
+        SELECT cancel_registration(${eventId}::uuid, ${userId}::uuid);
+      `;
+      
+      const promotedUserIds = result[0].cancel_registration;
+      
+      if (promotedUserIds && promotedUserIds.length > 0) {
+        for (const uid of promotedUserIds) {
+          await enqueueNotification({
+            tx,
+            userId: uid,
+            type: 'WAITLIST_PROMOTED',
+            title: 'You are off the waitlist!',
+            body: 'A spot opened up and you are now registered.',
+            metadata: {
+              schema_version: 1,
+              routing: { target: 'event_details', fallback: '/events', params: { id: eventId } },
+              entity_ids: { event_id: eventId }
+            },
+            preferenceGate: 'push_enabled',
+            idempotencyString: `WAITLIST_PROMOTED:${uid}:${eventId}`
+          });
+        }
       }
+      
+      return promotedUserIds;
+    } catch (err: any) {
+      mapDatabaseError(err);
     }
-    
-    return promotedUserIds;
   });
 };
 
@@ -127,11 +127,9 @@ export const searchEligibleInvitees = async (userId: string, eventId: string, q:
     const event = callerTeam.event;
     if (!event || event.state !== 'PUBLISHED') throw new BadRequestError('Event not available');
     
-    // Check event lock
-    const now = new Date();
-    const lockTime = new Date(event.endTime);
-    lockTime.setHours(lockTime.getHours() + 24);
-    if (event.isLocked || now >= lockTime) {
+    // SQL-authoritative event lock check
+    const [eventLockResult] = await tx.$queryRaw<any[]>`SELECT is_locked, (now() >= end_time + interval '24 hours') as is_expired FROM events WHERE id = ${eventId}::uuid`;
+    if (eventLockResult.is_locked || eventLockResult.is_expired) {
       throw new BadRequestError('EVENT_LOCKED');
     }
 
@@ -177,13 +175,19 @@ export const searchEligibleInvitees = async (userId: string, eventId: string, q:
       eligibleProfiles = profiles.filter((p: any) => eligibleIds.has(p.id));
     }
 
-    // 4. Evaluate each candidate against the absolute database invariants
+    // 4. Evaluate all candidates against the absolute database invariants in one batch call
+    const candidateIds = eligibleProfiles.map((p: any) => p.id);
+    if (candidateIds.length === 0) return [];
+
+    const batchResult = await tx.$queryRaw<{ user_id: string, is_available: boolean }[]>`
+      SELECT * FROM is_users_available_for_team(${eventId}::uuid, ${callerTeam.id}::uuid, ${candidateIds}::uuid[]);
+    `;
+    
+    const availableSet = new Set(batchResult.filter(r => r.is_available).map(r => r.user_id));
+
     const finalCandidates = [];
     for (const profile of eligibleProfiles) {
-      const result = await tx.$queryRaw<{ is_user_available_for_team: boolean }[]>`
-        SELECT is_user_available_for_team(${eventId}::uuid, ${callerTeam.id}::uuid, ${profile.id}::uuid);
-      `;
-      if (result[0]?.is_user_available_for_team) {
+      if (availableSet.has(profile.id)) {
         finalCandidates.push({
           user_id: profile.id,
           display_name: profile.fullName,

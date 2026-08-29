@@ -171,7 +171,7 @@ export default function QueuesManagementPage() {
 
       {isStatsError && (
         <Alert
-          message="Failed to load queue summary."
+          title="Failed to load queue summary."
           type="error"
           showIcon
           style={{ marginBottom: 24 }}
@@ -221,7 +221,7 @@ export default function QueuesManagementPage() {
 
       {isDlqError && (
         <Alert
-          message="Failed to load dead-lettered jobs."
+          title="Failed to load dead-lettered jobs."
           type="error"
           showIcon
           style={{ marginBottom: 24 }}

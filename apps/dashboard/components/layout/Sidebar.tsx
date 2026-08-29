@@ -27,7 +27,6 @@ export function Sidebar() {
 
   if (adminAccess) {
     links.push({ href: '/admin', label: 'Admin Hub' });
-    links.push({ href: '/admin/approvals', label: 'Approvals' });
     
     if (canViewStudentDirectory(currentUser)) {
       links.push({ href: '/admin/users', label: 'Users & Roles' });
@@ -35,6 +34,11 @@ export function Sidebar() {
 
     links.push({ href: '/admin/academic-programs', label: 'Academic Programs' });
     links.push({ href: '/admin/academic-batches', label: 'Academic Batches' });
+  }
+
+  const isFacultyMentor = currentUser?.club_memberships?.some(cm => cm.role === 'FACULTY_MENTOR');
+  if (adminAccess || isFacultyMentor) {
+    links.push({ href: '/admin/approvals', label: 'Approvals' });
   }
 
   if (platformAdmin) {

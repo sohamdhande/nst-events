@@ -12,6 +12,8 @@ import { useCurrentUser } from '../../../../../hooks/useCurrentUser';
 import { useAcademicBatches } from '../../../../../hooks/useAcademicBatches';
 import { useEventDetail } from '../../../../../hooks/useEventDetail';
 import { useUpdateEvent, UpdateEventInput } from '../../../../../hooks/useUpdateEvent';
+import { useEventLifecycle } from '../../../../../hooks/useEventLifecycle';
+import { ApiError } from '../../../../../lib/api';
 
 const { Title, Text } = Typography;
 const { RangePicker } = DatePicker;
@@ -28,6 +30,7 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
   const { data: batchesData, isLoading: isLoadingBatches } = useAcademicBatches();
   const { data: event, isLoading: isLoadingEvent, isError: isErrorEvent, error: errorEvent } = useEventDetail(eventId);
   const { mutateAsync: updateEvent, isPending: isUpdating } = useUpdateEvent(eventId);
+  const { deleteMutation } = useEventLifecycle();
 
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isDirty, setIsDirty] = useState(false);
@@ -67,7 +70,7 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
     return <div style={{ padding: 24 }}>Loading...</div>;
   }
 
-  if (isErrorEvent && errorEvent?.message?.includes('EVENT_LOCKED')) {
+  if (isErrorEvent && (errorEvent as ApiError)?.data?.detail === 'EVENT_LOCKED') {
     return (
       <Result
         status="warning"
@@ -168,18 +171,18 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
       message.success('Event updated successfully');
       router.push(`/events/${eventId}`);
     } catch (err: unknown) {
-      const error = err as Error;
-      if (error.message === 'EVENT_LOCKED' || error.message?.includes('DRAFT')) {
-        setErrorMessage(error.message);
+      const error = err as ApiError;
+      if (error.data?.detail === 'EVENT_LOCKED' || error.data?.detail === 'EVENT_MUST_BE_DRAFT') {
+        setErrorMessage(error.data?.detail || error.message);
         modal.warning({
           title: 'Event State Changed',
           content: 'This event can no longer be edited.',
           onOk: () => router.push(`/events/${eventId}`)
         });
-      } else if (error.message?.includes('403') || error.message?.toLowerCase().includes('forbidden')) {
+      } else if (error.status === 403 || error.message?.toLowerCase().includes('forbidden')) {
         setErrorMessage('You do not have permission to edit this event.');
       } else {
-        setErrorMessage(error.message || 'Failed to update event. Please check your inputs.');
+        setErrorMessage(error.data?.detail || error.message || 'Failed to update event. Please check your inputs.');
       }
     }
   };
@@ -200,6 +203,33 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
     } else {
       router.push(`/events/${eventId}`);
     }
+  };
+
+  const handleDelete = () => {
+    modal.confirm({
+      title: 'Delete Event?',
+      content: 'Are you sure you want to delete this event? This action is permanent and cannot be undone.',
+      okText: 'Delete',
+      okType: 'danger',
+      cancelText: 'Cancel',
+      onOk: () => {
+        return new Promise<void>((resolve, reject) => {
+          deleteMutation.mutate(eventId, {
+            onSuccess: () => {
+              message.success('Event deleted successfully');
+              setIsDirty(false);
+              router.push('/events');
+              resolve();
+            },
+            onError: (err) => {
+              const error = err as ApiError;
+              message.error(error.data?.detail || error.message || 'Failed to delete event');
+              reject(err);
+            }
+          });
+        });
+      }
+    });
   };
 
   return (
@@ -505,13 +535,14 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
           {/* SUBMISSION BUTTONS */}
           <Row justify="end" style={{ marginTop: 8 }}>
             <Space wrap>
-              <Button onClick={handleCancel} disabled={isUpdating}>Cancel</Button>
+              <Button onClick={handleCancel} disabled={isUpdating || deleteMutation.isPending}>Cancel</Button>
               <Button 
                 type="primary"
                 onClick={() => {
                   form.validateFields().then(values => handleFinish(values));
                 }}
                 loading={isUpdating}
+                disabled={deleteMutation.isPending}
               >
                 Save Changes
               </Button>
@@ -519,6 +550,26 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
           </Row>
         </Space>
       </Form>
+
+      {/* DANGER ZONE */}
+      {isAuthorizedToEdit && (
+        <Card title="Danger Zone" size="small" styles={{ header: { color: 'var(--ant-color-error)' } }} style={{ marginTop: 24, borderColor: 'var(--ant-color-error-border)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16 }}>
+            <div>
+              <Text strong style={{ display: 'block' }}>Delete Event</Text>
+              <Text type="secondary">Once you delete an event, there is no going back. Please be certain.</Text>
+            </div>
+            <Button 
+              danger 
+              onClick={handleDelete}
+              loading={deleteMutation.isPending}
+              disabled={isUpdating}
+            >
+              Delete Event
+            </Button>
+          </div>
+        </Card>
+      )}
     </div>
   );
 }

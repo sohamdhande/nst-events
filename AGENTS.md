@@ -143,3 +143,4 @@ or `packages/config`:
   clearly flagging it.
 - No touching `apps/api`, `apps/worker`, `packages/database`, or the Prisma
   schema/migrations, ever.
+- Always give a very detailed implementation plan

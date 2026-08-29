@@ -1,4 +1,5 @@
 import { withUserContext } from '@nst/database';
+import { mapDatabaseError } from '../../lib/errors/database-error-mapper';
 import { prisma } from '../../lib/prisma';
 import { NotFoundError, UnprocessableEntityError, ForbiddenError, BadRequestError } from '../../lib/errors';
 // Removed GLOBAL_ADMIN_ROLES
@@ -381,7 +382,11 @@ export const submitForApproval = async (callerId: string, eventId: string) => {
     });
     if (!event) throw new NotFoundError('Event not found');
 
-    await tx.$queryRaw`SELECT id FROM submit_event_for_approval(${eventId}::uuid)`;
+    try {
+      await tx.$queryRaw`SELECT id FROM submit_event_for_approval(${eventId}::uuid)`;
+    } catch (err: any) {
+      mapDatabaseError(err);
+    }
 
     // Notify Faculty Mentor and Platform Admins
     const clubName = event.eventClubs.find(c => c.isPrimary)?.club.name || 'A club';
@@ -427,7 +432,11 @@ export const approveEvent = async (callerId: string, eventId: string) => {
     });
     if (!event) throw new NotFoundError('Event not found');
 
-    await tx.$queryRaw`SELECT id FROM approve_event(${eventId}::uuid)`;
+    try {
+      await tx.$queryRaw`SELECT id FROM approve_event(${eventId}::uuid)`;
+    } catch (err: any) {
+      mapDatabaseError(err);
+    }
 
     const clubName = event.eventClubs.find(c => c.isPrimary)?.club.name || 'A club';
     
@@ -469,7 +478,11 @@ export const rejectEvent = async (callerId: string, eventId: string, reason: str
     });
     if (!event) throw new NotFoundError('Event not found');
 
-    await tx.$queryRaw`SELECT id FROM reject_event(${eventId}::uuid, ${reason})`;
+    try {
+      await tx.$queryRaw`SELECT id FROM reject_event(${eventId}::uuid, ${reason})`;
+    } catch (err: any) {
+      mapDatabaseError(err);
+    }
 
     const admins = await tx.clubMembership.findMany({
       where: { clubId: { in: event.eventClubs.map(c => c.clubId) }, role: 'CLUB_ADMIN', deletedAt: null },
@@ -508,10 +521,7 @@ export const lockEvent = async (callerId: string, eventId: string) => {
       return { is_locked: true };
     });
   } catch (error: any) {
-    const msg = error.message || '';
-    if (msg.includes('EVENT_LOCKED')) throw new UnprocessableEntityError('EVENT_LOCKED');
-    if (msg.includes('Unauthorized')) throw new UnprocessableEntityError('Unauthorized');
-    throw error;
+    mapDatabaseError(error);
   }
 };
 
@@ -522,10 +532,7 @@ export const unlockEvent = async (callerId: string, eventId: string) => {
       return { is_locked: false };
     });
   } catch (error: any) {
-    const msg = error.message || '';
-    if (msg.includes('EVENT_LOCKED')) throw new UnprocessableEntityError('EVENT_LOCKED');
-    if (msg.includes('Unauthorized')) throw new UnprocessableEntityError('Unauthorized');
-    throw error;
+    mapDatabaseError(error);
   }
 };
 

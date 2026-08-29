@@ -154,8 +154,8 @@ describe('Phase 26D: Leaderboard Point Deferral and Idempotency', () => {
   });
 
   it('Collision scan awards 0 points but remains PRESENT', async () => {
-    // Previous window (valid, but different signature!)
-    const token = generateCustomQrPayload(sessionId, 'SECRET', -1);
+    // Previous window (valid, but different signature! offset by 1 to avoid time-rollover flakiness)
+    const token = generateCustomQrPayload(sessionId, 'SECRET', 1);
 
     const res = await request(app)
       .post('/v1/attendance/mark')

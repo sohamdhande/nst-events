@@ -65,3 +65,11 @@ export const ListClubsQuerySchema = z.object({
     type: z.string().optional(),
   }),
 });
+
+export const ClubAnalyticsSchema = z.object({
+  params: z.object({ id: z.string().uuid() }),
+});
+
+export const ClubActivitySchema = z.object({
+  params: z.object({ id: z.string().uuid() }),
+});

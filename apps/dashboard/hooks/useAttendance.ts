@@ -95,3 +95,66 @@ export function useManualAttendance(eventId: string) {
     }
   });
 }
+
+export interface AttendanceDispute {
+  id: string;
+  attendanceRecordId: string | null;
+  sessionId: string;
+  eventId: string;
+  userId: string;
+  reason: string;
+  evidenceUrls: string[];
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  disputeWindowExpiresAt: string;
+  submittedAt: string;
+  reviewedAt: string | null;
+  reviewedBy: string | null;
+  reviewNotes: string | null;
+  createdAt: string;
+  user: {
+    id: string;
+    fullName: string | null;
+  };
+}
+
+export interface AttendanceDisputesResponse {
+  data: AttendanceDispute[];
+  nextCursor?: string | null;
+}
+
+export function useAttendanceDisputes(eventId?: string, clubId?: string) {
+  return useInfiniteQuery<AttendanceDisputesResponse>({
+    queryKey: ['attendance-disputes', eventId, clubId],
+    queryFn: async ({ pageParam = undefined }) => {
+      const cursorParam = pageParam ? `&cursor=${pageParam}` : '';
+      const eventParam = eventId ? `&filter_event_id=${eventId}` : '';
+      const clubParam = clubId ? `&filter_club_id=${clubId}` : '';
+      return apiClient<AttendanceDisputesResponse>(`/v1/attendance/disputes?limit=20${eventParam}${clubParam}${cursorParam}`);
+    },
+    getNextPageParam: (lastPage) => lastPage.nextCursor || undefined,
+    initialPageParam: undefined,
+  });
+}
+
+export function useResolveAttendanceDispute(eventId?: string, clubId?: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, resolution, review_notes }: { id: string; resolution: 'APPROVED' | 'REJECTED'; review_notes?: string }) => {
+      return apiClient(`/v1/attendance/disputes/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ resolution, review_notes })
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['attendance-disputes', eventId, clubId] });
+      if (eventId) {
+        queryClient.invalidateQueries({ queryKey: ['attendance', eventId] });
+        queryClient.invalidateQueries({ queryKey: ['event', eventId] });
+      }
+      if (clubId) {
+        queryClient.invalidateQueries({ queryKey: ['club-analytics', clubId] });
+        queryClient.invalidateQueries({ queryKey: ['club-leaderboard', 'students', clubId] });
+      }
+    }
+  });
+}

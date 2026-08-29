@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { authenticate } from '../../middleware/authenticate';
-import { requireRole, canManageClubDetails, canManageClubMembers } from '../../middleware/authorize';
+import { requireRole, canManageClubDetails, canManageClubMembers, canViewClubOversight } from '../../middleware/authorize';
 import { validate } from '../../middleware/validate';
 import { ConflictError } from '../../lib/errors';
 import {
@@ -10,6 +10,8 @@ import {
   AddMemberSchema,
   UpdateMemberRoleSchema,
   ListClubsQuerySchema,
+  ClubAnalyticsSchema,
+  ClubActivitySchema,
 } from './clubs.schema';
 import * as clubsService from './clubs.service';
 
@@ -68,6 +70,36 @@ router.get('/:id', authenticate, async (req, res, next) => {
     next(err);
   }
 });
+
+router.get(
+  '/:id/analytics',
+  authenticate,
+  canViewClubOversight((req) => req.params.id),
+  validate(ClubAnalyticsSchema),
+  async (req, res, next) => {
+    try {
+      const data = await clubsService.getClubAnalytics(req.user!.id, req.params.id);
+      res.json(data);
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+router.get(
+  '/:id/activity',
+  authenticate,
+  canViewClubOversight((req) => req.params.id),
+  validate(ClubActivitySchema),
+  async (req, res, next) => {
+    try {
+      const data = await clubsService.getClubActivity(req.user!.id, req.params.id);
+      res.json(data);
+    } catch (err) {
+      next(err);
+    }
+  }
+);
 
 router.post(
   '/',
@@ -139,11 +171,7 @@ router.post(
       );
       res.status(201).json(member);
     } catch (err: any) {
-      if (err.message === 'P2002') {
-        next(new ConflictError('User already a member'));
-      } else {
-        next(err);
-      }
+      next(err);
     }
   }
 );
@@ -151,7 +179,7 @@ router.post(
 router.patch(
   '/:id/members/:userId',
   authenticate,
-  canManageClubMembers((req) => req.params.id, ['CLUB_ADMIN', 'FACULTY_MENTOR']),
+  canManageClubMembers((req) => req.params.id, ['CLUB_ADMIN']),
   validate(UpdateMemberRoleSchema),
   async (req, res, next) => {
     try {

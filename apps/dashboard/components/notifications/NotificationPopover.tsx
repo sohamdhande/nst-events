@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Popover, List, Typography, Space, Button, Skeleton, theme, Badge } from 'antd';
+import { Popover, Typography, Space, Button, Skeleton, theme, Badge } from 'antd';
 import { BellOutlined } from '@ant-design/icons';
 import { useRouter } from 'next/navigation';
 import { useNotifications, useReadNotification, useUnreadCount, Notification } from '../../hooks/useNotifications';
@@ -56,9 +56,8 @@ export function NotificationPopover() {
         )}
 
         {!isLoading && !isError && notifications.length > 0 && (
-          <List
-            dataSource={notifications}
-            renderItem={(item) => {
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            {notifications.map((item) => {
               const isUnread = !item.readAt;
               const date = new Date(item.createdAt);
               
@@ -67,68 +66,70 @@ export function NotificationPopover() {
               const target = action?.href;
               
               return (
-                <List.Item
+                <div
+                  key={item.id}
                   style={{
                     padding: '12px 16px',
                     cursor: target ? 'pointer' : 'default',
                     backgroundColor: isUnread ? token.colorPrimaryBg : 'transparent',
                     borderBottom: `1px solid ${token.colorBorderSecondary}`,
                     transition: 'background-color 0.2s',
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: 12
                   }}
                   onClick={() => handleNotificationClick(item, target)}
                 >
-                  <List.Item.Meta
-                    avatar={<div style={{ marginTop: 2 }}>{getNotificationIcon(item.type)}</div>}
-                    title={
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
+                  <div style={{ marginTop: 2 }}>{getNotificationIcon(item.type)}</div>
+                  
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
+                      <Text 
+                        strong={isUnread} 
+                        style={{ 
+                          fontSize: 13, 
+                          lineHeight: 1.4,
+                          display: '-webkit-box',
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: 'vertical',
+                          overflow: 'hidden'
+                        }}
+                      >
+                        {item.title || item.body}
+                      </Text>
+                    </div>
+                    
+                    <div style={{ marginTop: 4 }}>
+                      {item.title && (
                         <Text 
-                          strong={isUnread} 
+                          type="secondary" 
                           style={{ 
-                            fontSize: 13, 
-                            lineHeight: 1.4,
+                            fontSize: 12, 
                             display: '-webkit-box',
-                            WebkitLineClamp: 2,
+                            WebkitLineClamp: 1,
                             WebkitBoxOrient: 'vertical',
                             overflow: 'hidden'
                           }}
                         >
-                          {item.title || item.body}
+                          {item.body}
                         </Text>
-                      </div>
-                    }
-                    description={
-                      <div style={{ marginTop: 4 }}>
-                        {item.title && (
-                          <Text 
-                            type="secondary" 
-                            style={{ 
-                              fontSize: 12, 
-                              display: '-webkit-box',
-                              WebkitLineClamp: 1,
-                              WebkitBoxOrient: 'vertical',
-                              overflow: 'hidden'
-                            }}
-                          >
-                            {item.body}
+                      )}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
+                        <Text type="secondary" style={{ fontSize: 11 }}>
+                          {date.toLocaleDateString()} {date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </Text>
+                        {action?.actionable && (
+                          <Text type="secondary" style={{ fontSize: 11, color: token.colorPrimary }}>
+                            {action.label} &rarr;
                           </Text>
                         )}
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
-                          <Text type="secondary" style={{ fontSize: 11 }}>
-                            {date.toLocaleDateString()} {date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                          </Text>
-                          {action?.actionable && (
-                            <Text type="secondary" style={{ fontSize: 11, color: token.colorPrimary }}>
-                              {action.label} &rarr;
-                            </Text>
-                          )}
-                        </div>
                       </div>
-                    }
-                  />
-                </List.Item>
+                    </div>
+                  </div>
+                </div>
               );
-            }}
-          />
+            })}
+          </div>
         )}
       </div>
 

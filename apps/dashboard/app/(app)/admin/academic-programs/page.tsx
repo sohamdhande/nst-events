@@ -4,11 +4,15 @@ import { useState } from 'react';
 import { Table, Button, Modal, Form, Input, Tag, App } from 'antd';
 import { EditOutlined, PlusOutlined } from '@ant-design/icons';
 import { useAdminAcademicPrograms, AdminAcademicProgram } from '../../../../hooks/useAdminAcademicPrograms';
+import { useCurrentUser } from '../../../../hooks/useCurrentUser';
+import { canManageAcademicCatalog } from '../../../../lib/auth-helpers';
 import { AdminPageHeader } from '../../../../components/admin/AdminPageHeader';
 
 export default function AcademicProgramsPage() {
   const { message } = App.useApp();
+  const { data: currentUser } = useCurrentUser();
   const { data, isLoading, isError, createProgram, updateProgram } = useAdminAcademicPrograms();
+  const canManage = canManageAcademicCatalog(currentUser);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [editingProgram, setEditingProgram] = useState<AdminAcademicProgram | null>(null);
   const [form] = Form.useForm();
@@ -73,13 +77,15 @@ export default function AcademicProgramsPage() {
       key: 'actions',
       width: '100px',
       render: (_: unknown, record: AdminAcademicProgram) => (
-        <Button 
-          type="text" 
-          icon={<EditOutlined />} 
-          onClick={() => handleOpenEdit(record)}
-        >
-          Edit
-        </Button>
+        canManage ? (
+          <Button 
+            type="text" 
+            icon={<EditOutlined />} 
+            onClick={() => handleOpenEdit(record)}
+          >
+            Edit
+          </Button>
+        ) : null
       ),
     },
   ];
@@ -103,11 +109,11 @@ export default function AcademicProgramsPage() {
         ]}
         title="Academic Programs"
         description="Manage the academic program catalog."
-        action={{
+        action={canManage ? {
           label: 'Create Program',
           icon: <PlusOutlined />,
           onClick: handleOpenCreate,
-        }}
+        } : undefined}
       />
 
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700 overflow-hidden">

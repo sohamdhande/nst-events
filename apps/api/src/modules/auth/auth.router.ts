@@ -79,8 +79,7 @@ authRouter.get(
       res.redirect(303, `${env.WEB_APP_URL}/dashboard`);
     } catch (err: any) {
       console.error('Login Error:', err);
-      const errMessage = encodeURIComponent(err.message || 'Unknown error');
-      res.redirect(303, `${env.WEB_APP_URL}/login?error=authentication_failed&details=${errMessage}`);
+      res.redirect(303, `${env.WEB_APP_URL}/login?error=authentication_failed`);
     }
   }
 );

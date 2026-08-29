@@ -3,8 +3,8 @@
   "compilerOptions": {
     "outDir": "dist",
     "rootDir": ".",
-    "module": "esnext",
-    "moduleResolution": "bundler"
+    "module": "CommonJS",
+    "moduleResolution": "Node"
   },
   "ts-node": {
     "esm": false,

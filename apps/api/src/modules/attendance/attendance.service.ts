@@ -1,6 +1,8 @@
 import { prisma, withUserContext } from '@nst/database';
 import { generateQrPayload, verifyQrPayload } from './totp.utils';
 import { UnprocessableEntityError, ConflictError, ForbiddenError, NotFoundError, BadRequestError } from '../../lib/errors';
+import { sanitizeOfflineError } from './attendance-error-mapper';
+import { mapDatabaseError } from '../../lib/errors/database-error-mapper';
 import { SCORE_RULES } from '../../config/score-rules';
 import { enqueueNotification } from '../notifications/notifications.producer';
 
@@ -8,31 +10,33 @@ export class AttendanceService {
   /**
    * Generates a new TOTP QR payload.
    */
-  async generateQr(sessionId: string) {
-    const session = await prisma.attendanceSession.findUnique({
-      where: { id: sessionId },
-      select: { 
-        qrSecret: true,
-        event: { select: { isLocked: true, endTime: true } }
-      },
+  async generateQr(userId: string, sessionId: string) {
+    return withUserContext(userId, async (tx) => {
+      const session = await tx.attendanceSession.findUnique({
+        where: { id: sessionId },
+        select: { 
+          qrSecret: true,
+          event: { select: { isLocked: true, endTime: true } }
+        },
+      });
+
+      if (!session) {
+        throw new Error('Session not found');
+      }
+
+      const dbTimeResult = await tx.$queryRaw<{ now: Date }[]>`SELECT now() as now`;
+      const dbNow = dbTimeResult[0].now;
+      const finalDeadline = new Date(session.event.endTime.getTime() + 24 * 60 * 60 * 1000);
+      
+      if (session.event.isLocked || dbNow >= finalDeadline) {
+        throw new UnprocessableEntityError('EVENT_LOCKED');
+      }
+
+      const qr_payload = generateQrPayload(sessionId, session.qrSecret);
+      // Expires at the end of the current 15-second window.
+      const expires_at = new Date(Math.ceil(Date.now() / 15000) * 15000).toISOString();
+      return { qr_payload, expires_at };
     });
-
-    if (!session) {
-      throw new Error('Session not found');
-    }
-
-    const dbTimeResult = await prisma.$queryRaw<{ now: Date }[]>`SELECT now() as now`;
-    const dbNow = dbTimeResult[0].now;
-    const finalDeadline = new Date(session.event.endTime.getTime() + 24 * 60 * 60 * 1000);
-    
-    if (session.event.isLocked || dbNow >= finalDeadline) {
-      throw new UnprocessableEntityError('EVENT_LOCKED');
-    }
-
-    const qr_payload = generateQrPayload(sessionId, session.qrSecret);
-    // Expires at the end of the current 15-second window.
-    const expires_at = new Date(Math.ceil(Date.now() / 15000) * 15000).toISOString();
-    return { qr_payload, expires_at };
   }
 
   /**
@@ -97,7 +101,7 @@ export class AttendanceService {
 
         const result = await tx.$queryRaw<any[]>`
           WITH rpc AS (
-            SELECT * FROM mark_attendance(
+            SELECT * FROM mark_attendance_v5(
               ${payload.session_id}::uuid,
               ${payload.totp_token},
               ${payload.latitude}::float,
@@ -133,24 +137,9 @@ export class AttendanceService {
           is_new,
         };
       });
-    } catch (error: any) {
-      // Map PostgreSQL RAISE EXCEPTION errors to HTTP 422
-      const msg = error.message || '';
-      if (msg.includes('MOCK_LOCATION_REJECTED')) throw new UnprocessableEntityError('MOCK_LOCATION_REJECTED');
-      if (msg.includes('LOCATION_UNAVAILABLE')) throw new UnprocessableEntityError('LOCATION_UNAVAILABLE');
-      if (msg.includes('INVALID_LOCATION')) throw new UnprocessableEntityError('INVALID_LOCATION');
-      if (msg.includes('LOCATION_UNRELIABLE')) throw new UnprocessableEntityError('LOCATION_UNRELIABLE');
-      if (msg.includes('SESSION_CLOSED')) throw new UnprocessableEntityError('SESSION_CLOSED');
-      if (msg.includes('EVENT_LOCKED')) throw new UnprocessableEntityError('EVENT_LOCKED');
-      if (msg.includes('OUTSIDE_GEOFENCE')) throw new UnprocessableEntityError('OUTSIDE_GEOFENCE');
-      if (msg.includes('ACADEMICALLY_INELIGIBLE')) throw new UnprocessableEntityError('ACADEMICALLY_INELIGIBLE');
-      if (msg.includes('ACADEMIC_PROFILE_MISSING')) throw new UnprocessableEntityError('ACADEMIC_PROFILE_MISSING');
-      if (msg.includes('REGISTRATION_NOT_ELIGIBLE')) throw new UnprocessableEntityError('REGISTRATION_NOT_ELIGIBLE');
-      if (msg.includes('WAITLISTED')) throw new UnprocessableEntityError('WAITLISTED');
-      if (msg.includes('NOT_REGISTERED')) throw new UnprocessableEntityError('NOT_REGISTERED');
-      if (msg.includes('UNAUTHORIZED')) throw new UnprocessableEntityError('UNAUTHORIZED');
-
-      throw error;
+    } catch (error: unknown) {
+      if ((error as any).statusCode) throw error;
+      mapDatabaseError(error);
     }
   }
 
@@ -201,7 +190,7 @@ export class AttendanceService {
       mock_location_detected: boolean;
       offline_seq: number;
     }> = [];
-    const errors: Array<{ offline_seq: number; error_code: string; message: string }> = [];
+    const errors: Array<{ user_id: string; error_code: string }> = [];
     let skipped = 0;
 
     for (const record of payload.records) {
@@ -209,9 +198,8 @@ export class AttendanceService {
       if (!secret) {
         skipped++;
         errors.push({
-          offline_seq: record.offline_seq,
+          user_id: userId,
           error_code: 'SESSION_CLOSED',
-          message: 'SESSION_CLOSED',
         });
         continue;
       }
@@ -222,9 +210,8 @@ export class AttendanceService {
       if (!isValid) {
         skipped++;
         errors.push({
-          offline_seq: record.offline_seq,
+          user_id: userId,
           error_code: 'INVALID_SIGNATURE',
-          message: 'INVALID_SIGNATURE',
         });
       } else {
         validRecords.push(record);
@@ -239,17 +226,22 @@ export class AttendanceService {
       await tx.$executeRaw`SELECT set_config('app.user_id', ${userId}, true)`;
       const recordsJson = JSON.stringify(validRecords);
 
-      return await tx.$queryRaw<any[]>`
-        SELECT sync_offline_attendance(${recordsJson}::jsonb) as result
+      const [{ result }] = await tx.$queryRaw<{ result: any }[]>`
+        SELECT sync_offline_attendance_v9(${recordsJson}::jsonb) as result
       `;
+      return result;
     });
 
-    const dbResult = result[0].result;
+    const dbResult = result;
+
+    const sanitizedDbErrors = (dbResult.errors || []).map(
+      (e: { user_id: string; error_code: string }) => sanitizeOfflineError(e)
+    );
 
     return {
       processed: dbResult.processed,
       skipped: dbResult.skipped + skipped,
-      errors: [...errors, ...(dbResult.errors || [])],
+      errors: [...errors, ...sanitizedDbErrors],
     };
   }
 
@@ -303,12 +295,12 @@ export class AttendanceService {
 
   async manualMarkAttendance(userId: string, payload: { session_id: string; user_id: string }) {
     try {
-      const result = await prisma.$transaction(async (tx) => {
+      const result = await withUserContext(userId, async (tx) => {
         const session = await tx.attendanceSession.findUnique({
           where: { id: payload.session_id },
-          select: { eventId: true }
+          select: { eventId: true },
         });
-        
+
         if (!session) throw new UnprocessableEntityError('SESSION_CLOSED');
         
         const event = await tx.event.findUnique({
@@ -326,7 +318,6 @@ export class AttendanceService {
           }
         }
 
-        await tx.$executeRaw`SELECT set_config('app.user_id', ${userId}, true)`;
         return await tx.$queryRaw<any[]>`
           WITH rpc AS (
             SELECT * FROM manual_mark_attendance(${payload.session_id}::uuid, ${payload.user_id}::uuid)
@@ -339,17 +330,9 @@ export class AttendanceService {
       const attendanceRecord = result[0];
       const is_new = attendanceRecord.is_new === 'true';
       return { attendance_record: attendanceRecord, is_new };
-    } catch (error: any) {
-      const msg = error.message || '';
-      if (msg.includes('UNAUTHORIZED')) throw new UnprocessableEntityError('UNAUTHORIZED');
-      if (msg.includes('SESSION_CLOSED')) throw new UnprocessableEntityError('SESSION_CLOSED');
-      if (msg.includes('EVENT_LOCKED')) throw new UnprocessableEntityError('EVENT_LOCKED');
-      if (msg.includes('ACADEMICALLY_INELIGIBLE')) throw new UnprocessableEntityError('ACADEMICALLY_INELIGIBLE');
-      if (msg.includes('ACADEMIC_PROFILE_MISSING')) throw new UnprocessableEntityError('ACADEMIC_PROFILE_MISSING');
-      if (msg.includes('REGISTRATION_NOT_ELIGIBLE')) throw new UnprocessableEntityError('REGISTRATION_NOT_ELIGIBLE');
-      if (msg.includes('WAITLISTED')) throw new UnprocessableEntityError('WAITLISTED');
-      if (msg.includes('NOT_REGISTERED')) throw new UnprocessableEntityError('NOT_REGISTERED');
-      throw error;
+    } catch (error: unknown) {
+      if ((error as any).statusCode) throw error;
+      mapDatabaseError(error);
     }
   }
 
@@ -367,20 +350,40 @@ export class AttendanceService {
       });
       if (!result || result.length === 0) throw new Error('Failed to submit dispute');
       return result[0];
-    } catch (error: any) {
-      const msg = error.message || '';
-      if (msg.includes('DISPUTE_WINDOW_EXPIRED')) throw new UnprocessableEntityError('DISPUTE_WINDOW_EXPIRED');
-      if (msg.includes('SESSION_CLOSED')) throw new UnprocessableEntityError('SESSION_CLOSED');
-      throw error;
+    } catch (error: unknown) {
+      mapDatabaseError(error);
     }
   }
 
   async getAttendanceDisputes(userId: string, eventId: string | undefined, query: any): Promise<{ data: any[]; nextCursor?: string }> {
     return withUserContext(userId, async (tx) => {
-      const { cursor, limit, filter_status } = query;
-      const where: any = {};
+      const { cursor, limit, filter_status, filter_club_id } = query;
+      const where: any = { deletedAt: null };
       if (eventId) where.eventId = eventId;
       if (filter_status) where.status = filter_status;
+      
+      if (filter_club_id) {
+        where.event = {
+          eventClubs: { some: { clubId: filter_club_id } }
+        };
+
+        // Explicitly verify the caller's authority over that club.
+        const user = await tx.user.findUnique({ where: { id: userId }, select: { globalRole: true } });
+        if (user && !['PLATFORM_ADMIN', 'FACULTY_ADMIN'].includes(user.globalRole)) {
+          const membership = await tx.clubMembership.findFirst({
+            where: {
+              clubId: filter_club_id,
+              userId: userId,
+              deletedAt: null,
+              role: { in: ['CLUB_ADMIN', 'CORE_MEMBER', 'FACULTY_MENTOR'] },
+            }
+          });
+          if (!membership) {
+            throw new Error('Unauthorized to view disputes for this club');
+          }
+        }
+      }
+
       const disputes = await tx.attendanceDispute.findMany({
         where,
         take: limit + 1,
@@ -437,17 +440,8 @@ export class AttendanceService {
         return rpcResult[0];
       });
       return result;
-    } catch (error: any) {
-      if (error.message.includes('UNAUTHORIZED') || error.message.includes('permission denied')) {
-        throw new ForbiddenError('Forbidden');
-      }
-      if (error.message.includes('DISPUTE_NOT_FOUND')) {
-        throw new NotFoundError('Dispute not found');
-      }
-      if (error.message.includes('ALREADY_RESOLVED')) {
-        throw new BadRequestError('Dispute is already resolved');
-      }
-      throw error;
+    } catch (error: unknown) {
+      mapDatabaseError(error);
     }
   }
 

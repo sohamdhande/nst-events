@@ -357,10 +357,13 @@ importers:
         version: 13.1.3
       ts-node:
         specifier: 10.9.2
-        version: 10.9.2(@types/node@26.2.0)(typescript@7.0.2)
+        version: 10.9.2(@types/node@26.2.0)(typescript@5.9.3)
+      ts-node-dev:
+        specifier: ^2.0.0
+        version: 2.0.0(@types/node@26.2.0)(typescript@5.9.3)
       typescript:
-        specifier: 7.0.2
-        version: 7.0.2
+        specifier: 5.9.3
+        version: 5.9.3
 
   packages/config:
     devDependencies:
@@ -14110,6 +14113,24 @@ snapshots:
       - '@swc/wasm'
       - '@types/node'
 
+  ts-node-dev@2.0.0(@types/node@26.2.0)(typescript@5.9.3):
+    dependencies:
+      chokidar: 3.6.0
+      dynamic-dedupe: 0.3.0
+      minimist: 1.2.8
+      mkdirp: 1.0.4
+      resolve: 1.22.12
+      rimraf: 2.7.1
+      source-map-support: 0.5.21
+      tree-kill: 1.2.2
+      ts-node: 10.9.2(@types/node@26.2.0)(typescript@5.9.3)
+      tsconfig: 7.0.0
+      typescript: 5.9.3
+    transitivePeerDependencies:
+      - '@swc/core'
+      - '@swc/wasm'
+      - '@types/node'
+
   ts-node@10.9.2(@types/node@20.19.43)(typescript@5.9.3):
     dependencies:
       '@cspotcode/source-map-support': 0.8.1
@@ -14118,6 +14139,24 @@ snapshots:
       '@tsconfig/node14': 1.0.3
       '@tsconfig/node16': 1.0.4
       '@types/node': 20.19.43
+      acorn: 8.18.0
+      acorn-walk: 8.3.5
+      arg: 4.1.3
+      create-require: 1.1.1
+      diff: 4.0.4
+      make-error: 1.3.6
+      typescript: 5.9.3
+      v8-compile-cache-lib: 3.0.1
+      yn: 3.1.1
+
+  ts-node@10.9.2(@types/node@26.2.0)(typescript@5.9.3):
+    dependencies:
+      '@cspotcode/source-map-support': 0.8.1
+      '@tsconfig/node10': 1.0.12
+      '@tsconfig/node12': 1.0.11
+      '@tsconfig/node14': 1.0.3
+      '@tsconfig/node16': 1.0.4
+      '@types/node': 26.2.0
       acorn: 8.18.0
       acorn-walk: 8.3.5
       arg: 4.1.3

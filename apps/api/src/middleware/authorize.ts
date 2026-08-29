@@ -78,6 +78,53 @@ export const canManageClubDetails = (
 };
 
 /**
+ * Ensures the authenticated user can view club oversight data (Analytics, Disputes, Leaderboard).
+ * Allows PLATFORM_ADMIN, FACULTY_ADMIN globally.
+ * Allows CLUB_ADMIN, CORE_MEMBER, and FACULTY_MENTOR for the specific club.
+ */
+export const canViewClubOversight = (
+  getClubId: (req: Request) => string | Promise<string>
+) => {
+  return async (req: Request, _res: Response, next: NextFunction) => {
+    try {
+      if (!req.user?.id) throw new ForbiddenError('Unauthorized access');
+      const clubId = await getClubId(req);
+      if (!clubId) throw new ForbiddenError('Club ID is required for this operation');
+
+      await withUserContext(req.user.id, async (tx) => {
+        const user = await tx.user.findUnique({
+          where: { id: req.user!.id },
+          select: { globalRole: true },
+        });
+
+        if (!user) throw new ForbiddenError('User not found');
+
+        if (['PLATFORM_ADMIN', 'FACULTY_ADMIN'].includes(user.globalRole)) {
+          return;
+        }
+
+        const membership = await tx.clubMembership.findFirst({
+          where: {
+            clubId,
+            userId: req.user!.id,
+            deletedAt: null,
+            role: { in: ['CLUB_ADMIN', 'CORE_MEMBER', 'FACULTY_MENTOR'] },
+          },
+        });
+
+        if (!membership) {
+          throw new ForbiddenError('Insufficient club role for oversight');
+        }
+      });
+
+      next();
+    } catch (error) {
+      next(error);
+    }
+  };
+};
+
+/**
  * Ensures the authenticated user can manage club memberships.
  * Allows PLATFORM_ADMIN globally, and specified roles (default: CLUB_ADMIN) for the specific club.
  * Excludes FACULTY_ADMIN from global bypass.

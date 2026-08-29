@@ -16,7 +16,7 @@ export const academicBatchesService = {
       }
 
       let isAuthorized = false;
-      if (user.globalRole === 'PLATFORM_ADMIN') {
+      if (['PLATFORM_ADMIN', 'FACULTY_ADMIN'].includes(user.globalRole)) {
         isAuthorized = true;
       } else {
         const hasClubRole = await tx.clubMembership.findFirst({

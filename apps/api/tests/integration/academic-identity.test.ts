@@ -92,8 +92,6 @@ test('Phase UI-14D Academic Identity Integration', async (t) => {
     await adminPrisma.club.deleteMany({});
     await adminPrisma.authorizedStudent.deleteMany({});
     await adminPrisma.user.deleteMany({});
-    await prisma.$disconnect();
-    await adminPrisma.$disconnect();
   });
 
   await t.test('Migration-backed Model Access', async () => {

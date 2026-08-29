@@ -4,8 +4,9 @@ import { ForbiddenError, NotFoundError, ValidationError } from '../../lib/errors
 import { withUserContext, AssignmentSource } from '@nst/database';
 
 export const adminUsersService = {
-  async listUsers(query: ListAdminUsersQuery) {
-    const { q, cursor, limit, scope } = query;
+  async listUsers(adminUserId: string, query: ListAdminUsersQuery) {
+    return withUserContext(adminUserId, async (tx) => {
+      const { q, cursor, limit, scope } = query;
     console.log("!!! ADMIN USERS QUERY !!!", query);
 
 
@@ -33,8 +34,8 @@ export const adminUsersService = {
       }
     }
 
-    const items = await prisma.user.findMany({
-      where,
+      const items = await tx.user.findMany({
+        where,
       select: {
         id: true,
         email: true,
@@ -90,24 +91,26 @@ export const adminUsersService = {
     }
     
     let platformAdminCount = 0;
-    if (scope === 'administrators') {
-      platformAdminCount = await prisma.user.count({
-        where: { globalRole: 'PLATFORM_ADMIN', deletedAt: null }
-      });
-    }
+      if (scope === 'administrators') {
+        platformAdminCount = await tx.user.count({
+          where: { globalRole: 'PLATFORM_ADMIN', deletedAt: null }
+        });
+      }
 
-    return {
-      data: items,
-      pagination: {
-        next_cursor: nextCursor,
-      },
-      ...(scope === 'administrators' ? { platform_admin_count: platformAdminCount } : {})
-    };
+      return {
+        data: items,
+        pagination: {
+          next_cursor: nextCursor,
+        },
+        ...(scope === 'administrators' ? { platform_admin_count: platformAdminCount } : {})
+      };
+    });
   },
 
-  async getUser(userId: string) {
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
+  async getUser(adminUserId: string, userId: string) {
+    return withUserContext(adminUserId, async (tx) => {
+      const user = await tx.user.findUnique({
+        where: { id: userId },
       select: {
         id: true,
         email: true,
@@ -151,11 +154,12 @@ export const adminUsersService = {
       }
     });
 
-    if (!user) {
-      throw new NotFoundError('User not found');
-    }
+      if (!user) {
+        throw new NotFoundError('User not found');
+      }
 
-    return user;
+      return user;
+    });
   },
 
   async updateUserRole(adminUserId: string, targetUserId: string, payload: UpdateAdminUserRoleBody) {
@@ -219,10 +223,19 @@ export const adminUsersService = {
 
       const targetUser = await tx.user.findUnique({
         where: { id: targetUserId },
+        include: {
+          clubMemberships: {
+            where: { role: 'CLUB_ADMIN', deletedAt: null },
+          },
+        },
       });
 
       if (!targetUser || targetUser.deletedAt) {
         throw new NotFoundError('User not found');
+      }
+
+      if (targetUser.globalRole !== 'STUDENT' || targetUser.clubMemberships.length > 0) {
+        throw new ForbiddenError('Academic batch changes are only permitted for ordinary students.');
       }
 
       const batch = await tx.academicBatch.findUnique({

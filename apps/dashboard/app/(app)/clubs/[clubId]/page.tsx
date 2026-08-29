@@ -45,30 +45,29 @@ export default function ClubDetailPage({ params }: { params: Promise<{ clubId: s
   const currentTab = validTabs.includes(activeTab) ? activeTab : 'overview';
 
   const auth = useMemo(() => {
-    let isGlobalAdmin = false;
+    let isPlatformAdmin = false;
+    let isFacultyAdmin = false;
     let isClubAdmin = false;
-    let isFacultyMentor = false;
 
     if (currentUser && club) {
-      if (currentUser.global_role === 'PLATFORM_ADMIN' || currentUser.global_role === 'FACULTY_ADMIN') {
-        isGlobalAdmin = true;
-      }
+      if (currentUser.global_role === 'PLATFORM_ADMIN') isPlatformAdmin = true;
+      if (currentUser.global_role === 'FACULTY_ADMIN') isFacultyAdmin = true;
       
       const membership = club.members.find(m => m.user_id === currentUser.id);
       if (membership) {
         if (membership.role === 'CLUB_ADMIN') isClubAdmin = true;
-        if (membership.role === 'FACULTY_MENTOR') isFacultyMentor = true;
       }
     }
 
-    const canEditClub = isGlobalAdmin || isClubAdmin;
-    const canChangeStatus = currentUser?.global_role === 'PLATFORM_ADMIN';
-    const canAddMember = isGlobalAdmin || isClubAdmin;
-    const canRemoveMember = isGlobalAdmin || isClubAdmin;
-    const canChangeMemberRole = isGlobalAdmin || isClubAdmin || isFacultyMentor;
+    const canEditClub = isPlatformAdmin || isFacultyAdmin || isClubAdmin;
+    const canChangeStatus = isPlatformAdmin;
+    const canAddMember = isPlatformAdmin || isClubAdmin;
+    const canRemoveMember = isPlatformAdmin || isClubAdmin;
+    const canChangeMemberRole = isPlatformAdmin || isClubAdmin;
 
     return {
-      isGlobalAdmin,
+      isPlatformAdmin,
+      isFacultyAdmin,
       isClubAdmin,
       canEditClub,
       canChangeStatus,

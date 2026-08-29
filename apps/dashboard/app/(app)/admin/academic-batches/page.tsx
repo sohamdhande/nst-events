@@ -6,11 +6,15 @@ import { EditOutlined, PlusOutlined } from '@ant-design/icons';
 import { useAdminAcademicBatches } from '../../../../hooks/useAdminAcademicBatches';
 import { useAdminAcademicPrograms } from '../../../../hooks/useAdminAcademicPrograms';
 import { AcademicBatch } from '../../../../hooks/useAcademicBatches';
+import { useCurrentUser } from '../../../../hooks/useCurrentUser';
+import { canManageAcademicCatalog } from '../../../../lib/auth-helpers';
 import { AdminPageHeader } from '../../../../components/admin/AdminPageHeader';
 
 export default function AcademicBatchesPage() {
+  const { data: currentUser } = useCurrentUser();
   const { data, isLoading, isError, createBatch, updateBatch } = useAdminAcademicBatches();
   const { data: programsData, isLoading: isProgramsLoading } = useAdminAcademicPrograms();
+  const canManage = canManageAcademicCatalog(currentUser);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [editingBatch, setEditingBatch] = useState<AcademicBatch | null>(null);
   const [form] = Form.useForm();
@@ -86,13 +90,15 @@ export default function AcademicBatchesPage() {
       key: 'actions',
       width: '100px',
       render: (_: unknown, record: AcademicBatch) => (
-        <Button 
-          type="text" 
-          icon={<EditOutlined />} 
-          onClick={() => handleOpenEdit(record)}
-        >
-          Edit
-        </Button>
+        canManage ? (
+          <Button 
+            type="text" 
+            icon={<EditOutlined />} 
+            onClick={() => handleOpenEdit(record)}
+          >
+            Edit
+          </Button>
+        ) : null
       ),
     },
   ];
@@ -116,11 +122,11 @@ export default function AcademicBatchesPage() {
         ]}
         title="Academic Batches"
         description="Manage academic cohorts and their program mappings."
-        action={{
+        action={canManage ? {
           label: 'Create Batch',
           icon: <PlusOutlined />,
           onClick: handleOpenCreate,
-        }}
+        } : undefined}
       />
 
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700 overflow-hidden">

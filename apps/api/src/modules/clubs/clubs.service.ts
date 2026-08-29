@@ -1,5 +1,6 @@
 import { ClubRole, ClubStatus, withUserContext, Prisma, prisma } from '@nst/database';
-import { ForbiddenError, ConflictError } from '../../lib/errors';
+import { ConflictError } from '../../lib/errors';
+import { mapDatabaseError } from '../../lib/errors/database-error-mapper';
 import { enqueueNotification } from '../notifications/notifications.producer';
 
 export const createClub = async (
@@ -7,20 +8,30 @@ export const createClub = async (
   data: { name: string; description?: string; initial_admin_id: string; banner_url?: string | null }
 ) => {
   return withUserContext(callerId, async (tx) => {
-    return tx.club.create({
-      data: {
-        name: data.name,
-        description: data.description,
-        ...(data.banner_url && { bannerUrl: data.banner_url }),
-        status: 'ACTIVE',
-        memberships: {
-          create: {
-            userId: data.initial_admin_id,
-            role: 'CLUB_ADMIN',
+    try {
+      const club = await tx.club.create({
+        data: {
+          name: data.name,
+          description: data.description,
+          ...(data.banner_url && { bannerUrl: data.banner_url }),
+          status: 'ACTIVE',
+          memberships: {
+            create: {
+              userId: data.initial_admin_id,
+              role: 'CLUB_ADMIN',
+            },
           },
         },
-      },
-    });
+      });
+      await tx.$executeRaw`SELECT increment_user_security_version(${data.initial_admin_id}::uuid)`;
+      return club;
+    } catch (err: any) {
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
+        throw new ConflictError('Club name already exists');
+      }
+      mapDatabaseError(err);
+      throw err;
+    }
   });
 };
 
@@ -221,19 +232,13 @@ export const addMember = async (
           role,
         },
       });
-      await tx.user.update({
-        where: { id: userId },
-        data: { securityVersion: { increment: 1 } },
-      });
+      await tx.$executeRaw`SELECT increment_user_security_version(${userId}::uuid)`;
       return { id: membership.id, user_id: membership.userId, role: membership.role };
     } catch (err: any) {
       if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
-        throw new Error('P2002');
+        throw new ConflictError('User already a member');
       }
-      if (err.code === '42501' || err.meta?.code === '42501') {
-        throw new ForbiddenError('Access denied by Row-Level Security');
-      }
-      throw err;
+      mapDatabaseError(err);
     }
   });
 };
@@ -256,10 +261,7 @@ export const updateMemberRole = async (
         where: { id: membership.id },
         data: { role },
       });
-      await tx.user.update({
-        where: { id: userId },
-        data: { securityVersion: { increment: 1 } },
-      });
+      await tx.$executeRaw`SELECT increment_user_security_version(${userId}::uuid)`;
 
       const club = await tx.club.findUnique({
         where: { id: clubId },
@@ -287,10 +289,7 @@ export const updateMemberRole = async (
       if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2025') {
         return null;
       }
-      if (err.code === '42501' || err.meta?.code === '42501') {
-        throw new ForbiddenError('Access denied by Row-Level Security');
-      }
-      throw err;
+      mapDatabaseError(err);
     }
   });
 };
@@ -308,19 +307,13 @@ export const removeMember = async (callerId: string, clubId: string, userId: str
         where: { id: membership.id },
         data: { deletedAt: new Date() },
       });
-      await tx.user.update({
-        where: { id: userId },
-        data: { securityVersion: { increment: 1 } },
-      });
+      await tx.$executeRaw`SELECT increment_user_security_version(${userId}::uuid)`;
       return true;
     } catch (err: any) {
       if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2025') {
         return false;
       }
-      if (err.code === '42501' || err.meta?.code === '42501') {
-        throw new ForbiddenError('Access denied by Row-Level Security');
-      }
-      throw err;
+      mapDatabaseError(err);
     }
   });
 };
@@ -384,3 +377,111 @@ export const searchClubs = async (
   });
 };
 
+
+export const getClubAnalytics = async (callerId: string, clubId: string) => {
+  return withUserContext(callerId, async (tx) => {
+    // 1. Total events
+    const total_events = await tx.event.count({
+      where: { eventClubs: { some: { clubId } }, deletedAt: null },
+    });
+
+    // 2. Pipeline counts
+    const events = await tx.event.findMany({
+      where: { eventClubs: { some: { clubId } }, deletedAt: null },
+      select: { state: true },
+    });
+    
+    const pipeline_counts: Record<string, number> = {
+      DRAFT: 0,
+      PENDING_APPROVAL: 0,
+      PUBLISHED: 0,
+      LOCKED: 0,
+      ARCHIVED: 0,
+    };
+    for (const evt of events) {
+      pipeline_counts[evt.state] = (pipeline_counts[evt.state] || 0) + 1;
+    }
+
+    // 3. Total registrations
+    const total_registrations = await tx.eventRegistration.count({
+      where: {
+        event: { eventClubs: { some: { clubId } }, deletedAt: null },
+        deletedAt: null,
+      },
+    });
+
+    // 4. Total attendance
+    const total_attendance = await tx.attendanceRecord.count({
+      where: {
+        session: { event: { eventClubs: { some: { clubId } } } },
+        status: 'PRESENT',
+      },
+    });
+
+    // 5. Unique attendees
+    const unique_attendees_groups = await tx.attendanceRecord.groupBy({
+      by: ['userId'],
+      where: {
+        session: { event: { eventClubs: { some: { clubId } } } },
+        status: 'PRESENT',
+      },
+    });
+    const unique_attendees = unique_attendees_groups.length;
+
+    // 6. Attendance Rate
+    const attendance_rate = total_registrations > 0 
+      ? Math.round((total_attendance / total_registrations) * 100)
+      : 0;
+
+    return {
+      total_events,
+      total_registrations,
+      total_attendance,
+      unique_attendees,
+      attendance_rate,
+      pipeline_counts,
+    };
+  });
+};
+
+export const getClubActivity = async (callerId: string, clubId: string) => {
+  return withUserContext(callerId, async (tx) => {
+    // Audit logs for events in this club
+    const clubEvents = await tx.eventClub.findMany({
+      where: { clubId },
+      select: { eventId: true },
+    });
+    const eventIds = clubEvents.map(e => e.eventId);
+
+    if (eventIds.length === 0) {
+      return [];
+    }
+
+    // Bypass RLS safely by executing Prisma query as system but strictly filtering to eventIds
+    // We must use queryRaw because auditLogs RLS blocks normal select unless PLATFORM_ADMIN.
+    const auditLogs = await prisma.$queryRaw<any[]>`
+      SELECT 
+        al.id, 
+        al.action, 
+        al.entity_type, 
+        al.entity_id, 
+        al.created_at,
+        u.full_name as actor_name
+      FROM audit_logs al
+      LEFT JOIN users u ON u.id = al.actor_id
+      WHERE al.entity_type = 'EVENT' 
+        AND al.entity_id::uuid = ANY (${eventIds}::uuid[])
+      ORDER BY al.created_at DESC
+      LIMIT 50
+    `;
+
+    return auditLogs.map(log => ({
+      id: log.id.toString(),
+      action: log.action,
+      entity_type: log.entity_type,
+      entity_id: log.entity_id,
+      created_at: log.created_at,
+      actor_name: log.actor_name || 'System',
+    }));
+  });
+};

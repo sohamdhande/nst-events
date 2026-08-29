@@ -27,6 +27,8 @@ describe('ATTENDANCE-06: Offline Identity Binding BOLA Protection', () => {
     await adminPrisma.consumedQrSignature.deleteMany({});
     await adminPrisma.attendanceSession.deleteMany({});
     await adminPrisma.eventRegistration.deleteMany({});
+    await adminPrisma.eventAudienceBatch.deleteMany({});
+    await adminPrisma.eventClub.deleteMany({});
     await adminPrisma.event.deleteMany({});
     await adminPrisma.leaderboardScore.deleteMany({});
     await adminPrisma.user.deleteMany({

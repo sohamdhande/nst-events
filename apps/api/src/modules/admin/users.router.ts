@@ -16,7 +16,8 @@ adminUsersRouter.get(
   validate(listAdminUsersSchema),
   async (req, res, next) => {
     try {
-      const result = await adminUsersService.listUsers(req.query as any);
+      const adminId = req.user!.id;
+      const result = await adminUsersService.listUsers(adminId, req.query as any);
       res.status(200).json(result);
     } catch (err) {
       console.error("ADMIN_BATCH_ERR:", err); next(err);
@@ -31,7 +32,8 @@ adminUsersRouter.get(
   requireRole(['PLATFORM_ADMIN', 'FACULTY_ADMIN']),
   async (req, res, next) => {
     try {
-      const result = await adminUsersService.getUser(req.params.userId);
+      const adminId = req.user!.id;
+      const result = await adminUsersService.getUser(adminId, req.params.userId);
       res.status(200).json(result);
     } catch (err) {
       console.error("ADMIN_USER_GET_ERR:", err); next(err);

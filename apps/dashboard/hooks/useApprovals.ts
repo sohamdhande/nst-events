@@ -18,12 +18,17 @@ export interface ApprovalsResponse {
   };
 }
 
-export const useApprovals = () => {
+export const useApprovals = (clubId?: string) => {
   const queryClient = useQueryClient();
 
   const query = useQuery<ApprovalsResponse>({
-    queryKey: ['events', 'pending'],
-    queryFn: () => apiClient<ApprovalsResponse>('/v1/events?filter_state=PENDING_APPROVAL'),
+    queryKey: ['events', 'pending', clubId],
+    queryFn: () => {
+      const url = clubId 
+        ? `/v1/events?filter_state=PENDING_APPROVAL&filter_club_id=${clubId}`
+        : `/v1/events?filter_state=PENDING_APPROVAL`;
+      return apiClient<ApprovalsResponse>(url);
+    },
     staleTime: 5 * 60 * 1000,
   });
 
@@ -32,13 +37,14 @@ export const useApprovals = () => {
       apiClient(`/v1/events/${eventId}/approve`, { method: 'POST' }),
     onSuccess: (_, eventId) => {
       // Optimistic invalidation mapping
-      queryClient.setQueryData<ApprovalsResponse>(['events', 'pending'], (oldData) => {
+      queryClient.setQueryData<ApprovalsResponse>(['events', 'pending', clubId], (oldData) => {
         if (!oldData) return oldData;
         return {
           ...oldData,
           data: oldData.data.filter((evt) => evt.id !== eventId),
         };
       });
+      queryClient.invalidateQueries({ queryKey: ['events', 'pending'] });
       queryClient.invalidateQueries({ queryKey: ['events', 'list'] });
       queryClient.invalidateQueries({ queryKey: ['event', eventId] });
     },
@@ -51,13 +57,14 @@ export const useApprovals = () => {
         body: JSON.stringify({ rejection_reason: reason }),
       }),
     onSuccess: (_, { eventId }) => {
-      queryClient.setQueryData<ApprovalsResponse>(['events', 'pending'], (oldData) => {
+      queryClient.setQueryData<ApprovalsResponse>(['events', 'pending', clubId], (oldData) => {
         if (!oldData) return oldData;
         return {
           ...oldData,
           data: oldData.data.filter((evt) => evt.id !== eventId),
         };
       });
+      queryClient.invalidateQueries({ queryKey: ['events', 'pending'] });
       queryClient.invalidateQueries({ queryKey: ['events', 'list'] });
       queryClient.invalidateQueries({ queryKey: ['event', eventId] });
     },

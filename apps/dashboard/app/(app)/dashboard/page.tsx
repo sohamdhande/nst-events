@@ -13,6 +13,7 @@ import { useNotifications, Notification } from '../../../hooks/useNotifications'
 import { resolveManagementAction, ManagementAction } from '../../../lib/action-utils';
 import { resolveEventLockState } from '../../../lib/event-utils';
 import { CurrentUser, ClubMembership } from '../../../hooks/useCurrentUser';
+import { FacultyMentorDashboard } from './FacultyMentorDashboard';
 
 const { Title, Text } = Typography;
 const { useToken } = theme;
@@ -311,6 +312,13 @@ export default function DashboardPage() {
   const userMentorClubs = currentUser.club_memberships?.filter((m: ClubMembership) => m.role === 'FACULTY_MENTOR').map((m: ClubMembership) => m.club_id) || [];
   const canApprove = isGlobalAdmin || userMentorClubs.length > 0;
 
+  const currentUserRoles = { 
+    isGlobalAdmin, 
+    isMentor: userMentorClubs.length > 0, 
+    isClubAdmin: userAdminClubs.length > 0, 
+    isCoreMember: userCoreClubs.length > 0 
+  };
+
   // Top Operational Summary
   const pendingApprovalsCount = approvalsData?.data?.length || 0;
   const deadLettersCount = queueData?.dead_letter_count || 0;
@@ -588,12 +596,29 @@ export default function DashboardPage() {
     },
   ];
 
+  // FACULTY MENTOR OVERRIDE
+  const isOnlyMentor = currentUserRoles.isMentor && !currentUserRoles.isGlobalAdmin && !currentUserRoles.isClubAdmin && !currentUserRoles.isCoreMember;
+
+  if (isOnlyMentor) {
+    return (
+      <div style={{ padding: '0 0 24px 0', maxWidth: 1200, margin: '0 auto' }}>
+        <FacultyMentorDashboard currentUser={currentUser} />
+      </div>
+    );
+  }
+
   return (
     <div style={{ maxWidth: 1400, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 20 }}>
       <div>
         <Title level={4} style={{ margin: 0 }}>Operations Dashboard</Title>
         <Text type="secondary" style={{ fontSize: 13 }}>Institutional management overview</Text>
       </div>
+
+      {currentUserRoles.isMentor && (
+        <div style={{ marginBottom: 12 }}>
+          <FacultyMentorDashboard currentUser={currentUser} />
+        </div>
+      )}
 
       {isEventsError && (
         <Alert

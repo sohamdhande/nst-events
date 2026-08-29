@@ -127,7 +127,7 @@ describe('Team Lifecycle Integration Tests', () => {
   });
 
   it('should prevent leader from leaving directly', async () => {
-    await assert.rejects(leaveTeam(leaderId, teamId), { message: /Leader cannot leave/ });
+    await assert.rejects(leaveTeam(leaderId, teamId), { message: /LEADER_CANNOT_LEAVE/ });
   });
 
   it('should allow admin to transfer leadership', async () => {

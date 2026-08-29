@@ -48,7 +48,7 @@ export const dashboardService = {
         pending_approvals = pendingEvents;
       } else {
         const adminClubs = await tx.clubMembership.findMany({
-          where: { userId, role: { in: ['CLUB_ADMIN', 'CORE_MEMBER'] }, deletedAt: null },
+          where: { userId, role: { in: ['CLUB_ADMIN', 'CORE_MEMBER', 'FACULTY_MENTOR'] }, deletedAt: null },
           select: { clubId: true },
         });
 

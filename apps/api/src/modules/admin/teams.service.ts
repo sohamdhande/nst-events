@@ -4,6 +4,7 @@ import { prisma } from '../../lib/prisma';
 import { NotFoundError, BadRequestError } from '../../lib/errors';
 import { checkAudienceEligibility } from '../events/audience.service';
 import * as teamsService from '../teams/teams.service';
+import { mapDatabaseError } from '../../lib/errors/database-error-mapper';
 
 const checkEventLock = (event: any) => {
   const isLocked = event.isLocked || new Date() >= new Date(event.endTime.getTime() + 24 * 60 * 60 * 1000);
@@ -12,37 +13,15 @@ const checkEventLock = (event: any) => {
 
 export const manualWaitlistPromotion = async (userId: string, teamId: string) => {
   return withUserContext(userId, async (tx) => {
-    const team = await tx.team.findUnique({ where: { id: teamId }, include: { event: true } });
+    const team = await tx.team.findUnique({ where: { id: teamId } });
     if (!team) throw new NotFoundError('Team not found');
-    if (team.status !== 'WAITLISTED') throw new BadRequestError('Team is not waitlisted');
-    checkEventLock(team.event);
-
-    const activeMembersCount = await tx.eventRegistration.count({
-      where: { teamId, deletedAt: null }
-    });
-
-    const capacityLeft = team.event.maxCapacity !== null 
-      ? team.event.maxCapacity - team.event.registrationCount 
-      : 999999;
-
-    if (activeMembersCount > capacityLeft) {
-      throw new BadRequestError('Not enough capacity for the entire team');
+    
+    try {
+      await tx.$queryRaw`SELECT manual_promote_team(${teamId}::uuid)`;
+    } catch (err: any) {
+      mapDatabaseError(err);
+      throw err;
     }
-
-    await tx.team.update({
-      where: { id: teamId },
-      data: { status: 'REGISTERED' }
-    });
-
-    await tx.eventRegistration.updateMany({
-      where: { teamId, deletedAt: null },
-      data: { registrationStatus: 'REGISTERED' }
-    });
-
-    await tx.event.update({
-      where: { id: team.eventId },
-      data: { registrationCount: team.event.registrationCount + activeMembersCount }
-    });
 
     await tx.auditLog.create({
       data: {
@@ -55,6 +34,28 @@ export const manualWaitlistPromotion = async (userId: string, teamId: string) =>
       }
     });
 
+    const members = await tx.eventRegistration.findMany({
+      where: { teamId, deletedAt: null },
+      select: { userId: true }
+    });
+
+    for (const member of members) {
+      await enqueueNotification({
+        tx,
+        userId: member.userId,
+        type: 'WAITLIST_PROMOTED',
+        title: 'You are off the waitlist!',
+        body: 'A spot opened up and your team is now registered.',
+        metadata: {
+          schema_version: 1,
+          routing: { target: 'event_details', fallback: '/events', params: { id: team.eventId } },
+          entity_ids: { event_id: team.eventId }
+        },
+        preferenceGate: 'push_enabled',
+        idempotencyString: `WAITLIST_PROMOTED:${member.userId}:${team.eventId}`
+      });
+    }
+
     return { status: 'REGISTERED' };
   });
 };
@@ -63,11 +64,17 @@ export const cancelTeam = async (userId: string, teamId: string) => {
   return withUserContext(userId, async (tx) => {
     const team = await tx.team.findUnique({ where: { id: teamId }, include: { event: true } });
     if (!team) throw new NotFoundError('Team not found');
-    checkEventLock(team.event);
 
-    const result = await tx.$queryRaw<{ cancel_team: string[] }[]>`
-      SELECT cancel_team(${team.eventId}::uuid, ${teamId}::uuid);
-    `;
+    let result;
+    try {
+      result = await tx.$queryRaw<{ cancel_team: string[] }[]>`
+        SELECT cancel_team(${team.eventId}::uuid, ${teamId}::uuid);
+      `;
+    } catch (err) {
+      mapDatabaseError(err);
+      throw err;
+    }
+    if (!result || result.length === 0) throw new BadRequestError('Failed to cancel team');
 
     await tx.auditLog.create({
       data: {
@@ -113,15 +120,20 @@ export const removeMember = async (userId: string, teamId: string, targetUserId:
   return withUserContext(userId, async (tx) => {
     const team = await tx.team.findUnique({ where: { id: teamId }, include: { event: true } });
     if (!team) throw new NotFoundError('Team not found');
-    checkEventLock(team.event);
 
     if (team.leaderId === targetUserId) {
       throw new BadRequestError('Cannot remove leader. Transfer leadership first.');
     }
 
-    const result = await tx.$queryRaw<{ leave_team: string[] }[]>`
-      SELECT leave_team(${team.eventId}::uuid, ${teamId}::uuid, ${targetUserId}::uuid);
-    `;
+    let result;
+    try {
+      result = await tx.$queryRaw<{ leave_team: string[] }[]>`
+        SELECT leave_team(${team.eventId}::uuid, ${teamId}::uuid, ${targetUserId}::uuid);
+      `;
+    } catch (err) {
+      mapDatabaseError(err);
+      throw err;
+    }
 
     await tx.auditLog.create({
       data: {
@@ -155,9 +167,16 @@ export const transferLeadership = async (userId: string, teamId: string, newLead
     
     await checkAudienceEligibility(team.eventId, newLeaderId, tx);
 
-    const result = await tx.$queryRaw<{ transfer_leadership: any }[]>`
-      SELECT transfer_leadership(${team.eventId}::uuid, ${teamId}::uuid, ${newLeaderId}::uuid);
-    `;
+    let result;
+    try {
+      result = await tx.$queryRaw<{ transfer_leadership: any }[]>`
+        SELECT transfer_leadership(${team.eventId}::uuid, ${teamId}::uuid, ${newLeaderId}::uuid);
+      `;
+    } catch (err) {
+      mapDatabaseError(err);
+      throw err;
+    }
+    if (!result || result.length === 0) throw new BadRequestError('Failed to transfer leadership');
 
     await tx.auditLog.create({
       data: {
@@ -225,7 +244,13 @@ export const cancelInvitation = async (userId: string, teamId: string, invitatio
   return withUserContext(userId, async (tx) => {
     const team = await tx.team.findUnique({ where: { id: teamId }, include: { event: true } });
     if (!team) throw new NotFoundError('Team not found');
-    checkEventLock(team.event);
+
+    const dbTimeResult = await tx.$queryRaw<{ now: Date }[]>`SELECT now() as now`;
+    const dbNow = dbTimeResult[0].now;
+    const finalDeadline = new Date(team.event.endTime.getTime() + 24 * 60 * 60 * 1000);
+    if (team.event.isLocked || dbNow >= finalDeadline) {
+      throw new BadRequestError('Event is locked');
+    }
 
     const inv = await tx.teamInvitation.findFirst({
       where: { id: invitationId, teamId }

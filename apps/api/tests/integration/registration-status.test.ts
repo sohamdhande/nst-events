@@ -58,6 +58,7 @@ describe('Participant Registration Status', () => {
     await adminPrisma.event.delete({ where: { id: eventId } });
     await adminPrisma.clubMembership.deleteMany({ where: { clubId } });
     await adminPrisma.club.delete({ where: { id: clubId } });
+    await adminPrisma.notification.deleteMany({ where: { userId: { in: [organizerId, participantAId, participantBId] } } });
     await adminPrisma.user.deleteMany({ where: { id: { in: [organizerId, participantAId, participantBId] } } });
   });
 

@@ -62,6 +62,8 @@ export function createApp(): Express {
     standardHeaders: true,
     legacyHeaders: false,
     skip: (req) => {
+      // Disable global rate limiting in development
+      if (process.env.NODE_ENV === 'development') return true;
       // Exclude SSE, health, and ready endpoints
       if (req.path === '/health' || req.path === '/ready') return true;
       if (req.path.match(/^\/v1\/events\/[^\/]+\/live$/)) return true;

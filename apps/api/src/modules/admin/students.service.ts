@@ -4,7 +4,7 @@ import { BadRequestError, NotFoundError } from '../../lib/errors';
 import { DirectoryStatus } from '@nst/database';
 
 export const studentsService = {
-  async listStudents(query: { q?: string; cursor?: string; limit: number; status?: string }) {
+  async listStudents(adminUserId: string, query: { q?: string; cursor?: string; limit: number; status?: string }) {
     const { q, cursor, limit, status } = query;
 
     const where: any = {};
@@ -15,59 +15,66 @@ export const studentsService = {
       where.status = status;
     }
 
-    const items = await prisma.authorizedStudent.findMany({
-      where,
-      take: limit + 1,
-      cursor: cursor ? { id: cursor } : undefined,
-      orderBy: { createdAt: 'desc' },
-    });
+    return withUserContext(adminUserId, async (tx) => {
+      const items = await tx.authorizedStudent.findMany({
+        where,
+        take: limit + 1,
+        cursor: cursor ? { id: cursor } : undefined,
+        orderBy: { createdAt: 'desc' },
+      });
 
-    let nextCursor: string | undefined = undefined;
-    if (items.length > limit) {
-      const nextItem = items.pop();
-      nextCursor = nextItem!.id;
-    }
+      let nextCursor: string | undefined = undefined;
+      if (items.length > limit) {
+        const nextItem = items.pop();
+        nextCursor = nextItem!.id;
+      }
 
-    // Attempt to join with User and UserAcademicProfile to enrich the output
-    // for users who have already logged in.
-    const enrichedItems = await Promise.all(
-      items.map(async (student) => {
-        const user = await prisma.user.findUnique({
-          where: { email: student.normalizedEmail },
-          select: {
-            id: true,
-            fullName: true,
-            academicProfile: {
-              select: {
-                batch: {
-                  select: {
-                    admissionYear: true,
-                    graduationYear: true,
-                    program: {
-                      select: {
-                        name: true,
-                        code: true,
+      // Attempt to join with User and UserAcademicProfile to enrich the output
+      // for users who have already logged in.
+      const enrichedItems = await Promise.all(
+        items.map(async (student) => {
+          const user = await tx.user.findUnique({
+            where: { email: student.normalizedEmail },
+            select: {
+              id: true,
+              fullName: true,
+              globalRole: true,
+              clubMemberships: {
+                where: { role: 'CLUB_ADMIN', deletedAt: null },
+                select: { role: true },
+              },
+              academicProfile: {
+                select: {
+                  batch: {
+                    select: {
+                      admissionYear: true,
+                      graduationYear: true,
+                      program: {
+                        select: {
+                          name: true,
+                          code: true,
+                        },
                       },
                     },
                   },
                 },
               },
             },
-          },
-        });
-        return {
-          ...student,
-          user,
-        };
-      })
-    );
+          });
+          return {
+            ...student,
+            user,
+          };
+        })
+      );
 
-    return {
-      data: enrichedItems,
-      pagination: {
-        next_cursor: nextCursor,
-      },
-    };
+      return {
+        data: enrichedItems,
+        pagination: {
+          next_cursor: nextCursor,
+        },
+      };
+    });
   },
 
   async addStudent(adminUserId: string, email: string) {

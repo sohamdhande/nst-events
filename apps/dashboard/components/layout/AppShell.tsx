@@ -23,6 +23,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import { useTheme } from 'next-themes';
 import { useCurrentUser } from '../../hooks/useCurrentUser';
 import { getWebAuthStore } from '../../lib/auth-store';
+import { canViewStudentDirectory, canViewAcademicCatalog } from '../../lib/auth-helpers';
 import { NotificationPopover } from '../notifications/NotificationPopover';
 import { useRealtimeNotifications } from '../../hooks/useRealtimeNotifications';
 
@@ -125,10 +126,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       adminChildren.push({ key: '/admin/approvals', icon: <CheckSquareOutlined />, label: 'Approvals' });
     }
     
-    if (isPlatformAdmin) {
+    if (canViewStudentDirectory(currentUser)) {
       adminChildren.push({ key: '/admin/users', icon: <UserOutlined />, label: 'Users & Roles' });
+    }
+    
+    if (canViewAcademicCatalog(currentUser)) {
       adminChildren.push({ key: '/admin/academic-programs', icon: <BookOutlined />, label: 'Academic Programs' });
       adminChildren.push({ key: '/admin/academic-batches', icon: <BlockOutlined />, label: 'Academic Batches' });
+    }
+
+    if (isPlatformAdmin) {
       adminChildren.push({ key: '/admin/audit-logs', icon: <FileTextOutlined />, label: 'Audit Logs' });
       adminChildren.push({ key: '/admin/queues', icon: <MonitorOutlined />, label: 'Queues' });
     }

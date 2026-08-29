@@ -61,7 +61,7 @@ export const apiClient = async <T = any>(endpoint: string, options: RequestInit 
 
     throw new ApiError(
       response.status,
-      errorBody?.message || 'API Request Failed',
+      errorBody?.detail || errorBody?.message || 'API Request Failed',
       errorBody,
       requestId
     );

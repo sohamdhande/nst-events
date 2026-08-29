@@ -77,6 +77,7 @@ export const getDisputesSchema = z.object({
     limit: z.coerce.number().min(1).max(100).default(20),
     filter_status: z.enum(['PENDING', 'APPROVED', 'REJECTED']).optional(),
     filter_event_id: z.string().uuid().optional(),
+    filter_club_id: z.string().uuid().optional(),
   }),
 });
 

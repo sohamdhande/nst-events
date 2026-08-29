@@ -20,9 +20,10 @@ export interface AuditLogsResponse {
   };
 }
 
-export const useAuditLogs = () => {
+export const useAuditLogs = (options?: { enabled?: boolean }) => {
   return useQuery<AuditLogsResponse>({
     queryKey: ['admin-audit-logs'],
     queryFn: () => apiClient<AuditLogsResponse>('/v1/admin/audit-logs'),
+    enabled: options?.enabled !== false,
   });
 };

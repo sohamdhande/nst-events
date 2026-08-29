@@ -3,14 +3,21 @@
 import React, { useState } from 'react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { useCurrentUser } from '../../../../hooks/useCurrentUser';
-import { useAdminUsers, useUpdateUserRole, useUpdateUserAcademicBatch, AdminUser, useProvisionUser } from '../../../../hooks/useUserManagement';
+import { useAdminUsers, useUpdateUserRole, useUpdateUserAcademicBatch, AdminUser, useProvisionUser, useRevokeUserSessions } from '../../../../hooks/useUserManagement';
 import { useAdminAcademicBatches } from '../../../../hooks/useAdminAcademicBatches';
 import { useAdminStudents, useAddStudent, useRemoveStudent, useImportStudents, AuthorizedStudent } from '../../../../hooks/useAdminStudents';
 import { useClubs } from '../../../../hooks/useClubs';
-import { Input, Button, Table, Badge, Modal, Select, Tag, Dropdown, Tabs, Upload, message, Skeleton, Result, Tooltip, Popover } from 'antd';
+import { Input, Button, Table, Badge, Modal, Select, Tag, Dropdown, Tabs, Upload, App, Skeleton, Result, Tooltip, Popover } from 'antd';
 import { SearchOutlined, UploadOutlined, ExclamationCircleOutlined, InfoCircleOutlined } from '@ant-design/icons';
 import { AdminPageHeader } from '../../../../components/admin/AdminPageHeader';
-import { canViewStudentDirectory, canManageStudentDirectory } from '../../../../lib/auth-helpers';
+import { 
+  canViewStudentDirectory, 
+  canManageStudentDirectory, 
+  canRevokeUserSessions, 
+  canChangeAcademicBatch,
+  canChangeGlobalRole,
+  canViewTargetClub
+} from '../../../../lib/auth-helpers';
 
 const ROLE_OPTIONS = [
   { value: 'STUDENT', label: 'Student' },
@@ -20,6 +27,7 @@ const ROLE_OPTIONS = [
 ];
 
 export default function UserManagementPage() {
+  const { message } = App.useApp();
   const router = useRouter();
   const searchParams = useSearchParams();
   const pathname = usePathname();
@@ -63,6 +71,7 @@ export default function UserManagementPage() {
   const removeStudent = useRemoveStudent();
   const importStudents = useImportStudents();
   const provisionUser = useProvisionUser();
+  const revokeSessions = useRevokeUserSessions();
 
   // Navigation Helper
   const setParam = (key: string, value: string) => {
@@ -226,6 +235,26 @@ export default function UserManagementPage() {
     });
   };
 
+  const handleRevokeSessions = (user: AdminUser) => {
+    Modal.confirm({
+      title: 'Force Logout User?',
+      icon: <ExclamationCircleOutlined className="text-red-500" />,
+      content: `This will immediately revoke all active refresh sessions for ${user.fullName || user.email}. They will be forced to log in again on all their devices.`,
+      okText: 'Force Logout',
+      okType: 'danger',
+      cancelText: 'Cancel',
+      onOk: async () => {
+        try {
+          await revokeSessions.mutateAsync(user.id);
+          message.success('User sessions revoked successfully');
+        } catch (err: unknown) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          message.error((err as any).response?.data?.error || 'Failed to revoke sessions');
+        }
+      }
+    });
+  };
+
   const adminColumns = [
     { title: 'Name', dataIndex: 'fullName', key: 'fullName', render: (text: string) => <span className="font-medium">{text ?? 'Not yet registered'}</span> },
     { title: 'Email', dataIndex: 'email', key: 'email', render: (text: string) => <span style={{ opacity: 0.65 }}>{text}</span> },
@@ -289,11 +318,9 @@ export default function UserManagementPage() {
       title: 'Actions',
       key: 'actions',
       render: (_: unknown, user: AdminUser) => {
-        const isClubAdmin = user.clubMemberships && user.clubMemberships.length > 0;
-        
         const items = [];
         
-        if (['PLATFORM_ADMIN', 'FACULTY_ADMIN', 'FACULTY_MENTOR'].includes(user.globalRole)) {
+        if (canChangeGlobalRole(currentUser, user)) {
           const isSelf = currentUser?.id === user.id;
           items.push({ 
             key: 'role', 
@@ -312,7 +339,7 @@ export default function UserManagementPage() {
           });
         }
         
-        if (isClubAdmin) {
+        if (canViewTargetClub(currentUser, user)) {
           items.push({ 
             key: 'view_club', 
             label: user.clubMemberships!.length > 1 ? 'View Clubs' : 'View Club', 
@@ -323,8 +350,22 @@ export default function UserManagementPage() {
             } 
           });
         } 
-        if (items.length === 0) return null;
-        return isPlatformAdmin ? <Dropdown menu={{ items }} trigger={['click']}><Button size="small">Actions ▾</Button></Dropdown> : null;
+        
+        if (canRevokeUserSessions(currentUser, user)) {
+          items.push({
+            type: 'divider' as const,
+          });
+          items.push({
+            key: 'force_logout',
+            label: <span className="text-red-500">Force Logout</span>,
+            onClick: () => handleRevokeSessions(user),
+          });
+        }
+        
+
+        
+        if (items.length === 0) return <span style={{ opacity: 0.45 }}>-</span>;
+        return <Dropdown menu={{ items }} trigger={['click']}><Button size="small">Actions ▾</Button></Dropdown>;
       },
       align: 'right' as const,
     },
@@ -333,20 +374,68 @@ export default function UserManagementPage() {
   const studentColumns = [
     { title: 'Student', key: 'student', render: (_: unknown, row: AuthorizedStudent) => (
       <div className="flex flex-col">
-        <span className="font-medium">{row.user ? row.user.fullName : 'Not yet registered'}</span>
+        <span className="font-medium">
+          {row.user ? row.user.fullName : <span className="text-gray-400 font-normal italic">Not yet registered (Directory only)</span>}
+        </span>
         <span className="text-sm" style={{ opacity: 0.65 }}>{row.normalizedEmail}</span>
       </div>
     )},
     { title: 'Program', key: 'program', render: (_: unknown, row: AuthorizedStudent) => row.user?.academicProfile ? <Tag color="blue">{row.user.academicProfile.batch?.program?.code}</Tag> : <span style={{ opacity: 0.45 }}>-</span> },
     { title: 'Batch', key: 'batch', render: (_: unknown, row: AuthorizedStudent) => row.user?.academicProfile ? <span>{row.user.academicProfile.batch?.admissionYear}-{row.user.academicProfile.batch?.graduationYear}</span> : <span style={{ opacity: 0.45 }}>-</span> },
-    { title: 'Eligibility', dataIndex: 'status', key: 'status', render: (status: string) => (
+    { title: 'Status', dataIndex: 'status', key: 'status', render: (status: string) => (
       <span className={`px-2 py-1 rounded-full text-xs font-semibold ${status === 'ACTIVE' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
         {status === 'ACTIVE' ? 'Active' : 'Revoked'}
       </span>
     )},
-    { title: 'Actions', key: 'actions', render: (_: unknown, row: AuthorizedStudent) => row.status === 'ACTIVE' && isPlatformAdmin && (
-        <Button danger size="small" type="text" onClick={() => handleRevokeStudent(row.id)}>Remove</Button>
-    ), align: 'right' as const }
+    {
+      title: 'Actions',
+      key: 'actions',
+      render: (_: unknown, row: AuthorizedStudent) => {
+        const canChangeBatch = row.user ? canChangeAcademicBatch(currentUser, row.user) : false;
+        const canRemove = isPlatformAdmin;
+        
+        const items = [];
+        
+        if (row.user) {
+          items.push({
+            key: 'view_profile',
+            label: 'View',
+            disabled: true,
+            onClick: () => {}
+          });
+        }
+        
+        if (canChangeBatch && row.user) {
+          items.push({
+            key: 'change_batch',
+            label: 'Change Academic Batch',
+            onClick: () => {
+              setBatchModalUser({
+                id: row.user!.id,
+                email: row.normalizedEmail,
+                fullName: row.user!.fullName,
+                globalRole: row.user!.globalRole as AdminUser['globalRole'],
+                clubMemberships: row.user!.clubMemberships as unknown as AdminUser['clubMemberships'],
+              } as AdminUser);
+              setSelectedBatchId(undefined);
+            }
+          });
+        }
+        
+        if (canRemove) {
+          if (items.length > 0) items.push({ type: 'divider' as const });
+          items.push({
+            key: 'remove',
+            label: <span className="text-red-500">Remove</span>,
+            onClick: () => handleRevokeStudent(row.id)
+          });
+        }
+        
+        if (items.length === 0) return <span style={{ opacity: 0.45 }}>-</span>;
+        return <Dropdown menu={{ items }} trigger={['click']}><Button size="small">Actions ▾</Button></Dropdown>;
+      },
+      align: 'right' as const,
+    }
   ];
 
   const tabItems = [
@@ -401,7 +490,7 @@ export default function UserManagementPage() {
           ) : (
             <Table 
               dataSource={students} 
-              columns={studentColumns} 
+              columns={isPlatformAdmin || students.some(row => row.user) ? studentColumns : studentColumns.filter(c => c.key !== 'actions')} 
               rowKey="id" 
               pagination={{ pageSize: 50 }} 
               scroll={{ x: 800 }} 

@@ -21,7 +21,9 @@ describe('SECURITY DEFINER Helpers BOLA & Validation Tests', () => {
     await adminPrisma.userAcademicProfile.deleteMany({});
     await adminPrisma.academicBatch.deleteMany({});
     await adminPrisma.academicProgram.deleteMany({});
-    await adminPrisma.event.deleteMany({});
+    await adminPrisma.attendanceRecord.deleteMany({});
+  await adminPrisma.eventRegistration.deleteMany({});
+  await adminPrisma.event.deleteMany({});
     await adminPrisma.user.deleteMany({
       where: { email: { in: ['leaderA@nst.com', 'leaderB@nst.com', 'member@nst.com'] } }
     });

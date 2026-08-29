@@ -46,11 +46,20 @@ export function useEventLifecycle() {
     }
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: (eventId: string) => apiClient(`/v1/events/${eventId}`, { method: 'DELETE' }),
+    onSuccess: (_, eventId) => {
+      queryClient.invalidateQueries({ queryKey: ['events'] });
+      queryClient.removeQueries({ queryKey: ['event', eventId] });
+    }
+  });
+
   return {
     submitMutation,
     approveMutation,
     rejectMutation,
     lockMutation,
     unlockMutation,
+    deleteMutation,
   };
 }

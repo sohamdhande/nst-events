@@ -1,16 +1,10 @@
 import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert';
 import request from 'supertest';
-import { app } from '../../src/app';
+import { createApp } from '../../src/app';
 import { prisma } from '../../src/lib/prisma';
 import { adminPrisma } from '../helpers/adminDb';
-import jwt from 'jsonwebtoken';
-
-const JWT_SECRET = process.env.JWT_SECRET || 'test-secret';
-
-function generateToken(userId: string) {
-  return jwt.sign({ sub: userId }, JWT_SECRET, { expiresIn: '1h' });
-}
+import { signJwt } from '../../src/lib/jwt';
 
 describe('Auth Phase 56B - Role Drifts and securityVersion Realignment', () => {
   let platformAdminToken: string;
@@ -30,15 +24,11 @@ describe('Auth Phase 56B - Role Drifts and securityVersion Realignment', () => {
   let testEventId: string;
   let testBatchId: string;
   let testProgramId: string;
+  let app: any;
 
   before(async () => {
-    await adminPrisma.eventClub.deleteMany();
-    await adminPrisma.event.deleteMany();
-    await adminPrisma.clubMembership.deleteMany();
-    await adminPrisma.club.deleteMany();
-    await adminPrisma.academicBatch.deleteMany();
-    await adminPrisma.academicProgram.deleteMany();
-    await adminPrisma.user.deleteMany({ where: { googleSub: { startsWith: 'google-' } } });
+    app = createApp();
+    // Global wipes are unsafe in a shared DB. The after() block will clean up test-specific data.
     
     // 1. Create Users
     const createRes = await adminPrisma.user.createManyAndReturn({
@@ -57,11 +47,11 @@ describe('Auth Phase 56B - Role Drifts and securityVersion Realignment', () => {
     collaboratingClubAdminId = createRes[3].id;
     unauthorizedUserId = createRes[4].id;
 
-    platformAdminToken = generateToken(platformAdminId);
-    facultyAdminToken = generateToken(facultyAdminId);
-    primaryClubAdminToken = generateToken(primaryClubAdminId);
-    collaboratingClubAdminToken = generateToken(collaboratingClubAdminId);
-    unauthorizedUserToken = generateToken(unauthorizedUserId);
+    platformAdminToken = signJwt(platformAdminId);
+    facultyAdminToken = signJwt(facultyAdminId);
+    primaryClubAdminToken = signJwt(primaryClubAdminId);
+    collaboratingClubAdminToken = signJwt(collaboratingClubAdminId);
+    unauthorizedUserToken = signJwt(unauthorizedUserId);
 
     // 2. Create Program and Batch
     const program = await adminPrisma.academicProgram.create({
@@ -108,6 +98,8 @@ describe('Auth Phase 56B - Role Drifts and securityVersion Realignment', () => {
         startTime: new Date(),
         endTime: new Date(Date.now() + 3600000),
         registrationType: 'INDIVIDUAL',
+        eventType: 'MEETUP',
+        createdBy: platformAdminId,
       },
     });
     testEventId = event.id;
@@ -121,14 +113,26 @@ describe('Auth Phase 56B - Role Drifts and securityVersion Realignment', () => {
   });
 
   after(async () => {
-    // Cleanup
-    await adminPrisma.eventClub.deleteMany();
-    await adminPrisma.event.deleteMany();
-    await adminPrisma.clubMembership.deleteMany();
-    await adminPrisma.club.deleteMany();
-    await adminPrisma.academicBatch.deleteMany();
-    await adminPrisma.academicProgram.deleteMany();
-    await adminPrisma.user.deleteMany();
+    // Cleanup specific test data
+    if (testEventId) {
+      await adminPrisma.eventClub.deleteMany({ where: { eventId: testEventId } });
+      await adminPrisma.event.delete({ where: { id: testEventId } });
+    }
+    if (testClubId) {
+      await adminPrisma.clubMembership.deleteMany({ where: { clubId: testClubId } });
+      await adminPrisma.club.delete({ where: { id: testClubId } });
+    }
+    if (collabClubId) {
+      await adminPrisma.clubMembership.deleteMany({ where: { clubId: collabClubId } });
+      await adminPrisma.club.delete({ where: { id: collabClubId } });
+    }
+    if (testBatchId) await adminPrisma.academicBatch.delete({ where: { id: testBatchId } });
+    if (testProgramId) await adminPrisma.academicProgram.delete({ where: { id: testProgramId } });
+    
+    const userIds = [platformAdminId, facultyAdminId, primaryClubAdminId, collaboratingClubAdminId, unauthorizedUserId].filter(Boolean);
+    if (userIds.length > 0) {
+      await adminPrisma.user.deleteMany({ where: { id: { in: userIds } } });
+    }
   });
 
   describe('Events: isPrimary validation', () => {
@@ -179,7 +183,7 @@ describe('Auth Phase 56B - Role Drifts and securityVersion Realignment', () => {
       const initialSv = preUser!.securityVersion;
 
       const res = await request(app)
-        .post(`/v1/clubs/${testClubId}/members`)
+        .post(`/clubs/${testClubId}/members`)
         .set('Authorization', `Bearer ${primaryClubAdminToken}`)
         .send({ user_id: unauthorizedUserId, role: 'CORE_MEMBER' });
       

@@ -116,3 +116,20 @@ export function useProvisionUser() {
     },
   });
 }
+
+export function useRevokeUserSessions() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: (userId: string) => {
+      return apiClient<{ message: string, revoked_count: number }>(`/v1/admin/users/${userId}/revoke-sessions`, {
+        method: 'POST',
+      });
+    },
+    onSuccess: (_, userId) => {
+      queryClient.invalidateQueries({ queryKey: ['admin-user-detail', userId] });
+      // The users list might not explicitly show session count, but invalidating it is safe
+      queryClient.invalidateQueries({ queryKey: ['admin-users'] });
+    },
+  });
+}

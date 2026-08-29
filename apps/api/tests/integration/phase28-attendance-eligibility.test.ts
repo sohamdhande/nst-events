@@ -257,9 +257,10 @@ test('Phase 28: Attendance Eligibility Enforcement', async (t) => {
       data: { eventId: event.id, batchId: batch.id },
     });
 
-    await adminPrisma.userAcademicProfile.create({
-      data: { userId: user.id, batchId: batch.id, assignmentSource: 'INSTITUTIONAL_EMAIL_INFERENCE' },
-    });
+    await adminPrisma.$executeRaw`
+      INSERT INTO user_academic_profiles (id, user_id, batch_id, assignment_source)
+      VALUES (gen_random_uuid(), ${user.id}::uuid, ${batch.id}::uuid, 'INSTITUTIONAL_EMAIL_INFERENCE')
+    `;
 
     const session = await createTestSession(event.id, user.id);
     await adminPrisma.eventRegistration.create({
@@ -298,9 +299,10 @@ test('Phase 28: Attendance Eligibility Enforcement', async (t) => {
     });
 
     // Student is in the WRONG batch
-    await adminPrisma.userAcademicProfile.create({
-      data: { userId: user.id, batchId: wrongBatch.id, assignmentSource: 'INSTITUTIONAL_EMAIL_INFERENCE' },
-    });
+    await adminPrisma.$executeRaw`
+      INSERT INTO user_academic_profiles (id, user_id, batch_id, assignment_source)
+      VALUES (gen_random_uuid(), ${user.id}::uuid, ${wrongBatch.id}::uuid, 'INSTITUTIONAL_EMAIL_INFERENCE')
+    `;
 
     const session = await createTestSession(event.id, user.id);
     await adminPrisma.eventRegistration.create({
@@ -420,9 +422,10 @@ test('Phase 28: Attendance Eligibility Enforcement', async (t) => {
       data: { eventId: event.id, batchId: correctBatch.id },
     });
 
-    await adminPrisma.userAcademicProfile.create({
-      data: { userId: student.id, batchId: wrongBatch.id, assignmentSource: 'INSTITUTIONAL_EMAIL_INFERENCE' },
-    });
+    await adminPrisma.$executeRaw`
+      INSERT INTO user_academic_profiles (id, user_id, batch_id, assignment_source)
+      VALUES (gen_random_uuid(), ${student.id}::uuid, ${wrongBatch.id}::uuid, 'INSTITUTIONAL_EMAIL_INFERENCE')
+    `;
 
     const session = await createTestSession(event.id, admin.id);
     await adminPrisma.eventRegistration.create({
@@ -497,9 +500,10 @@ test('Phase 28: Attendance Eligibility Enforcement', async (t) => {
     });
 
     // Student is in batch2 (the second eligible batch)
-    await adminPrisma.userAcademicProfile.create({
-      data: { userId: user.id, batchId: batch2.id, assignmentSource: 'INSTITUTIONAL_EMAIL_INFERENCE' },
-    });
+    await adminPrisma.$executeRaw`
+      INSERT INTO user_academic_profiles (id, user_id, batch_id, assignment_source)
+      VALUES (gen_random_uuid(), ${user.id}::uuid, ${batch2.id}::uuid, 'INSTITUTIONAL_EMAIL_INFERENCE')
+    `;
 
     const session = await createTestSession(event.id, user.id);
     await adminPrisma.eventRegistration.create({
@@ -538,9 +542,10 @@ test('Phase 28: Attendance Eligibility Enforcement', async (t) => {
     });
 
     // Originally eligible batch at registration time
-    const profile = await adminPrisma.userAcademicProfile.create({
-      data: { userId: user.id, batchId: eligibleBatch.id, assignmentSource: 'INSTITUTIONAL_EMAIL_INFERENCE' },
-    });
+    await adminPrisma.$executeRaw`
+      INSERT INTO user_academic_profiles (id, user_id, batch_id, assignment_source)
+      VALUES (gen_random_uuid(), ${user.id}::uuid, ${eligibleBatch.id}::uuid, 'INSTITUTIONAL_EMAIL_INFERENCE')
+    `;
 
     const session = await createTestSession(event.id, user.id);
     await adminPrisma.eventRegistration.create({
@@ -548,10 +553,11 @@ test('Phase 28: Attendance Eligibility Enforcement', async (t) => {
     });
 
     // Batch changed AFTER registration to an ineligible batch
-    await adminPrisma.userAcademicProfile.update({
-      where: { id: profile.id },
-      data: { batchId: wrongBatch.id },
-    });
+    await adminPrisma.$executeRaw`
+      UPDATE user_academic_profiles
+      SET batch_id = ${wrongBatch.id}::uuid
+      WHERE user_id = ${user.id}::uuid
+    `;
 
     const payload = makePayload(session.id);
     await assert.rejects(

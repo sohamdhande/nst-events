@@ -27,7 +27,7 @@ adminStudentsRouter.get(
   ),
   async (req, res, next) => {
     try {
-      const result = await studentsService.listStudents(req.query as any);
+      const result = await studentsService.listStudents(req.user!.id, req.query as any);
       res.json(result);
     } catch (err) {
       next(err);

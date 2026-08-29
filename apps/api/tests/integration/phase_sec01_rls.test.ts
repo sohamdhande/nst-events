@@ -15,6 +15,7 @@ describe('SEC-01: Postgres Least-Privilege & Active RLS', () => {
         email: 'sec01_test1@newtonschool.co',
         fullName: 'SEC-01 Test User 1',
         globalRole: 'STUDENT',
+        googleSub: 'mock-google-sub-sec1'
       }
     });
     testUserId1 = user1.id;
@@ -24,6 +25,7 @@ describe('SEC-01: Postgres Least-Privilege & Active RLS', () => {
         email: 'sec01_test2@newtonschool.co',
         fullName: 'SEC-01 Test User 2',
         globalRole: 'STUDENT',
+        googleSub: 'mock-google-sub-sec2'
       }
     });
     testUserId2 = user2.id;
@@ -31,7 +33,6 @@ describe('SEC-01: Postgres Least-Privilege & Active RLS', () => {
     const club = await adminPrisma.club.create({
       data: {
         name: 'SEC-01 Security Club',
-        slug: 'sec01-security-club',
       }
     });
     testClubId = club.id;
@@ -47,11 +48,11 @@ describe('SEC-01: Postgres Least-Privilege & Active RLS', () => {
   });
 
   it('nst_app runtime connection should not have SUPERUSER or BYPASSRLS', async () => {
-    const rows = await prisma.$queryRaw<Array<{ rolsuper: boolean; rolbypasserls: boolean }>>`
-      SELECT rolsuper, rolbypasserls FROM pg_roles WHERE rolname = 'nst_app'
+    const result = await adminPrisma.$queryRaw<Array<{ rolsuper: boolean, rolbypassrls: boolean }>>`
+      SELECT rolsuper, rolbypassrls FROM pg_roles WHERE rolname = 'nst_app'
     `;
-    assert.strictEqual(rows[0].rolsuper, false, 'nst_app must not be superuser');
-    assert.strictEqual(rows[0].rolbypasserls, false, 'nst_app must not bypass RLS');
+    assert.strictEqual(result[0].rolsuper, false);
+    assert.strictEqual(result[0].rolbypassrls, false, 'nst_app must not bypass RLS');
   });
 
   it('Cross-user writes should be blocked by RLS (Connection Pool Safety)', async () => {
@@ -83,30 +84,31 @@ describe('SEC-01: Postgres Least-Privilege & Active RLS', () => {
     const rows = await prisma.$queryRaw<Array<{ current: string | null }>>`
       SELECT current_setting('app.user_id', true) as current
     `;
-    assert.strictEqual(rows[0].current, null, 'app.user_id must not leak between transactions');
+    // current_setting() returns '' if not set, not null, when missing_ok=true in some PG versions
+    assert.ok(rows[0].current === null || rows[0].current === '', 'app.user_id must not leak between transactions');
   });
 
   it('AuthorizedStudent pre-login lookup works without user context', async () => {
     // admin bootstrap
     await adminPrisma.authorizedStudent.create({
       data: {
-        normalizedEmail: 'sec01prelogin@adypu.edu.in',
+        normalizedEmail: 'test_auth@adypu.edu.in',
         status: 'ACTIVE'
       }
     });
 
     // Runtime fetch without context
-    const student = await prisma.authorizedStudent.findUnique({
-      where: { normalizedEmail: 'sec01prelogin@adypu.edu.in' }
-    });
+    const result = await prisma.$queryRaw<Array<{ status: string }>>`
+      SELECT * FROM lookup_authorized_student('test_auth@adypu.edu.in')
+    `;
     
-    assert.ok(student, 'Pre-login authorized student lookup must succeed');
+    assert.ok(result && result.length > 0 && result[0].status === 'ACTIVE', 'Pre-login authorized student lookup must succeed');
 
     // Runtime mutation without context should fail
     await assert.rejects(
       async () => {
         await prisma.authorizedStudent.update({
-          where: { normalizedEmail: 'sec01prelogin@adypu.edu.in' },
+          where: { normalizedEmail: 'test_auth@adypu.edu.in' },
           data: { status: 'REVOKED' }
         });
       },
@@ -115,7 +117,7 @@ describe('SEC-01: Postgres Least-Privilege & Active RLS', () => {
     );
 
     await adminPrisma.authorizedStudent.delete({
-      where: { normalizedEmail: 'sec01prelogin@adypu.edu.in' }
+      where: { normalizedEmail: 'test_auth@adypu.edu.in' }
     });
   });
 

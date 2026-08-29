@@ -9,6 +9,8 @@ export interface AuthorizedStudent {
   user?: {
     id: string;
     fullName: string;
+    globalRole: string;
+    clubMemberships?: { role: string }[];
     academicProfile?: {
       batch?: {
         admissionYear: number;

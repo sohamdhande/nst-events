@@ -111,8 +111,7 @@ test('Phase UI-17A Academic Batches API', async (t) => {
   });
 
   t.after(async () => {
-    await prisma.$disconnect();
-    await adminPrisma.$disconnect();
+    // Let the test runner handle process exit and connection teardown
   });
 
   await t.test('1. PLATFORM_ADMIN receives 200 and deterministic ordered list', async () => {

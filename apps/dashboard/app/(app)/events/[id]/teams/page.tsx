@@ -153,7 +153,7 @@ export default function TeamsManagementPage({ params }: { params: Promise<{ id: 
   if (isEventError || !event) {
     return (
       <div style={{ maxWidth: 1400, margin: '0 auto' }}>
-        <Alert message="Error" description="Failed to load event." type="error" />
+        <Alert title="Error" description="Failed to load event." type="error" />
       </div>
     );
   }
@@ -163,7 +163,7 @@ export default function TeamsManagementPage({ params }: { params: Promise<{ id: 
       <div style={{ maxWidth: 600, margin: '100px auto', textAlign: 'center' }}>
         <Space orientation="vertical" size="large">
           <Alert 
-            message="Individual Registration Event" 
+            title="Individual Registration Event" 
             description="This event uses individual registration. Team management is not applicable." 
             type="info" 
             showIcon 
@@ -295,7 +295,7 @@ export default function TeamsManagementPage({ params }: { params: Promise<{ id: 
 
       {isError ? (
         <Alert 
-          message="Unable to load teams." 
+          title="Unable to load teams." 
           type="error" 
           showIcon 
           action={<Button size="small" onClick={() => refetchTeams()}>Retry</Button>}

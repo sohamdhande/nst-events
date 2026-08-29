@@ -1,7 +1,8 @@
-import { describe, expect, test, beforeAll, afterAll } from 'vitest';
+import { describe, it, before, after } from 'node:test';
+import assert from 'node:assert/strict';
 import request from 'supertest';
 import { createApp } from '../../src/app';
-import { prisma } from '../../src/lib/prisma';
+import { adminPrisma as prisma } from '../helpers/adminDb';
 import { signJwt } from '../../src/lib/jwt';
 
 describe('Admin Users API', () => {
@@ -10,7 +11,7 @@ describe('Admin Users API', () => {
   let adminId: string;
   let app: any;
 
-  beforeAll(async () => {
+  before(async () => {
     app = createApp();
     const admin = await prisma.user.create({ data: { email: 'test_admin_auth@example.com', globalRole: 'PLATFORM_ADMIN', fullName: 'Test', googleSub: 'auth' } });
     adminId = admin.id;
@@ -29,21 +30,21 @@ describe('Admin Users API', () => {
     testUsers = [u1, u2, u3, u4, u5];
   });
 
-  afterAll(async () => {
+  after(async () => {
     await prisma.clubMembership.deleteMany();
     await prisma.club.deleteMany({ where: { name: 'Test Club Admin' } });
     await prisma.user.deleteMany({ where: { id: { in: [...testUsers.map(u => u.id), adminId] } } });
   });
 
-  test('scope=administrators filters correctly', async () => {
+  it('scope=administrators filters correctly', async () => {
     const res = await request(app).get('/v1/admin/users?scope=administrators').set('Authorization', `Bearer ${adminToken}`);
-    expect(res.status).toBe(200);
+    assert.equal(res.status, 200);
     
     const emails = res.body.data.map((u: any) => u.email);
-    expect(emails).not.toContain('student_no_admin@example.com');
-    expect(emails).toContain('student_admin@example.com');
-    expect(emails).toContain('mentor@example.com');
-    expect(emails).toContain('fac_admin@example.com');
-    expect(emails).toContain('plat_admin@example.com');
+    assert.ok(!emails.includes('student_no_admin@example.com'));
+    assert.ok(emails.includes('student_admin@example.com'));
+    assert.ok(emails.includes('mentor@example.com'));
+    assert.ok(emails.includes('fac_admin@example.com'));
+    assert.ok(emails.includes('plat_admin@example.com'));
   });
 });

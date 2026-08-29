@@ -3,8 +3,9 @@
 import React, { use, useState, useEffect, useMemo, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Card, Button, Skeleton, Alert, Typography, Table, Badge, Breadcrumb, Space, Modal, Form, Input, Select, QRCode, Row, Col, InputNumber, App, Tag, Grid, Flex, Empty, DatePicker } from 'antd';
+import { Card, Button, Skeleton, Alert, Typography, Table, Badge, Breadcrumb, Space, Modal, Form, Input, Select, QRCode, Row, Col, InputNumber, App, Tag, Grid, Flex, Empty, DatePicker, Tabs } from 'antd';
 import { QrcodeOutlined, DownloadOutlined, PlusOutlined, SyncOutlined, CloseOutlined } from '@ant-design/icons';
+import { AttendanceDisputes } from './AttendanceDisputes';
 import { useEventDetail } from '../../../../../hooks/useEventDetail';
 import { useAttendance, useGenerateQr, useCreateSession, useUpdateSession, useManualAttendance, AttendanceRecord } from '../../../../../hooks/useAttendance';
 import { useCurrentUser } from '../../../../../hooks/useCurrentUser';
@@ -566,7 +567,14 @@ export default function AttendancePage({ params }: { params: Promise<{ id: strin
         Manage sessions, QR attendance, and attendance records.
       </Text>
 
-      <Row gutter={[24, 24]}>
+      <Tabs 
+        defaultActiveKey="records" 
+        items={[
+          {
+            key: 'records',
+            label: 'Session Records',
+            children: (
+              <Row gutter={[24, 24]}>
         <Col xs={24} lg={8}>
           <Space orientation="vertical" style={{ width: '100%' }} size="middle">
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -752,7 +760,16 @@ export default function AttendancePage({ params }: { params: Promise<{ id: strin
             )}
           </Card>
         </Col>
-      </Row>
+              </Row>
+            )
+          },
+          {
+            key: 'disputes',
+            label: 'Disputes',
+            children: <AttendanceDisputes eventId={eventId} canManageAttendance={auth.canManageAttendance} />
+          }
+        ]}
+      />
 
       <Modal
         title="Create Attendance Session"

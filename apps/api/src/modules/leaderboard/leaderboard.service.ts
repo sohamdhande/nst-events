@@ -1,4 +1,4 @@
-import { prisma } from '@nst/database';
+import { prisma, withUserContext } from '@nst/database';
 
 export class LeaderboardService {
   async getStudentLeaderboard(query: { cursor?: string; limit: number }): Promise<{ data: any[]; nextCursor?: string }> {
@@ -74,6 +74,25 @@ export class LeaderboardService {
     await prisma.$executeRawUnsafe('REFRESH MATERIALIZED VIEW CONCURRENTLY student_leaderboard_mv');
     await prisma.$executeRawUnsafe('REFRESH MATERIALIZED VIEW CONCURRENTLY club_leaderboard_mv');
     return { refreshed_at: new Date().toISOString() };
+  }
+
+  async getClubScopedStudentLeaderboard(callerId: string, clubId: string, query: { limit: number }): Promise<{ data: any[] }> {
+    return withUserContext(callerId, async (tx) => {
+      const records = await tx.$queryRaw<any[]>`
+        SELECT 
+          u.id as user_id, 
+          u.full_name as display_name, 
+          COALESCE(SUM(ls.points), 0)::integer as total_points
+        FROM leaderboard_scores ls
+        JOIN users u ON u.id = ls.user_id
+        WHERE ls.club_id = ${clubId}::uuid
+        GROUP BY u.id, u.full_name
+        ORDER BY total_points DESC, u.id ASC
+        LIMIT ${query.limit}::integer
+      `;
+
+      return { data: records };
+    });
   }
 }
 

@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useCurrentUser } from '../../../../hooks/useCurrentUser';
 import { useApprovals, PendingEvent } from '../../../../hooks/useApprovals';
-import { Card, Button, Skeleton, Alert, Typography, Modal, Input, Space, Table } from 'antd';
+import { Card, Button, Skeleton, Alert, Typography, Modal, Input, Space, Table, App } from 'antd';
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
@@ -22,12 +22,14 @@ export default function ApprovalsPage() {
   const router = useRouter();
   const { data: currentUser, isLoading: isUserLoading } = useCurrentUser();
   const { data: approvalsData, isLoading: isApprovalsLoading, error: approvalsError, approveMutation, rejectMutation, refetch } = useApprovals();
+  const { modal } = App.useApp();
 
   const [rejectingId, setRejectingId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState('');
   const [rejectError, setRejectError] = useState('');
 
   const isAuthorized = currentUser?.global_role === 'PLATFORM_ADMIN' || 
+    currentUser?.global_role === 'FACULTY_ADMIN' ||
     currentUser?.club_memberships?.some((cm) => cm.role === 'FACULTY_MENTOR');
 
   useEffect(() => {
@@ -79,7 +81,7 @@ export default function ApprovalsPage() {
   const pendingEvents = approvalsData?.data || [];
 
   const handleApproveConfirm = (event: PendingEvent) => {
-    Modal.confirm({
+    modal.confirm({
       title: 'Approve Event',
       content: (
         <Space orientation="vertical" size="small" style={{ width: '100%', marginTop: 16 }}>
@@ -150,7 +152,7 @@ export default function ApprovalsPage() {
 
       {approvalsError ? (
         <Alert
-          message="Failed to load approvals"
+          title="Failed to load approvals"
           description={approvalsError instanceof Error ? approvalsError.message : 'An unknown error occurred.'}
           type="error"
           showIcon

@@ -150,7 +150,7 @@ describe('Phase 26G: GPS Consistency', () => {
   it('Offline: mock_location_detected=true -> rejected in batch', async () => {
     const timestamp = new Date().toISOString();
     const token = generateCustomQrPayload(sessionId, 'SECRET', 0);
-    const res = await request(app).post('/v1/attendance/sync-offline').set('Authorization', `Bearer ${adminToken}`).send({
+    const res = await request(app).post('/v1/attendance/sync-offline').set('Authorization', `Bearer ${studentToken}`).send({
       records: [
         { user_id: student, session_id: sessionId, scanned_token: token, scan_timestamp: timestamp, device_id: 'd2', gps_lat: validLat, gps_lng: validLng, gps_accuracy: 5, mock_location_detected: true, offline_seq: 1 }
       ]
@@ -163,7 +163,7 @@ describe('Phase 26G: GPS Consistency', () => {
   it('Offline: outside geofence -> rejected in batch', async () => {
     const timestamp = new Date().toISOString();
     const token = generateCustomQrPayload(sessionId, 'SECRET', 0);
-    const res = await request(app).post('/v1/attendance/sync-offline').set('Authorization', `Bearer ${adminToken}`).send({
+    const res = await request(app).post('/v1/attendance/sync-offline').set('Authorization', `Bearer ${studentToken}`).send({
       records: [
         { user_id: student, session_id: sessionId, scanned_token: token, scan_timestamp: timestamp, device_id: 'd3', gps_lat: outsideLat, gps_lng: validLng, gps_accuracy: 5, mock_location_detected: false, offline_seq: 2 }
       ]
@@ -180,8 +180,9 @@ describe('Phase 26G: GPS Consistency', () => {
     // We need to delete the live attendance record first to test offline properly for the same user
     await adminPrisma.leaderboardScore.deleteMany({ where: { userId: student } });
     await adminPrisma.attendanceRecord.deleteMany({ where: { userId: student } });
+    await adminPrisma.consumedQrSignature.deleteMany({ where: { sessionId } });
 
-    const res = await request(app).post('/v1/attendance/sync-offline').set('Authorization', `Bearer ${adminToken}`).send({
+    const res = await request(app).post('/v1/attendance/sync-offline').set('Authorization', `Bearer ${studentToken}`).send({
       records: [
         { user_id: student, session_id: sessionId, scanned_token: token, scan_timestamp: timestamp, device_id: 'd4', gps_lat: validLat, gps_lng: validLng, gps_accuracy: 5, mock_location_detected: false, offline_seq: 3 }
       ]

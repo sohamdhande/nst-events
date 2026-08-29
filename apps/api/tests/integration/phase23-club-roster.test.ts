@@ -48,6 +48,7 @@ describe('Phase 23: Club Roster Authorization', () => {
 
   after(async () => {
     // Cleanup
+    await adminPrisma.$executeRaw`DELETE FROM notifications WHERE user_id = ${targetUserId}::uuid;`;
     await adminPrisma.$executeRaw`DELETE FROM club_memberships WHERE club_id = ${clubId}::uuid;`;
     await adminPrisma.$executeRaw`DELETE FROM clubs WHERE id = ${clubId}::uuid;`;
     await adminPrisma.$executeRaw`DELETE FROM users WHERE id IN (${mentorId}::uuid, ${adminId}::uuid, ${platformAdminId}::uuid, ${targetUserId}::uuid);`;
@@ -70,13 +71,32 @@ describe('Phase 23: Club Roster Authorization', () => {
     assert.strictEqual(res.status, 403);
   });
 
+  it('FACULTY_MENTOR -> PATCH /v1/clubs/:id/members/:userId -> 403', async () => {
+    const res = await request(app)
+      .patch(`/clubs/${clubId}/members/${targetUserId}`)
+      .set('Authorization', `Bearer ${mentorToken}`)
+      .send({ role: 'CORE_MEMBER' });
+    
+    assert.strictEqual(res.status, 403);
+  });
+
   it('CLUB_ADMIN -> POST /v1/clubs/:id/members -> 201', async () => {
     const res = await request(app)
       .post(`/clubs/${clubId}/members`)
       .set('Authorization', `Bearer ${adminToken}`)
-      .send({ user_id: targetUserId, role: 'CORE_MEMBER' });
+      .send({ user_id: targetUserId, role: 'MEMBER' });
     
     assert.strictEqual(res.status, 201);
+  });
+
+  it('CLUB_ADMIN -> PATCH /v1/clubs/:id/members/:userId -> 200', async () => {
+    const res = await request(app)
+      .patch(`/clubs/${clubId}/members/${targetUserId}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ role: 'CORE_MEMBER' });
+    
+    assert.strictEqual(res.status, 200);
+    assert.strictEqual(res.body.role, 'CORE_MEMBER');
   });
 
   it('CLUB_ADMIN -> DELETE /v1/clubs/:id/members/:userId -> 204', async () => {

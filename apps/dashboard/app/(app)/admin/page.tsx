@@ -4,7 +4,9 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useCurrentUser } from '../../../hooks/useCurrentUser';
 import { useAuditLogs } from '../../../hooks/useAuditLogs';
-import { Card, Button, Skeleton, Alert, Typography, Row, Col, Table, theme } from 'antd';
+import { useRecalculateLeaderboard } from '../../../hooks/useLeaderboard';
+import { canRecalculateLeaderboard } from '../../../lib/auth-helpers';
+import { Card, Button, Skeleton, Alert, Typography, Row, Col, Table, theme, Modal, message } from 'antd';
 
 const { Title, Text } = Typography;
 
@@ -29,17 +31,42 @@ export default function AdminHubPage() {
   const router = useRouter();
   const { token } = theme.useToken();
   const { data: currentUser, isLoading: isUserLoading } = useCurrentUser();
-  const { data: auditLogs, isLoading: isLogsLoading, error: logsError, refetch } = useAuditLogs();
-
   const isPlatformAdmin = currentUser?.global_role === 'PLATFORM_ADMIN';
+  const isFacultyAdmin = currentUser?.global_role === 'FACULTY_ADMIN';
+  const isAdmin = isPlatformAdmin || isFacultyAdmin;
+
+  const { data: auditLogs, isLoading: isLogsLoading, error: logsError, refetch } = useAuditLogs({ enabled: isPlatformAdmin });
+
+  const canRecalculate = canRecalculateLeaderboard(currentUser);
+  
+  const recalculateLeaderboard = useRecalculateLeaderboard();
+
+  const handleRecalculateLeaderboard = () => {
+    Modal.confirm({
+      title: 'Recalculate Leaderboard?',
+      content: 'Are you sure you want to trigger a full leaderboard recalculation? This may take some time depending on the amount of data.',
+      okText: 'Recalculate Now',
+      okType: 'primary',
+      cancelText: 'Cancel',
+      onOk: async () => {
+        try {
+          await recalculateLeaderboard.mutateAsync();
+          message.success('Leaderboard recalculation triggered successfully');
+        } catch (err: unknown) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          message.error((err as any).response?.data?.error || 'Failed to trigger recalculation');
+        }
+      }
+    });
+  };
 
   useEffect(() => {
-    if (!isUserLoading && !isPlatformAdmin) {
+    if (!isUserLoading && !isAdmin) {
       router.replace('/dashboard');
     }
-  }, [isUserLoading, isPlatformAdmin, router]);
+  }, [isUserLoading, isAdmin, router]);
 
-  if (isUserLoading || !isPlatformAdmin) {
+  if (isUserLoading || !isAdmin) {
     return (
       <div style={{ maxWidth: 1200, margin: '0 auto' }}>
         <Title level={2}>Platform Administration</Title>
@@ -94,22 +121,35 @@ export default function AdminHubPage() {
       
       <Row gutter={[24, 24]}>
         {/* Quick Actions */}
-        <Col xs={24} lg={12}>
-          <Card title="Quick Actions" style={{ height: '100%' }}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: 16, backgroundColor: token.colorBgLayout, borderRadius: 8 }}>
-                <div>
-                  <Text strong style={{ display: 'block' }}>Point Adjustments</Text>
-                  <Text type="secondary">Manually adjust student or club points.</Text>
+        {isPlatformAdmin && (
+          <Col xs={24} lg={12}>
+            <Card title="Quick Actions" style={{ height: '100%' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: 16, backgroundColor: token.colorBgLayout, borderRadius: 8 }}>
+                  <div>
+                    <Text strong style={{ display: 'block' }}>Point Adjustments</Text>
+                    <Text type="secondary">Manually adjust student or club points.</Text>
+                  </div>
+                  <Button disabled>DEFERRED TO V2</Button>
                 </div>
-                <Button disabled>DEFERRED TO V2</Button>
+                
+                {canRecalculate && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: 16, backgroundColor: token.colorBgLayout, borderRadius: 8 }}>
+                    <div>
+                      <Text strong style={{ display: 'block' }}>Leaderboard Recalculation</Text>
+                      <Text type="secondary">Force a manual update of the global leaderboard materialized views.</Text>
+                    </div>
+                    <Button type="primary" onClick={handleRecalculateLeaderboard}>Recalculate Now</Button>
+                  </div>
+                )}
               </div>
-            </div>
-          </Card>
-        </Col>
+            </Card>
+          </Col>
+        )}
 
         {/* Audit Logs */}
-        <Col xs={24} lg={12}>
+        {isPlatformAdmin && (
+          <Col xs={24} lg={12}>
           <Card title="Recent Audit Logs" style={{ height: '100%' }} styles={{ body: { padding: 0 } }}>
             {logsError ? (
               <div style={{ padding: 24 }}>
@@ -138,6 +178,7 @@ export default function AdminHubPage() {
             )}
           </Card>
         </Col>
+        )}
       </Row>
     </div>
   );

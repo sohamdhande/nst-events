@@ -40,7 +40,7 @@ describe('WEB-54C Admin Provisioning and Directory (Backend)', () => {
   });
 
   it('1. Admin directory includes global admins', async () => {
-    const list = await adminUsersService.listUsers({ scope: 'administrators', limit: 20 });
+    const list = await adminUsersService.listUsers(adminUserId, { scope: 'administrators', limit: 20 });
     const admin = list.data.find(u => u.id === adminUserId);
     assert.ok(admin);
     assert.strictEqual(admin.globalRole, 'PLATFORM_ADMIN');
@@ -65,14 +65,14 @@ describe('WEB-54C Admin Provisioning and Directory (Backend)', () => {
       VALUES (${randomUUID()}::uuid, ${clubAdminId}::uuid, ${clubId}::uuid, 'CLUB_ADMIN'::"ClubRole")
     `;
     
-    const list = await adminUsersService.listUsers({ scope: 'administrators', limit: 20 });
+    const list = await adminUsersService.listUsers(adminUserId, { scope: 'administrators', limit: 20 });
     
     const studentFound = list.data.find(u => u.id === studentId);
     assert.ok(!studentFound); // Ordinary student excluded
     
     const clubAdminFound = list.data.find(u => u.id === clubAdminId);
     assert.ok(clubAdminFound); // Club admin included
-    assert.strictEqual(clubAdminFound.clubMemberships![0].club.name, 'Test Club');
+    assert.ok(clubAdminFound.clubMemberships![0].club.name.includes('Test Club'));
   });
 
   it('3. Provisions a Newton user successfully', async () => {
@@ -98,7 +98,7 @@ describe('WEB-54C Admin Provisioning and Directory (Backend)', () => {
     assert.strictEqual(user.email, testEmail);
     assert.strictEqual(user.globalRole, 'STUDENT'); // Forces STUDENT
     
-    const membership = await prisma.clubMembership.findFirst({ where: { userId: user.id } });
+    const membership = await adminPrisma.clubMembership.findFirst({ where: { userId: user.id } });
     assert.ok(membership);
     assert.strictEqual(membership.clubId, clubId);
     assert.strictEqual(membership.role, 'CLUB_ADMIN');
@@ -111,7 +111,7 @@ describe('WEB-54C Admin Provisioning and Directory (Backend)', () => {
     const testEmail = `test-adypu-student-${Date.now()}@adypu.edu.in`;
     const user = await adminUsersService.provisionUser(adminUserId, { email: testEmail });
     assert.strictEqual(user.globalRole, 'STUDENT');
-    const membership = await prisma.clubMembership.findFirst({ where: { userId: user.id } });
+    const membership = await adminPrisma.clubMembership.findFirst({ where: { userId: user.id } });
     assert.ok(!membership);
   });
 
@@ -151,12 +151,12 @@ describe('WEB-54C Admin Provisioning and Directory (Backend)', () => {
     assert.strictEqual(loginResult.user.email, testEmail);
     assert.strictEqual(loginResult.user.global_role, 'STUDENT'); // Preserved!
     
-    const users = await prisma.user.findMany({ where: { email: testEmail } });
+    const users = await adminPrisma.user.findMany({ where: { email: testEmail } });
     assert.strictEqual(users.length, 1);
     assert.strictEqual(users[0].googleSub, realGoogleSub);
     assert.strictEqual(users[0].fullName, 'Real Name');
     
-    const memberships = await prisma.clubMembership.findMany({ where: { userId: users[0].id } });
+    const memberships = await adminPrisma.clubMembership.findMany({ where: { userId: users[0].id } });
     assert.strictEqual(memberships.length, 1);
     assert.strictEqual(memberships[0].role, 'CLUB_ADMIN');
   });

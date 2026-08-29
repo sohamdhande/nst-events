@@ -9,7 +9,7 @@ import {
   submitDisputeSchema, getDisputesSchema, resolveDisputeSchema, reviewFlaggedSchema
 } from './attendance.schema';
 import { attendanceService } from './attendance.service';
-import { prisma } from '@nst/database';
+import { prisma, withUserContext } from '@nst/database';
 
 export const attendanceRouter: Router = Router();
 
@@ -43,9 +43,13 @@ const syncOfflineRateLimit = rateLimit({
 const getEventIdFromSession = async (req: any): Promise<string> => {
   const sessionId = req.body.session_id;
   if (!sessionId) return '';
-  const session = await prisma.attendanceSession.findUnique({
-    where: { id: sessionId },
-    select: { eventId: true },
+  const userId = req.user?.id;
+  if (!userId) return '';
+  const session = await withUserContext(userId, async (tx) => {
+    return tx.attendanceSession.findUnique({
+      where: { id: sessionId },
+      select: { eventId: true },
+    });
   });
   return session?.eventId || '';
 };
@@ -60,7 +64,7 @@ attendanceRouter.post(
   async (req, res, next) => {
     try {
       const { session_id } = req.body;
-      const result = await attendanceService.generateQr(session_id);
+      const result = await attendanceService.generateQr(req.user!.id, session_id);
       res.status(200).json(result);
     } catch (error) {
       next(error);

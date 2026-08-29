@@ -537,7 +537,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
           
           {event.below_minimum_team_count && event.below_minimum_team_count > 0 ? (
             <Alert
-              message={`${event.below_minimum_team_count} team${event.below_minimum_team_count === 1 ? ' is' : 's are'} below the minimum team size.`}
+              title={`${event.below_minimum_team_count} team${event.below_minimum_team_count === 1 ? ' is' : 's are'} below the minimum team size.`}
               type="warning"
               showIcon
               action={

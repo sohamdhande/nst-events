@@ -8,6 +8,7 @@ datasource db {
   url= env("DATABASE_URL")
 }
 
+
 model User {
   id                        String                      @id @default(uuid()) @db.Uuid
   googleSub                 String                      @unique @map("google_sub")
@@ -199,6 +200,9 @@ model EventRegistration {
   team                                              Team?              @relation(fields: [teamId], references: [id])
   user                                              User               @relation(fields: [userId], references: [id])
   teams_event_registrations_team_id_event_idToteams Team?              @relation("event_registrations_team_id_event_idToteams", fields: [teamId, eventId], references: [id, eventId], onDelete: NoAction, onUpdate: NoAction, map: "fk_team_event")
+
+  eligibilityScopeSnapshot                          EventAudience?     @map("eligibility_scope_snapshot")
+  academicBatchIdSnapshot                           String?            @map("academic_batch_id_snapshot") @db.Uuid
 
   @@index([eventId, userId])
   @@index([userId])
