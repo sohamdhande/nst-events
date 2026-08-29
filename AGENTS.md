@@ -9,6 +9,7 @@ NST Events is a monorepo consisting of `apps/api` (a frozen Express backend), `a
 - NEVER persist access tokens in localStorage.
 - The `nst-events-docs` repo is the single source of truth. When two docs conflict, STOP and report the conflict with file:line citations — do not silently pick one.
 - When something is unspecified: STOP and report "SPECIFICATION GAP" — do not guess.
+- For all student-facing frontend UI work, follow nst-events-student-design-system.md for visual/interaction rules and nst-events-student-ux-spec.md for screen content and flows. Do not deviate from the design system doc without flagging the conflict.
 
 ## Read before any task
 Please read these documents before starting work:
