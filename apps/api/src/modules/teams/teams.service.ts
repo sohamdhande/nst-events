@@ -117,6 +117,13 @@ export const leaveTeam = async (userId: string, teamId: string) => {
     const team = await tx.team.findUnique({ where: { id: teamId } });
     if (!team) throw new NotFoundError('Team not found');
 
+    // Fetch all members before mutation using helper SQL function to bypass RLS
+    const resultMembers = await tx.$queryRaw<{ get_team_members: string[] }[]>`
+      SELECT get_team_members(${teamId}::uuid);
+    `;
+    const preMembers = resultMembers[0].get_team_members;
+    const wasRegistered = team.status === 'REGISTERED';
+
     try {
       const result = await tx.$queryRaw<{ leave_team: string[] }[]>`
         SELECT leave_team(${team.eventId}::uuid, ${teamId}::uuid, ${userId}::uuid);
@@ -141,6 +148,20 @@ export const leaveTeam = async (userId: string, teamId: string) => {
           });
         }
       }
+
+      const postTeam = await tx.team.findUnique({ where: { id: teamId } });
+      const remainingUserIds = preMembers.filter((m: string) => m !== userId);
+
+      if (wasRegistered && postTeam?.status === 'WAITLISTED') {
+        for (const uid of remainingUserIds) {
+          await enqueueNotification({
+            tx, userId: uid, type: 'TEAM_WAITLISTED', title: 'Team Demoted to Waitlist', body: 'A member left and your team fell below the minimum size.',
+            metadata: { schema_version: 1, routing: { target: 'event_details', fallback: '/events', params: { id: team.eventId } }, entity_ids: { event_id: team.eventId } },
+            preferenceGate: 'push_enabled', idempotencyString: `TEAM_DEMOTE:${teamId}:${uid}`
+          });
+        }
+      }
+
       return promotedUserIds;
     } catch (err: any) {
       mapDatabaseError(err);
@@ -292,21 +313,27 @@ export const acceptInvitation = async (userId: string, teamId: string, invitatio
       });
 
       if (acceptResult.status === 'REGISTERED') {
-        const teamMembers = await tx.eventRegistration.findMany({ where: { teamId, deletedAt: null }});
-        for (const m of teamMembers) {
+        const resultMembers = await tx.$queryRaw<{ get_team_members: string[] }[]>`
+          SELECT get_team_members(${teamId}::uuid);
+        `;
+        const teamMembers = resultMembers[0].get_team_members;
+        for (const mId of teamMembers) {
           await enqueueNotification({
-            tx, userId: m.userId, type: 'TEAM_REGISTERED', title: 'Team Registered', body: 'Your team is now registered.',
+            tx, userId: mId, type: 'TEAM_REGISTERED', title: 'Team Registered', body: 'Your team is now registered.',
             metadata: { schema_version: 1, routing: { target: 'event_details', fallback: '/events', params: { id: team.eventId } }, entity_ids: { event_id: team.eventId } },
-            preferenceGate: 'push_enabled', idempotencyString: `TEAM_REG:${teamId}:${m.userId}`
+            preferenceGate: 'push_enabled', idempotencyString: `TEAM_REG:${teamId}:${mId}`
           });
         }
       } else if (acceptResult.status === 'WAITLISTED') {
-        const teamMembers = await tx.eventRegistration.findMany({ where: { teamId, deletedAt: null }});
-        for (const m of teamMembers) {
+        const resultMembers = await tx.$queryRaw<{ get_team_members: string[] }[]>`
+          SELECT get_team_members(${teamId}::uuid);
+        `;
+        const teamMembers = resultMembers[0].get_team_members;
+        for (const mId of teamMembers) {
           await enqueueNotification({
-            tx, userId: m.userId, type: 'TEAM_WAITLISTED', title: 'Team Waitlisted', body: 'Your team has been waitlisted.',
+            tx, userId: mId, type: 'TEAM_WAITLISTED', title: 'Team Waitlisted', body: 'Your team has been waitlisted.',
             metadata: { schema_version: 1, routing: { target: 'event_details', fallback: '/events', params: { id: team.eventId } }, entity_ids: { event_id: team.eventId } },
-            preferenceGate: 'push_enabled', idempotencyString: `TEAM_WAIT:${teamId}:${m.userId}`
+            preferenceGate: 'push_enabled', idempotencyString: `TEAM_WAIT:${teamId}:${mId}`
           });
         }
       }
