@@ -85,6 +85,13 @@ export const joinTeam = async (userId: string, teamId: string) => {
     const team = await tx.team.findUnique({ where: { id: teamId } });
     if (!team) throw new NotFoundError('Team not found');
 
+    // Fetch all members before mutation using helper SQL function to bypass RLS
+    const resultMembers = await tx.$queryRaw<{ get_team_members: string[] }[]>`
+      SELECT get_team_members(${teamId}::uuid);
+    `;
+    const preMembers = resultMembers[0].get_team_members;
+    const wasRegistered = team.status === 'REGISTERED';
+
     try {
       const result = await tx.$queryRaw<{ join_team: any }[]>`
         SELECT join_team(${team.eventId}::uuid, ${teamId}::uuid);
@@ -149,10 +156,19 @@ export const leaveTeam = async (userId: string, teamId: string) => {
         }
       }
 
-      const postTeam = await tx.team.findUnique({ where: { id: teamId } });
+      const postTeamResult = await tx.$queryRaw<{ status: string }[]>`SELECT status FROM teams WHERE id = ${teamId}::uuid`;
+      const postTeamStatus = postTeamResult[0]?.status;
       const remainingUserIds = preMembers.filter((m: string) => m !== userId);
 
-      if (wasRegistered && postTeam?.status === 'WAITLISTED') {
+      if (postTeamStatus === 'CANCELLED') {
+        for (const uid of remainingUserIds) {
+          await enqueueNotification({
+            tx, userId: uid, type: 'TEAM_CANCELLED', title: 'Team Cancelled', body: 'Your team leader left, causing the team to dissolve.',
+            metadata: { schema_version: 1, routing: { target: 'event_details', fallback: '/events', params: { id: team.eventId } }, entity_ids: { event_id: team.eventId } },
+            preferenceGate: 'push_enabled', idempotencyString: `TEAM_CANCEL_LEAD:${teamId}:${uid}`
+          });
+        }
+      } else if (wasRegistered && postTeamStatus === 'WAITLISTED') {
         for (const uid of remainingUserIds) {
           await enqueueNotification({
             tx, userId: uid, type: 'TEAM_WAITLISTED', title: 'Team Demoted to Waitlist', body: 'A member left and your team fell below the minimum size.',

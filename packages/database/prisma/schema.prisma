@@ -650,6 +650,7 @@ enum EventState {
   PENDING_APPROVAL
   PUBLISHED
   ARCHIVED
+  CANCELLED
 }
 
 /// Whether an event is visible to all or restricted.
