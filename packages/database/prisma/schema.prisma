@@ -44,7 +44,6 @@ model User {
   notifications             Notification[]
   pushTokens                PushToken[]
   refreshTokens             RefreshToken[]
-  TeamInvitation            TeamInvitation[]
   teamLeaderships           Team[]
   assignedAcademicProfiles  UserAcademicProfile[]       @relation("AcademicProfileAssignedBy")
   academicProfile           UserAcademicProfile?
@@ -178,12 +177,12 @@ model Team {
   status                                                          TeamStatus          @default(FORMING) @map("status")
   eventRegistrations                                              EventRegistration[]
   event_registrations_event_registrations_team_id_event_idToteams EventRegistration[] @relation("event_registrations_team_id_event_idToteams")
-  teamInvitations                                                 TeamInvitation[]
   event                                                           Event               @relation(fields: [eventId], references: [id])
   leader                                                          User                @relation(fields: [leaderId], references: [id])
+  normalizedName                                                  String              @map("normalized_name")
 
   @@unique([id, eventId])
-  @@unique([eventId, name])
+  @@unique([eventId, normalizedName])
   @@map("teams")
 }
 
@@ -208,25 +207,6 @@ model EventRegistration {
   @@index([userId])
   @@index([teamId, eventId])
   @@map("event_registrations")
-}
-
-model TeamInvitation {
-  id          String           @id @default(uuid()) @db.Uuid
-  teamId      String           @map("team_id") @db.Uuid
-  inviteeId   String           @map("invitee_id") @db.Uuid
-  status      InvitationStatus @default(PENDING) @map("status")
-  createdAt   DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
-  respondedAt DateTime?        @map("responded_at") @db.Timestamptz(6)
-  expiresAt   DateTime         @map("expires_at") @db.Timestamptz(6)
-  updatedAt   DateTime         @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
-  invitee     User             @relation(fields: [inviteeId], references: [id])
-  team        Team             @relation(fields: [teamId], references: [id])
-
-  @@index([teamId])
-  @@index([inviteeId])
-  @@index([status])
-  @@index([expiresAt])
-  @@map("team_invitations")
 }
 
 model AttendanceSession {
@@ -257,7 +237,7 @@ model AttendanceSession {
   attendanceRecords    AttendanceRecord[]
   creator              User                  @relation("SessionCreatedBy", fields: [createdBy], references: [id])
   event                Event                 @relation(fields: [eventId], references: [id])
-  consumedQrSignatures ConsumedQrSignature[]
+
 
   @@index([eventId])
   @@map("attendance_sessions")
@@ -310,15 +290,6 @@ model AttendanceDispute {
   @@map("attendance_disputes")
 }
 
-model ConsumedQrSignature {
-  sessionId  String            @map("session_id") @db.Uuid
-  signature  String
-  consumedAt DateTime          @default(now()) @map("consumed_at") @db.Timestamptz(6)
-  session    AttendanceSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-
-  @@id([sessionId, signature])
-  @@map("consumed_qr_signatures")
-}
 
 model EventResult {
   id         String            @id @default(uuid()) @db.Uuid
@@ -754,12 +725,4 @@ enum TeamStatus {
   REGISTERED
   WAITLISTED
   CANCELLED
-}
-
-enum InvitationStatus {
-  PENDING
-  ACCEPTED
-  DECLINED
-  CANCELLED
-  EXPIRED
 }
