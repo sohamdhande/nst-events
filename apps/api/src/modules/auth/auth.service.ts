@@ -26,15 +26,23 @@ export async function loginWithGoogle(
   ipAddress?: string,
   userAgent?: string
 ): Promise<AuthTokenResponse> {
-  // 1. Exchange code for tokens & verify id_token
   const { id_token } = await googleOAuth.exchangeCodeForTokens(code);
+  return loginWithIdToken(id_token, ipAddress, userAgent);
+}
+
+export async function loginWithIdToken(
+  id_token: string,
+  ipAddress?: string,
+  userAgent?: string
+): Promise<AuthTokenResponse> {
   const { sub, email, name } = await googleOAuth.verifyIdToken(id_token);
 
   // 2. Enforce email domain restriction
   const normalizedEmail = email.trim().toLowerCase();
   const domain = normalizedEmail.split('@')[1];
 
-  if (!['newtonschool.co', 'adypu.edu.in'].includes(domain)) {
+  const ALLOWED_DOMAINS = env.ALLOWED_EMAIL_DOMAINS.split(',').map((d) => d.trim());
+  if (!ALLOWED_DOMAINS.includes(domain)) {
     throw new ForbiddenError('INSTITUTIONAL_DOMAIN_NOT_ALLOWED');
   }
 
@@ -284,6 +292,7 @@ export async function logout(rawRefreshToken?: string): Promise<void> {
 
 export const authService = {
   loginWithGoogle,
+  loginWithIdToken,
   refreshTokens,
   logout,
 };
