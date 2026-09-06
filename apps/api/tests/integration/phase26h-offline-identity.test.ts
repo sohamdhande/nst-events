@@ -21,7 +21,6 @@ describe('ATTENDANCE-06: Offline Identity Binding BOLA Protection', () => {
 
   before(async () => {
     // Clear out
-    await adminPrisma.teamInvitation.deleteMany({});
     await adminPrisma.team.deleteMany({});
     await adminPrisma.attendanceRecord.deleteMany({});
     await adminPrisma.consumedQrSignature.deleteMany({});
@@ -142,19 +141,19 @@ describe('ATTENDANCE-06: Offline Identity Binding BOLA Protection', () => {
     assert.strictEqual(recordsB.length, 1, 'Student B receives attendance');
   });
 
-  it('STUDENT / CLUB_ADMIN cannot call manual POST /attendance/manual -> 403', async () => {
-    const token = signJwt(studentAId, 1);
-    const authHeader = `Bearer ${token}`;
+  it('STUDENT / unrelated CLUB_ADMIN cannot call manual POST /attendance/manual -> 403', async () => {
+    const studentToken = signJwt(studentAId, 1);
 
-    const res = await request(app)
+    const resStudent = await request(app)
       .post(`/v1/events/${eventId}/attendance/manual`)
-      .set('Authorization', authHeader)
+      .set('Authorization', `Bearer ${studentToken}`)
       .send({
-        student_id: studentBId,
+        user_id: studentBId,
         session_id: sessionId
       });
     
-    assert.strictEqual(res.status, 403, 'Must reject manual attendance if not PLATFORM_ADMIN');
+    assert.strictEqual(resStudent.status, 403, 'Must reject manual attendance for normal STUDENT');
   });
 
 });
+

@@ -37,10 +37,7 @@ export function resolveNotificationTarget(notification: Notification): string | 
       'TEAM_CANCELLED', 
       'TEAM_LEADERSHIP_TRANSFERRED', 
       'TEAM_MEMBER_REMOVED', 
-      'TEAM_WAITLIST_PROMOTED',
-      'TEAM_INVITATION_RECEIVED',
-      'TEAM_INVITATION_ACCEPTED',
-      'TEAM_INVITATION_DECLINED'
+      'TEAM_WAITLIST_PROMOTED'
     ].includes(type)
   ) {
     if (eventId) return `/events/${eventId}/teams`;
@@ -79,7 +76,6 @@ export function getNotificationIcon(type: string): React.ReactNode {
   switch (type) {
     case 'EVENT_APPROVED':
     case 'WAITLIST_PROMOTED':
-    case 'TEAM_INVITATION_ACCEPTED':
       return <CheckCircleOutlined style={{ color: '#52c41a' }} />;
     
     case 'APPROVAL_REQUEST':
@@ -91,8 +87,6 @@ export function getNotificationIcon(type: string): React.ReactNode {
     case 'TEAM_REGISTERED':
     case 'TEAM_WAITLISTED':
     case 'TEAM_CANCELLED':
-    case 'TEAM_INVITATION_RECEIVED':
-    case 'TEAM_INVITATION_DECLINED':
     case 'TEAM_LEADERSHIP_TRANSFERRED':
     case 'TEAM_MEMBER_REMOVED':
     case 'TEAM_WAITLIST_PROMOTED':

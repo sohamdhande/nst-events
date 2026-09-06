@@ -78,7 +78,7 @@ export default function CreateEventPage() {
           attendance_type: values.attendance_type,
           audience: values.audience,
           audience_batch_ids: values.audience === 'SPECIFIC_BATCHES' ? values.audience_batch_ids : undefined,
-          max_capacity: values.max_capacity,
+          max_capacity: values.max_capacity ?? undefined,
           club_ids: [
             { club_id: values.club_id, is_primary: true },
             ...(values.collaborating_club_ids ?? [])
@@ -89,8 +89,8 @@ export default function CreateEventPage() {
               })),
           ],
           metadata: values.registration_type === 'TEAM' ? {
-            minimum_team_size: values.minimum_team_size,
-            maximum_team_size: values.maximum_team_size,
+            minimum_team_size: values.minimum_team_size ?? undefined,
+            maximum_team_size: values.maximum_team_size ?? undefined,
           } : undefined,
         };
 
@@ -341,14 +341,29 @@ export default function CreateEventPage() {
               </Col>
               <Col xs={24} md={12}>
                 <Form.Item
-                  name="max_capacity"
-                  label="Maximum Capacity"
-                  extra="Maximum number of participants allowed for the event. Leave empty for unlimited spots."
-                  rules={[{ type: 'number', min: 1 }]}
+                  noStyle
+                  shouldUpdate={(prev, curr) => prev.registration_type !== curr.registration_type}
                 >
-                  <InputNumber style={{ width: '100%' }} placeholder="e.g. 100" />
+                  {({ getFieldValue }) => {
+                    const isTeam = getFieldValue('registration_type') === 'TEAM';
+                    return (
+                      <Form.Item
+                        name="max_capacity"
+                        label={isTeam ? "Maximum Teams" : "Maximum Participants"}
+                        extra={
+                          isTeam
+                            ? "Maximum number of registered teams allowed. Leave empty for unlimited."
+                            : "Maximum number of individual students allowed. Leave empty for unlimited."
+                        }
+                        rules={[{ type: 'number', min: 1 }]}
+                      >
+                        <InputNumber style={{ width: '100%' }} placeholder={isTeam ? "e.g. 10" : "e.g. 100"} />
+                      </Form.Item>
+                    );
+                  }}
                 </Form.Item>
               </Col>
+
             </Row>
           </Card>
 

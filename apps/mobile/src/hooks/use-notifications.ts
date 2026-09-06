@@ -21,7 +21,7 @@ export function useNotifications() {
   const { mutate: syncToken } = useMutation({
     mutationFn: async (expoToken: string) => {
       if (!userId) return;
-      return apiClient('/v1/users/me/push-token', {
+      return apiClient('/users/me/push-token', {
         method: 'POST',
         body: JSON.stringify({
           expoToken,

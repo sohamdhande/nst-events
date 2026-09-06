@@ -8,6 +8,15 @@ import { canViewClubOversight } from '../../middleware/authorize';
 
 export const leaderboardRouter: Router = Router();
 
+leaderboardRouter.get('/me', authenticate, async (req, res, next) => {
+  try {
+    const result = await leaderboardService.getStudentRank(req.user!.id);
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
 leaderboardRouter.get('/students', authenticate, validate(getLeaderboardSchema), async (req, res, next) => {
   try {
     const result = await leaderboardService.getStudentLeaderboard(req.query as any);

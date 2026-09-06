@@ -1,13 +1,15 @@
 {
   "expo": {
-    "name": "mobile",
-    "slug": "mobile",
+    "name": "NST Events",
+    "slug": "nst-events",
+    "scheme": "nst-events",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.sohamdhande.nstevents"
     },
     "android": {
       "adaptiveIcon": {
@@ -16,10 +18,41 @@
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION"
+      ],
+      "package": "com.sohamdhande.nstevents"
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "plugins": [
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Required for scanning attendance QR codes.",
+          "recordAudioAndroid": false
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Required to verify attendance geofence."
+        }
+      ],
+      "@react-native-google-signin/google-signin",
+      "expo-secure-store",
+      "expo-dev-client",
+      "expo-router"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "af8da666-3f92-46c0-aebb-d51d25a5e461"
+      }
+    },
+    "owner": "sohamdhande"
   }
 }

@@ -1,22 +1,30 @@
-import React from 'react';
-import { View, Text, ScrollView } from 'react-native';
+import React, { useMemo } from 'react';
+import { View, StyleSheet, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '../../../../src/infrastructure/api';
 import { useRegistration } from '../../../../src/hooks/use-registration';
 import { useEventLive } from '../../../../src/hooks/use-event-live';
+import { useEventSessions } from '../../../../src/hooks/use-events';
+import { useAttendanceHistory } from '../../../../src/hooks/use-attendance-history';
+import { useUserProfile } from '../../../../src/hooks/use-user-profile';
 import { useNetworkStatus } from '../../../../src/infrastructure/network';
-import { Button, Banner, Skeleton, Card, Divider, Badge } from '../../../../src/ui/primitives';
+import { useAppTheme } from '../../../../src/store/theme-store';
+import { Button } from '../../../../src/ui/Button';
+import { MobileShell } from '../../../../src/ui/core/MobileShell';
+import { Title, Body, MonoLabel, Mono } from '../../../../src/ui/core/Typography';
+import { StatusBadge } from '../../../../src/ui/core/StatusBadge';
 
 export default function EventScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { isOnline } = useNetworkStatus();
+  const theme = useAppTheme();
 
-  // Realtime synchronization hook automatically patches cache
   useEventLive(id as string);
 
-  // Queries (Single source of truth)
+  const { data: profile } = useUserProfile();
+
   const { data: event, isLoading: isEventLoading } = useQuery({
     queryKey: ['events', id],
     queryFn: () => apiClient(`/v1/events/${id}`),
@@ -27,170 +35,271 @@ export default function EventScreen() {
     queryFn: () => apiClient(`/v1/events/${id}/my-registration`),
   });
 
-  // Mutations
-  const { register, cancel, isRegistering, isCancelling, error } = useRegistration(id as string);
+  const { data: sessions = [] } = useEventSessions(id as string);
+  const { data: attendanceHistory } = useAttendanceHistory(id as string);
+
+  const { register, cancel, isRegistering, isCancelling } = useRegistration(id as string);
 
   const isLoading = isEventLoading || isRegLoading;
   const isActionLoading = isRegistering || isCancelling;
-  const isFull = event?.max_capacity ? event.registration_count >= event.max_capacity : false;
+  
+  const isFull = event?.maxCapacity ? (event.registrationCount || 0) >= event.maxCapacity : false;
+  
+  const primaryClub = event?.eventClubs?.find((ec: any) => ec.isPrimary);
+  const isPrimaryClubAdmin = !!(profile?.club_memberships?.some(
+    (m: any) => m.club_id === primaryClub?.clubId && m.role === 'CLUB_ADMIN'
+  ));
 
-  const registrationError = (error as any)?.status === 403 && (error as any)?.message?.includes('AUDIENCE_NOT_ELIGIBLE');
+  const now = new Date();
+  const activeSession = sessions.find((s: any) => {
+    const openAt = new Date(s.openAt);
+    const closeAt = s.closeAt ? new Date(s.closeAt) : null;
+    return openAt <= now && (!closeAt || closeAt >= now);
+  });
+
+  const hasAttendanceForActiveSession = !!(activeSession && attendanceHistory?.pages.some((page: any) => 
+    page.data.some((record: any) => record.sessionId === activeSession.id)
+  ));
+
+  const isEventEnded = event?.endTime ? new Date(event.endTime) < now : false;
+
+  const styles = useMemo(() => StyleSheet.create({
+    heroSection: {
+      paddingBottom: theme.spacing.sm,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.colors.borderHairline,
+    },
+    statusRow: {
+      marginBottom: theme.spacing.sm,
+    },
+    title: {
+      fontSize: 28,
+      lineHeight: 32,
+      marginBottom: 8,
+    },
+    location: {
+      color: theme.colors.onSurfaceVariant,
+      letterSpacing: 1,
+    },
+    gridSection: {
+      backgroundColor: theme.colors.surfaceContainerLow,
+      borderWidth: 1,
+      borderColor: theme.colors.outlineVariant,
+    },
+    gridRow: {
+      flexDirection: 'row',
+      borderBottomWidth: 1,
+      borderBottomColor: theme.colors.outlineVariant,
+    },
+    gridRowLast: {
+      flexDirection: 'row',
+    },
+    gridCol: {
+      flex: 1,
+      padding: theme.spacing.base,
+    },
+    gridColRight: {
+      borderLeftWidth: 1,
+      borderLeftColor: theme.colors.outlineVariant,
+    },
+    metaLabel: {
+      marginBottom: 4,
+    },
+    successColor: {
+      color: theme.colors.primaryFixed,
+    },
+    infoBlock: {
+      gap: 6,
+    },
+    descriptionBlock: {
+      gap: 8,
+    },
+    actionSection: {
+      marginTop: theme.spacing.lg,
+    },
+    actionBtn: {
+      flex: 1,
+    },
+    cancelBtn: {
+      marginRight: theme.spacing.sm,
+    },
+    multiActionTray: {
+      flexDirection: 'row',
+    },
+    restrictedTray: {
+      backgroundColor: theme.colors.surfaceContainerHighest,
+      padding: theme.spacing.base,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderWidth: 1,
+      borderColor: theme.colors.outlineVariant,
+    },
+    restrictedText: {
+      color: theme.colors.onSurfaceVariant,
+      textAlign: 'center',
+    },
+    successTray: {
+      backgroundColor: theme.colors.surfaceContainerHighest,
+      padding: theme.spacing.base,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderWidth: 1,
+      borderColor: theme.colors.primaryFixed,
+    },
+    successText: {
+      color: theme.colors.primaryFixed,
+    },
+    loadingContainer: {
+      paddingTop: 80,
+      alignItems: 'center',
+      gap: 16,
+    },
+  }), [theme]);
+  
+  const renderActionTray = () => {
+    if (!isOnline) {
+      return (
+        <View style={styles.restrictedTray}>
+          <MonoLabel style={styles.restrictedText}>OFFLINE — ACTIONS UNAVAILABLE</MonoLabel>
+        </View>
+      );
+    }
+
+    if (isPrimaryClubAdmin) {
+      return (
+        <View style={styles.restrictedTray}>
+          <MonoLabel style={styles.restrictedText}>ORGANIZER — USE DESKTOP TO MANAGE</MonoLabel>
+        </View>
+      );
+    }
+    
+    // Check locked state BEFORE session/registration logic to satisfy audit rule
+    if (event?.isLocked || isEventEnded || event?.state !== 'PUBLISHED') {
+      return (
+        <View style={styles.restrictedTray}>
+          <MonoLabel style={styles.restrictedText}>
+            {event?.isLocked ? 'EVENT LOCKED' : isEventEnded ? 'EVENT ENDED' : 'REGISTRATION CLOSED'}
+          </MonoLabel>
+        </View>
+      );
+    }
+
+    const status = registration?.status || 'NOT_REGISTERED';
+
+    if (status === 'REGISTERED') {
+      if (activeSession) {
+        if (hasAttendanceForActiveSession) {
+          return (
+            <View style={styles.successTray}>
+              <MonoLabel style={styles.successText}>ATTENDANCE MARKED</MonoLabel>
+            </View>
+          );
+        }
+        return (
+          <Button
+            title="[ SCAN QR ]"
+            onPress={() => router.push(`/events/${id}/scan`)}
+            variant="primary"
+            style={styles.actionBtn}
+          />
+        );
+      }
+      
+      return (
+        <View style={styles.restrictedTray}>
+          <MonoLabel style={styles.restrictedText}>REGISTERED — WAITING FOR SESSION</MonoLabel>
+        </View>
+      );
+    }
+
+    return (
+      <View style={styles.restrictedTray}>
+        <MonoLabel style={styles.restrictedText}>
+          STATUS: {status.replace('_', ' ')}
+        </MonoLabel>
+      </View>
+    );
+  };
+
+  const getStatusDisplay = () => {
+    if (isEventEnded) return 'ENDED';
+    if (activeSession) return 'LIVE NOW';
+    return event?.state || 'UNKNOWN';
+  };
 
   return (
-    <ScrollView className="flex-1 bg-gray-50" accessibilityRole="scrollbar">
-      {!isOnline && <Banner message="You are currently offline." type="error" accessibilityRole="alert" />}
-
+    <MobileShell title="EVENT" showBackButton>
       {isLoading ? (
-        <View className="p-4" accessibilityRole="progressbar" accessibilityLabel="Loading event details">
-          <Skeleton height={200} />
-          <Skeleton height={40} />
-          <Skeleton height={40} />
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={theme.colors.primary} />
+          <MonoLabel>LOADING EVENT DETAILS...</MonoLabel>
         </View>
       ) : (
-        <View className="p-4">
-          <Card>
-            <Text className="text-2xl font-bold mb-2" accessibilityRole="header">{event?.title || 'Event Details'}</Text>
-            <Text className="text-gray-600 mb-4">{event?.description || 'No description available.'}</Text>
-
-            <View className="flex-row justify-between mb-2">
-              <Text className="font-bold">Capacity:</Text>
-              <Text accessibilityLabel={`${event?.registration_count || 0} out of ${event?.max_capacity || 'unlimited'} registered`}>
-                {event?.registration_count || 0} / {event?.max_capacity || '∞'}
-              </Text>
+        <>
+          <View style={styles.heroSection}>
+            <View style={styles.statusRow}>
+              <StatusBadge 
+                status={getStatusDisplay()} 
+                type={activeSession ? 'error' : isEventEnded ? 'default' : 'info'} 
+              />
             </View>
+            <Title style={styles.title}>{event?.title?.toUpperCase() || 'UNTITLED EVENT'}</Title>
+            <Body style={styles.location}>{event?.locationName?.toUpperCase() || 'CAMPUS VENUE'}</Body>
+          </View>
 
-            <Divider />
-
-            <View className="mb-4">
-              <Text className="font-bold">Audience:</Text>
-              {event?.audience === 'ALL_STUDENTS' ? (
-                <Text>Open to all students</Text>
-              ) : event?.audience === 'SPECIFIC_BATCHES' ? (
-                <Text>Targeted to selected batches</Text>
-              ) : (
-                <Text>{event?.audience}</Text>
-              )}
+          <View style={styles.gridSection}>
+            <View style={styles.gridRow}>
+              <View style={styles.gridCol}>
+                <MonoLabel style={styles.metaLabel}>DATE</MonoLabel>
+                <Mono>
+                  {event?.startTime ? new Date(event.startTime).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' }) : 'TBA'}
+                </Mono>
+              </View>
+              <View style={[styles.gridCol, styles.gridColRight]}>
+                <MonoLabel style={styles.metaLabel}>TIME</MonoLabel>
+                <Mono>
+                  {event?.startTime ? new Date(event.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'TBA'}
+                </Mono>
+              </View>
             </View>
-
-            <Divider />
-
-            {event?.registration_type === 'TEAM' && (event?.metadata?.minimum_team_size || event?.metadata?.maximum_team_size) && (
-              <View className="mb-4">
-                <Text className="font-bold mb-1">Team Registration</Text>
-                <Text className="text-gray-600">
-                  {event.metadata.minimum_team_size && `Minimum: ${event.metadata.minimum_team_size}`}
-                  {event.metadata.minimum_team_size && event.metadata.maximum_team_size && ' • '}
-                  {event.metadata.maximum_team_size && `Maximum: ${event.metadata.maximum_team_size}`}
-                </Text>
+            <View style={styles.gridRowLast}>
+              <View style={styles.gridCol}>
+                <MonoLabel style={styles.metaLabel}>REGISTRATION</MonoLabel>
+                <Mono style={registration?.status === 'REGISTERED' ? styles.successColor : {}}>
+                  {registration?.status || 'NOT_REGISTERED'}
+                </Mono>
               </View>
-            )}
-
-            {event?.is_locked && (
-              <Banner message="Event is locked" type="warning" accessibilityRole="alert" />
-            )}
-
-            {registrationError && (
-              <Banner message="This event is not available to your academic batch." type="error" accessibilityRole="alert" />
-            )}
-
-            {registration?.status === 'REGISTERED' || registration?.status === 'WAITLISTED' || registration?.status === 'FORMING' || registration?.status === 'CANCELLED' ? (
-              <View>
-                {registration.status === 'WAITLISTED' && (
-                  <Text className="text-lg mb-2 text-center font-bold text-yellow-600">
-                    Your team is waiting for event capacity.
-                    {registration.waitlist_position && ` (Position: ${registration.waitlist_position})`}
-                  </Text>
-                )}
-                {registration.status === 'REGISTERED' && event?.registration_type === 'TEAM' && (
-                  <Text className="text-lg mb-2 text-center font-bold text-green-600">
-                    Team registered
-                  </Text>
-                )}
-                {registration.status === 'FORMING' && (
-                  <Text className="text-lg mb-2 text-center font-bold text-blue-600">
-                    Your team is still forming.
-                  </Text>
-                )}
-                {registration.status === 'CANCELLED' && (
-                  <Text className="text-lg mb-2 text-center font-bold text-red-600">
-                    {event?.registration_type === 'TEAM' ? 'Team registration is cancelled.' : 'Registration is cancelled.'}
-                  </Text>
-                )}
-                
-                {registration.status !== 'CANCELLED' && (
-                  <Text className="text-lg mb-4 text-center font-bold" accessibilityRole="text">
-                    Status: {registration.status}
-                  </Text>
-                )}
-
-                {registration.status !== 'CANCELLED' && !event?.is_locked && (
-                  <Button
-                    title="Cancel Registration"
-                    variant="danger"
-                    accessibilityLabel="Cancel Registration"
-                    onPress={() => cancel()}
-                    loading={isActionLoading}
-                    disabled={!isOnline || isActionLoading}
-                  />
-                )}
-
-                {event?.registration_type === 'TEAM' && (
-                  <View className="mt-4">
-                    <Button
-                      title="Manage Team"
-                      variant="secondary"
-                      accessibilityLabel="Manage Team"
-                      onPress={() => router.push(`/events/${id}/teams`)}
-                      disabled={isActionLoading}
-                    />
-                  </View>
-                )}
+              <View style={[styles.gridCol, styles.gridColRight]}>
+                <MonoLabel style={styles.metaLabel}>CAPACITY</MonoLabel>
+                <Mono>
+                  {event?.registrationCount || 0} / {event?.maxCapacity || '∞'}
+                </Mono>
               </View>
-            ) : (
-              <View>
-                {event?.registration_type === 'TEAM' ? (
-                  <View>
-                    {event?.state === 'CLOSED' || isFull || event?.is_locked ? (
-                      <Button
-                        title={event?.is_locked ? 'Event Locked' : (event?.state === 'CLOSED' ? 'Event Closed' : 'Event Full')}
-                        disabled={true}
-                        accessibilityLabel="Team Creation Disabled"
-                      />
-                    ) : (
-                      <Button
-                        title="Create Team"
-                        variant="primary"
-                        accessibilityLabel="Create Team"
-                        onPress={() => router.push(`/events/${id}/team-creation`)}
-                        disabled={!isOnline || event?.state !== 'PUBLISHED' || isActionLoading}
-                      />
-                    )}
-                  </View>
-                ) : (
-                  <View>
-                    {event?.state === 'CLOSED' || isFull || event?.is_locked ? (
-                      <Button
-                        title={event?.is_locked ? 'Event Locked' : (event?.state === 'CLOSED' ? 'Event Closed' : 'Event Full')}
-                        disabled={true}
-                        accessibilityLabel={event?.is_locked ? 'Event Locked' : (event?.state === 'CLOSED' ? 'Event Closed' : 'Event Full')}
-                      />
-                    ) : (
-                      <Button
-                        title="Register"
-                        variant="primary"
-                        accessibilityLabel="Register for Event"
-                        onPress={() => register()}
-                        loading={isActionLoading}
-                        disabled={!isOnline || event?.state !== 'PUBLISHED' || isActionLoading}
-                      />
-                    )}
-                  </View>
-                )}
-              </View>
-            )}
-          </Card>
-        </View>
+            </View>
+          </View>
+
+          {event?.registrationType === 'TEAM' && (
+            <View style={styles.infoBlock}>
+              <MonoLabel style={styles.metaLabel}>TEAM REQUIREMENTS</MonoLabel>
+              <Body>
+                {event?.metadata?.minimum_team_size ? `Min: ${event.metadata.minimum_team_size} members` : 'No minimum'}
+                {event?.metadata?.maximum_team_size ? `  •  Max: ${event.metadata.maximum_team_size} members` : ''}
+              </Body>
+            </View>
+          )}
+
+          <View style={styles.descriptionBlock}>
+            <MonoLabel style={styles.metaLabel}>ABOUT EVENT</MonoLabel>
+            <Body>
+              {event?.description || 'No additional details provided.'}
+            </Body>
+          </View>
+
+          <View style={styles.actionSection}>
+            {renderActionTray()}
+          </View>
+        </>
       )}
-    </ScrollView>
+    </MobileShell>
   );
 }

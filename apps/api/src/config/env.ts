@@ -11,6 +11,7 @@ const envSchema = z.object({
   GOOGLE_CLIENT_SECRET: z.string().min(1, 'GOOGLE_CLIENT_SECRET is required'),
   GOOGLE_CALLBACK_URL: z.string().url('GOOGLE_CALLBACK_URL must be a valid URL'),
   ALLOWED_EMAIL_DOMAINS: z.string().default('adypu.edu.in,newtonschool.co'),
+  ALLOWED_TEST_EMAILS: z.string().default(''),
   ALLOWED_ORIGINS: z.string().default('http://localhost:3000,http://localhost:3001'),
   WEB_APP_URL: z.string().url('WEB_APP_URL must be a valid URL').default('http://localhost:3000'),
   ALLOW_INSECURE_COOKIES_LOCAL_DEV: z.coerce.boolean().default(false),

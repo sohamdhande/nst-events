@@ -2,8 +2,6 @@
 // This strictly avoids localStorage to prevent XSS exfiltration of access tokens.
 // The refresh token is managed exclusively via HttpOnly cookies by the backend.
 
-import { queryClient } from './query-client';
-
 export interface WebAuthStore {
   accessToken: string | null;
   setAccessToken: (token: string | null) => void;
@@ -17,8 +15,9 @@ const authState: WebAuthStore = {
   },
   logout: () => {
     authState.accessToken = null;
-    queryClient.clear();
-    // In a real application, this would also trigger a redirect or context update
+    if (typeof window !== 'undefined') {
+      window.location.href = '/login';
+    }
   },
 };
 

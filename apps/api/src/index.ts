@@ -46,7 +46,13 @@ export async function gracefulShutdown(signal: string, shouldExit = true) {
   try {
     if (server) {
       await new Promise<void>((resolve, reject) => {
-        server!.close((err) => (err ? reject(err) : resolve()));
+        server!.close((err) => {
+          if (err && (err as any).code !== 'ERR_SERVER_NOT_RUNNING') {
+            reject(err);
+          } else {
+            resolve();
+          }
+        });
       });
       logger.info('[nst-api] HTTP server closed');
     }

@@ -1,6 +1,7 @@
 import { test, expect, vi, beforeEach } from 'vitest';
 import { getWebAuthStore } from '../lib/auth-store';
-import { queryClient } from '../lib/query-client';
+import { getQueryClient } from '../lib/query-client';
+const queryClient = getQueryClient();
 
 beforeEach(() => {
   vi.unstubAllGlobals();

@@ -619,6 +619,7 @@ $$;
 -- 1. RLS POLICIES for clubs table
 -- ==============================================================================
 
+DROP POLICY IF EXISTS "Allow PLATFORM_ADMIN and FACULTY_ADMIN to UPDATE clubs" ON clubs;
 CREATE POLICY "Allow PLATFORM_ADMIN and FACULTY_ADMIN to UPDATE clubs" ON clubs
   FOR UPDATE
   USING (
@@ -640,6 +641,7 @@ CREATE POLICY "Allow PLATFORM_ADMIN and FACULTY_ADMIN to UPDATE clubs" ON clubs
 -- 2. RLS POLICIES for club_memberships table
 -- ==============================================================================
 
+DROP POLICY IF EXISTS "Allow members INSERT for Admins and Faculty" ON club_memberships;
 CREATE POLICY "Allow members INSERT for Admins and Faculty" ON club_memberships
   FOR INSERT
   WITH CHECK (
@@ -653,6 +655,7 @@ CREATE POLICY "Allow members INSERT for Admins and Faculty" ON club_memberships
   );
 
 
+DROP POLICY IF EXISTS "Allow members UPDATE for Admins and Faculty" ON club_memberships;
 CREATE POLICY "Allow members UPDATE for Admins and Faculty" ON club_memberships
   FOR UPDATE
   USING (
@@ -675,6 +678,7 @@ CREATE POLICY "Allow members UPDATE for Admins and Faculty" ON club_memberships
   );
 
 
+DROP POLICY IF EXISTS "Allow members DELETE for Admins and Faculty" ON club_memberships;
 CREATE POLICY "Allow members DELETE for Admins and Faculty" ON club_memberships
   FOR DELETE
   USING (
@@ -691,6 +695,7 @@ CREATE POLICY "Allow members DELETE for Admins and Faculty" ON club_memberships
 -- 3. RLS POLICIES for events table
 -- ==============================================================================
 
+DROP POLICY IF EXISTS "Allow UPDATE on events" ON events;
 CREATE POLICY "Allow UPDATE on events" ON events
   FOR UPDATE USING (
     (
@@ -760,6 +765,7 @@ CREATE POLICY "Allow UPDATE on events" ON events
 -- 4. RLS POLICIES for attendance_sessions table
 -- ==============================================================================
 
+DROP POLICY IF EXISTS "Allow INSERT on attendance_sessions" ON attendance_sessions;
 CREATE POLICY "Allow INSERT on attendance_sessions" ON attendance_sessions
   FOR INSERT WITH CHECK (
     EXISTS (
@@ -772,6 +778,7 @@ CREATE POLICY "Allow INSERT on attendance_sessions" ON attendance_sessions
   );
 
 
+DROP POLICY IF EXISTS "Allow UPDATE on attendance_sessions" ON attendance_sessions;
 CREATE POLICY "Allow UPDATE on attendance_sessions" ON attendance_sessions
   FOR UPDATE USING (
     EXISTS (

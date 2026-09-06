@@ -2,7 +2,7 @@ import { withUserContext } from '@nst/database';
 import { enqueueNotification } from '../notifications/notifications.producer';
 import { prisma } from '../../lib/prisma';
 
-import { BadRequestError, ForbiddenError } from '../../lib/errors';
+import { BadRequestError, ForbiddenError, NotFoundError } from '../../lib/errors';
 import { mapDatabaseError } from '../../lib/errors/database-error-mapper';
 
 import { checkAudienceEligibility } from '../events/audience.service';
@@ -99,15 +99,76 @@ export const getMyRegistrations = async (userId: string): Promise<any[]> => {
 
 export const getMyRegistrationStatus = async (userId: string, eventId: string) => {
   return withUserContext(userId, async (tx) => {
+    const event = await tx.event.findUnique({
+      where: { id: eventId },
+      select: { registrationType: true }
+    });
+    
+    if (!event) {
+      throw new NotFoundError('Event not found');
+    }
+
     const reg = await tx.eventRegistration.findFirst({
       where: { eventId, userId, deletedAt: null },
-      select: { registrationStatus: true }
+      select: { 
+        id: true,
+        teamId: true, 
+        registrationStatus: true,
+        registeredAt: true 
+      }
     });
 
     if (!reg) {
       return { status: 'NOT_REGISTERED' };
     }
-    return { status: reg.registrationStatus };
+
+    let waitlist_position: number | null = null;
+    
+    if (reg.registrationStatus === 'WAITLISTED') {
+      if (event.registrationType === 'INDIVIDUAL') {
+        const countResult = await tx.$queryRaw<{ count: number }[]>`
+          SELECT COUNT(*)::int as count 
+          FROM event_registrations er 
+          WHERE er.event_id = ${eventId}::uuid 
+            AND er.registration_status = 'WAITLISTED'
+            AND er.team_id IS NULL 
+            AND er.deleted_at IS NULL
+            AND (er.registered_at < ${reg.registeredAt} OR (er.registered_at = ${reg.registeredAt} AND er.id < ${reg.id}::uuid))
+        `;
+        waitlist_position = countResult[0].count + 1;
+      } else if (event.registrationType === 'TEAM' && reg.teamId) {
+        const teamRegQuery = await tx.$queryRaw<{ min_reg: Date }[]>`
+          SELECT min(er.registered_at) as min_reg
+          FROM event_registrations er 
+          WHERE er.team_id = ${reg.teamId}::uuid AND er.deleted_at IS NULL
+        `;
+        const myMinReg = teamRegQuery[0]?.min_reg;
+
+        if (myMinReg) {
+          const countResult = await tx.$queryRaw<{ count: number }[]>`
+            SELECT COUNT(t.id)::int as count 
+            FROM teams t
+            WHERE t.event_id = ${eventId}::uuid 
+              AND t.status = 'WAITLISTED'
+              AND t.deleted_at IS NULL
+              AND (
+                (SELECT min(er.registered_at) FROM event_registrations er WHERE er.team_id = t.id AND er.deleted_at IS NULL) < ${myMinReg}
+                OR (
+                  (SELECT min(er.registered_at) FROM event_registrations er WHERE er.team_id = t.id AND er.deleted_at IS NULL) = ${myMinReg} 
+                  AND t.id < ${reg.teamId}::uuid
+                )
+              )
+          `;
+          waitlist_position = countResult[0].count + 1;
+        }
+      }
+    }
+
+    return { 
+      status: reg.registrationStatus,
+      team_id: reg.teamId,
+      waitlist_position 
+    };
   });
 };
 

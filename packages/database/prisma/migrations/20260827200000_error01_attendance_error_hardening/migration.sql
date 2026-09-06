@@ -415,7 +415,6 @@ CREATE OR REPLACE FUNCTION public.manual_mark_attendance(p_session_id uuid, p_us
 AS $function$
 DECLARE
   v_admin_id UUID;
-  v_is_platform_admin BOOLEAN;
   v_event_id UUID;
   v_event_state text;
   v_new_record attendance_records;
@@ -426,11 +425,18 @@ BEGIN
     RAISE EXCEPTION 'UNAUTHORIZED' USING ERRCODE = 'U0001';
   END IF;
 
-  SELECT EXISTS (
-    SELECT 1 FROM users WHERE id = v_admin_id AND global_role = 'PLATFORM_ADMIN'
-  ) INTO v_is_platform_admin;
-
-  IF NOT v_is_platform_admin THEN
+  IF NOT EXISTS (
+    SELECT 1 FROM users u WHERE u.id = v_admin_id AND u.global_role IN ('PLATFORM_ADMIN', 'FACULTY_ADMIN')
+  ) AND NOT EXISTS (
+    SELECT 1 FROM attendance_sessions s
+    JOIN event_clubs ec ON ec.event_id = s.event_id
+    JOIN club_memberships cm ON ec.club_id = cm.club_id
+    WHERE s.id = p_session_id
+      AND ec.is_primary = true
+      AND cm.user_id = v_admin_id
+      AND cm.role = 'CLUB_ADMIN'
+      AND cm.deleted_at IS NULL
+  ) THEN
     RAISE EXCEPTION 'UNAUTHORIZED' USING ERRCODE = 'U0001';
   END IF;
 

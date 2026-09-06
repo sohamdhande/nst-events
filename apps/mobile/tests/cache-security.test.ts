@@ -23,7 +23,7 @@ test('Mobile Cache Security: React Query cache is flushed on logout', async () =
   store = {};
 
   // 1. User A session exists
-  await useAuthStore.getState().setSession('user-a-uuid', 'token-a');
+  await useAuthStore.getState().setSession('user-a-uuid', 'token-a', 'refresh-a');
   expect(useAuthStore.getState().isLoggedIn).toBe(true);
 
   // 2. User A private server-state cache is populated
@@ -46,7 +46,7 @@ test('Mobile Cache Security: React Query cache is flushed on logout', async () =
   expect(await SecureStore.getItemAsync('access_token')).toBeNull();
 
   // 6. User B starts a session
-  await useAuthStore.getState().setSession('user-b-uuid', 'token-b');
+  await useAuthStore.getState().setSession('user-b-uuid', 'token-b', 'refresh-b');
   expect(useAuthStore.getState().userId).toBe('user-b-uuid');
 
   // 7. User B cannot observe User A's previous cached data

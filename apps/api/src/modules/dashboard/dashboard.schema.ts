@@ -21,6 +21,8 @@ export const dashboardSummaryResponseSchema = z.object({
       member_count: z.number(),
     })
   ),
+  totalPoints: z.number(),
+  eventsAttendedCount: z.number(),
 });
 
 export type DashboardSummaryResponse = z.infer<typeof dashboardSummaryResponseSchema>;

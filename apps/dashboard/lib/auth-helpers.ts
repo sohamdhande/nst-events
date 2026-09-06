@@ -101,8 +101,15 @@ export function canManageAcademicCatalog(user?: CurrentUser | null): boolean {
   return isPlatformAdmin(user);
 }
 
-export function canMarkAttendanceManually(user?: CurrentUser | null): boolean {
-  return isPlatformAdmin(user);
+export function canMarkAttendanceManually(user: CurrentUser | null | undefined, event?: Event): boolean {
+  if (!user) return false;
+  if (isPlatformAdmin(user) || isFacultyAdmin(user)) return true;
+  if (!event) return false;
+  const primaryClubId = getPrimaryClubId(event);
+  if (!primaryClubId) return false;
+  return user.club_memberships.some(
+    (m) => m.club_id === primaryClubId && m.role === 'CLUB_ADMIN'
+  );
 }
 
 export function canRecalculateLeaderboard(user?: CurrentUser | null): boolean {

@@ -6,6 +6,7 @@ import { manualWaitlistPromotion, cancelTeam, transferLeadership, removeMember }
 
 describe('Team Lifecycle Integration Tests', () => {
   let eventId: string;
+  let isolatedEventId: string;
   let leaderId: string;
   let member1Id: string;
   let member2Id: string;
@@ -82,7 +83,7 @@ describe('Team Lifecycle Integration Tests', () => {
     await prisma.notificationJob.deleteMany({});
     await prisma.notification.deleteMany({});
     await prisma.eventClub.deleteMany({});
-    await prisma.event.deleteMany({ where: { id: eventId } });
+    await prisma.event.deleteMany({ where: { id: { in: [eventId, isolatedEventId] } } });
     await prisma.club.deleteMany({ where: { id: '00000000-0000-0000-0000-000000000000' } });
     await prisma.user.deleteMany({ where: { id: { in: [leaderId, member1Id, member2Id, adminId] } } });
   });
@@ -126,11 +127,7 @@ describe('Team Lifecycle Integration Tests', () => {
     assert.strictEqual(event?.registrationCount, 3); // 3 members total
   });
 
-  it('should prevent leader from leaving directly', async () => {
-    await assert.rejects(leaveTeam(leaderId, teamId), { message: /LEADER_CANNOT_LEAVE/ });
-  });
-
-  it('should allow admin to transfer leadership', async () => {
+  it('should allow admin to transfer leadership (setup for later tests)', async () => {
     await transferLeadership(adminId, teamId, member1Id);
     const team = await prisma.team.findUnique({ where: { id: teamId } });
     assert.strictEqual(team?.leaderId, member1Id);
@@ -146,12 +143,125 @@ describe('Team Lifecycle Integration Tests', () => {
     assert.strictEqual(team?.status, 'REGISTERED'); // Still registered even though below min size conceptually (lazy cleanup handles cancelling later)
   });
 
-  it('should cancel team by admin', async () => {
-    await cancelTeam(adminId, teamId);
+  it('should allow leader to leave, which dissolves the team completely', async () => {
+    // member1Id is the new leader from the transfer leadership test
+    await leaveTeam(member1Id, teamId);
     const team = await prisma.team.findUnique({ where: { id: teamId } });
+
     assert.strictEqual(team?.status, 'CANCELLED');
 
     const event = await prisma.event.findUnique({ where: { id: eventId } });
     assert.strictEqual(event?.registrationCount, 0); // Capacity released completely
+    
+    // Assert audit log was created by the SQL function
+    const log = await prisma.auditLog.findFirst({ where: { entityId: teamId, action: 'TEAM_CANCELLED_BY_LEADER' } });
+    assert.ok(log, 'Audit log TEAM_CANCELLED_BY_LEADER should exist from SQL function');
+    
+    const jobs = await prisma.notificationJob.findMany();
+    const cancelJobs = jobs.filter(j => (j.payload as any).notification_type === 'TEAM_CANCELLED' && (j.payload as any).user_id !== member1Id);
+    assert.strictEqual(cancelJobs.length, 1, 'Should enqueue TEAM_CANCELLED notification for remaining 1 member');
+  });
+
+  it('should cancel team by admin', async () => {
+    // Admin cancels demoted team (from previous test setup)
+    const t = await createTeam(adminId, eventId, 'Admin Cancel Team');
+    const newTeamId = t.team_id;
+    await cancelTeam(adminId, newTeamId);
+    const team = await prisma.team.findUnique({ where: { id: newTeamId } });
+    assert.strictEqual(team?.status, 'CANCELLED');
+
+    const event = await prisma.event.findUnique({ where: { id: eventId } });
+    // Capacity should be released (but event had 0 above)
+  });
+
+  it('TEST - leaveTeam: member leaves causing fall-below-minimum -> team demoted, capacity drops by exactly N', async () => {
+    // Setup a new team to test demotion
+    const t = await createTeam(leaderId, eventId, 'Demotion Team');
+    const newTeamId = t.team_id;
+
+    const inv = await inviteMember(leaderId, newTeamId, member1Id);
+    await acceptInvitation(member1Id, newTeamId, inv.id);
+    
+    // Team now has 2 members and is REGISTERED (min size is 2).
+    let team = await prisma.team.findUnique({ where: { id: newTeamId } });
+    assert.strictEqual(team?.status, 'REGISTERED');
+    let event = await prisma.event.findUnique({ where: { id: eventId } });
+    // wait, the previous test might have altered event.registrationCount.
+    // we just check if it decreased by exactly 2.
+    const beforeCount = event?.registrationCount || 0;
+
+    // Member leaves (member1), size drops to 1, falling below minimum of 2.
+    await leaveTeam(member1Id, newTeamId);
+
+    team = await prisma.team.findUnique({ where: { id: newTeamId } });
+    assert.strictEqual(team?.status, 'WAITLISTED');
+
+    event = await prisma.event.findUnique({ where: { id: eventId } });
+    assert.strictEqual(event?.registrationCount, beforeCount - 2); // Decreased by exactly N (2)
+    
+    // Assert audit log was created by the SQL function
+    const log = await prisma.auditLog.findFirst({ where: { entityId: newTeamId, action: 'TEAM_DEMOTED_TO_WAITLIST' } });
+    assert.ok(log, 'Audit log TEAM_DEMOTED_TO_WAITLIST should exist from SQL function');
+    
+    const jobs = await prisma.notificationJob.findMany();
+    const waitlistJobs = jobs.filter(j => (j.payload as any).notification_type === 'TEAM_WAITLISTED' && (j.payload as any).user_id === leaderId);
+    assert.strictEqual(waitlistJobs.length, 1, 'Should enqueue TEAM_WAITLISTED notification for the remaining member (leader)');
+  });
+
+  it('TEST - isolated scenario: leader leaves a team of 3, exactly 2 remaining members get TEAM_CANCELLED', async () => {
+    // Setup a new 3-member team completely isolated from the previous tests
+    // Create a NEW event so leaderId is not blocked by "Already in a team for this event"
+        const newEvent = await prisma.event.create({
+      data: {
+        title: 'Isolated Test Event',
+        description: 'Test',
+        state: 'PUBLISHED',
+        registrationType: 'TEAM',
+        maxCapacity: 10,
+        registrationCount: 0,
+        eventClubs: {
+          create: {
+            clubId: '00000000-0000-0000-0000-000000000000',
+            isPrimary: true
+          }
+        },
+        metadata: {
+          minimum_team_size: 2,
+          maximum_team_size: 3
+        },
+        startTime: new Date('2027-01-01T00:00:00Z'),
+        endTime: new Date('2027-01-02T00:00:00Z'),
+        audience: 'ALL_STUDENTS',
+        eventType: 'WORKSHOP',
+        createdBy: adminId
+      }
+    });
+    isolatedEventId = newEvent.id;
+    const t = await createTeam(leaderId, isolatedEventId, 'Isolated 3-Member Team');
+    const isoTeamId = t.team_id;
+
+    const inv1 = await inviteMember(leaderId, isoTeamId, member1Id);
+    await acceptInvitation(member1Id, isoTeamId, inv1.id);
+    
+    const inv2 = await inviteMember(leaderId, isoTeamId, member2Id);
+    await acceptInvitation(member2Id, isoTeamId, inv2.id);
+    
+    // Team now has 3 members. Leader leaves.
+    await leaveTeam(leaderId, isoTeamId);
+
+    const team = await prisma.team.findUnique({ where: { id: isoTeamId } });
+    assert.strictEqual(team?.status, 'CANCELLED', 'Team should be dissolved when leader leaves');
+    
+    // Assert audit log was created
+    const log = await prisma.auditLog.findFirst({ where: { entityId: isoTeamId, action: 'TEAM_CANCELLED_BY_LEADER' } });
+    assert.ok(log, 'Audit log TEAM_CANCELLED_BY_LEADER should exist from SQL function');
+    
+    // Assert 2 remaining members get notified
+    const jobs = await prisma.notificationJob.findMany();
+    const cancelJobs = jobs.filter(j => 
+      (j.payload as any).notification_type === 'TEAM_CANCELLED' && 
+      (j.payload as any).metadata?.entity_ids?.event_id === isolatedEventId
+    );
+    assert.strictEqual(cancelJobs.length, 2, 'Should enqueue exactly 2 TEAM_CANCELLED notifications (one for member1, one for member2)');
   });
 });

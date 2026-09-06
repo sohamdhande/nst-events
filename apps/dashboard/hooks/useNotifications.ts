@@ -52,8 +52,41 @@ export function useReadNotification() {
   return useMutation({
     mutationFn: (notificationId: string) => 
       apiClient(`/v1/notifications/${notificationId}/read`, { method: 'PATCH' }),
-    onSuccess: (data, notificationId) => {
-      // Optimistically or deterministically invalidate so it recounts/renders correctly
+    onMutate: async (notificationId) => {
+      await queryClient.cancelQueries({ queryKey: ['notifications'] });
+
+      const previousNotifications = queryClient.getQueryData(['notifications', undefined]);
+      const previousUnreadCount = queryClient.getQueryData(['notifications', 'unread-count']);
+
+      queryClient.setQueryData(['notifications', undefined], (old: any) => {
+        if (!old || !old.pages) return old;
+        return {
+          ...old,
+          pages: old.pages.map((page: any) => ({
+            ...page,
+            data: page.data.map((notif: Notification) => 
+              notif.id === notificationId ? { ...notif, readAt: new Date().toISOString() } : notif
+            ),
+          })),
+        };
+      });
+
+      queryClient.setQueryData(['notifications', 'unread-count'], (old: any) => {
+        if (!old) return old;
+        return { unread_count: Math.max(0, old.unread_count - 1) };
+      });
+
+      return { previousNotifications, previousUnreadCount };
+    },
+    onError: (err, notificationId, context) => {
+      if (context?.previousNotifications) {
+        queryClient.setQueryData(['notifications', undefined], context.previousNotifications);
+      }
+      if (context?.previousUnreadCount) {
+        queryClient.setQueryData(['notifications', 'unread-count'], context.previousUnreadCount);
+      }
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
     },
   });

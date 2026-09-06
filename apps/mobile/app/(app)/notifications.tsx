@@ -1,18 +1,29 @@
-import React from 'react';
-import { View, Text, FlatList, TouchableOpacity, RefreshControl } from 'react-native';
+import React, { useMemo } from 'react';
+import {
+  View,
+  StyleSheet,
+  FlatList,
+  TouchableOpacity,
+  ActivityIndicator,
+  RefreshControl,
+} from 'react-native';
 import { useRouter } from 'expo-router';
+import { useAppTheme } from '../../src/store/theme-store';
+import { StatusBadge } from '../../src/ui/core/StatusBadge';
+import { Button } from '../../src/ui/Button';
 import { useNotificationInbox, NotificationPayload } from '../../src/hooks/use-notification-inbox';
-import { useNetworkStatus } from '../../src/infrastructure/network';
-import { Banner, Card, Skeleton, EmptyState, Button, Badge } from '../../src/ui/primitives';
+import { MobileShell } from '../../src/ui/core/MobileShell';
+import { Title, Body, MonoLabel, Display, Mono } from '../../src/ui/core/Typography';
 
 export default function NotificationsScreen() {
   const router = useRouter();
-  const { isOnline } = useNetworkStatus();
+  const theme = useAppTheme();
   
   const {
     data,
     isLoading,
     isError,
+    error,
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
@@ -23,73 +34,224 @@ export default function NotificationsScreen() {
     isMarkingAllRead,
   } = useNotificationInbox();
 
+  const notifications = data?.pages.flatMap((page) => page.data) || [];
+  const hasUnread = notifications.some((item: NotificationPayload) => !item.readAt);
+
   const handleNotificationPress = (notification: NotificationPayload) => {
     if (!notification.readAt) {
       markAsRead(notification.id);
     }
-    // Deep linking routing logic would go here, explicitly omitted per requirements
   };
 
-  const renderItem = ({ item }: { item: NotificationPayload }) => (
-    <TouchableOpacity 
-      onPress={() => handleNotificationPress(item)}
-      accessibilityRole="button"
-      accessibilityLabel={`Notification: ${item.title}`}
-      accessibilityState={{ selected: !item.readAt }}
-      className="mb-2"
-    >
-      <Card>
-        <View className="flex-row justify-between items-start mb-1">
-          <Text className={`font-bold text-lg flex-1 ${!item.readAt ? 'text-primary' : 'text-gray-800'}`}>
+  const styles = useMemo(() => StyleSheet.create({
+    actionBar: {
+      paddingHorizontal: theme.spacing.base,
+      paddingVertical: 12,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.colors.borderHairline,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      backgroundColor: theme.colors.surfaceContainerLow,
+    },
+    actionBarLeft: {
+      gap: 2,
+    },
+    inboxTitle: {
+      color: theme.colors.onSurface,
+    },
+    inboxSub: {
+      color: theme.colors.onSurfaceVariant,
+    },
+    markAllBtn: {
+      minHeight: 36,
+      height: 36,
+      paddingHorizontal: 12,
+    },
+    listContent: {
+      paddingHorizontal: theme.spacing.base,
+      paddingVertical: theme.spacing.base,
+      paddingBottom: 80,
+    },
+    notificationCard: {
+      backgroundColor: theme.colors.surface,
+      borderColor: theme.colors.borderHairline,
+      borderWidth: 1,
+      padding: 14,
+      marginBottom: 10,
+      gap: 8,
+    },
+    unreadNotificationCard: {
+      borderColor: theme.colors.primary,
+      borderWidth: 1.5,
+    },
+    cardHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      gap: 8,
+    },
+    cardTitle: {
+      fontSize: 14,
+      flex: 1,
+    },
+    readCardTitle: {
+      color: theme.colors.onSurfaceVariant,
+    },
+    cardBody: {
+      fontSize: 12,
+      lineHeight: 17,
+    },
+    cardFooter: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      borderTopWidth: 1,
+      borderTopColor: theme.colors.borderHairline,
+      paddingTop: 8,
+      marginTop: 2,
+    },
+    timestampText: {
+      fontSize: 10,
+      color: theme.colors.onSurfaceVariant,
+    },
+    tapReadText: {
+      fontSize: 9,
+      color: theme.colors.primary,
+    },
+    loadingContainer: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 12,
+    },
+    errorContainer: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: 24,
+      gap: 12,
+    },
+    errorTitle: {
+      fontSize: 16,
+    },
+    errorSub: {
+      textAlign: 'center',
+    },
+    emptyContainer: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: 48,
+      gap: 12,
+    },
+    emptyBadge: {
+    },
+    emptyTitle: {
+      fontSize: 16,
+    },
+    emptySub: {
+      textAlign: 'center',
+      paddingHorizontal: 24,
+      lineHeight: 18,
+    },
+    footerLoader: {
+      paddingVertical: 12,
+      alignItems: 'center',
+    },
+  }), [theme]);
+
+  const renderItem = ({ item }: { item: NotificationPayload }) => {
+    const formattedDate = new Date(item.createdAt).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+
+    const isUnread = !item.readAt;
+
+    return (
+      <TouchableOpacity
+        style={[styles.notificationCard, isUnread && styles.unreadNotificationCard]}
+        onPress={() => handleNotificationPress(item)}
+        activeOpacity={0.8}
+      >
+        <View style={styles.cardHeader}>
+          <Title style={[styles.cardTitle, !isUnread && styles.readCardTitle]} numberOfLines={1}>
             {item.title}
-          </Text>
-          {!item.readAt && <Badge text="New" variant="primary" />}
+          </Title>
+          {isUnread ? (
+            <StatusBadge status="[NEW]" type="warning" />
+          ) : (
+            <StatusBadge status="[READ]" type="default" />
+          )}
         </View>
-        <Text className="text-gray-600 mb-2">{item.body}</Text>
-        <Text className="text-xs text-gray-400">
-          {new Date(item.createdAt).toLocaleString()}
-        </Text>
-      </Card>
-    </TouchableOpacity>
+
+        <Body style={styles.cardBody}>{item.body}</Body>
+
+        <View style={styles.cardFooter}>
+          <Mono style={styles.timestampText}>{formattedDate}</Mono>
+          {isUnread && <MonoLabel style={styles.tapReadText}>TAP TO MARK READ</MonoLabel>}
+        </View>
+      </TouchableOpacity>
+    );
+  };
+
+  const renderEmptyState = () => (
+    <View style={styles.emptyContainer}>
+      <StatusBadge status="[INBOX CLEAR]" type="default" />
+      <Display style={styles.emptyTitle}>NO NOTIFICATIONS</Display>
+      <Body style={styles.emptySub}>
+        You have no unread notifications or system alerts at this time. Check-in reminders and dispute updates will arrive here.
+      </Body>
+    </View>
   );
 
-  const flatData = data?.pages.flatMap((page) => page.data) ?? [];
-
   return (
-    <View className="flex-1 bg-gray-50" accessibilityRole="scrollbar">
-      {!isOnline && <Banner message="You are offline. Showing cached notifications." type="warning" />}
+    <MobileShell title="NOTIFICATIONS" showBackButton scrollable={false}>
+      {/* Control Action Bar */}
+      <View style={styles.actionBar}>
+        <View style={styles.actionBarLeft}>
+          <MonoLabel style={styles.inboxTitle}>SYSTEM INBOX</MonoLabel>
+          <Mono style={styles.inboxSub}>{notifications.length} MESSAGES</Mono>
+        </View>
 
-      <View className="p-4 flex-row justify-between items-center bg-white border-b border-gray-200 shadow-sm">
-        <Text className="text-xl font-bold" accessibilityRole="header">Inbox</Text>
-        <Button 
-          title="Mark all read" 
-          variant="secondary" 
-          disabled={!isOnline || flatData.length === 0} 
+        <Button
+          title={isMarkingAllRead ? 'MARKING...' : 'MARK ALL READ'}
+          variant="secondary"
+          disabled={!hasUnread || isMarkingAllRead}
           loading={isMarkingAllRead}
-          onPress={() => markAllAsRead()} 
-          accessibilityLabel="Mark all notifications as read"
+          onPress={() => markAllAsRead()}
+          style={styles.markAllBtn}
         />
       </View>
 
-      {isLoading && flatData.length === 0 ? (
-        <View className="p-4" accessibilityRole="progressbar" accessibilityLabel="Loading notifications">
-          <Skeleton height={100} />
-          <Skeleton height={100} />
-          <Skeleton height={100} />
+      {isLoading && notifications.length === 0 ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={theme.colors.primary} />
+          <MonoLabel>FETCHING INBOX MESSAGES...</MonoLabel>
         </View>
-      ) : isError && flatData.length === 0 ? (
-        <View className="flex-1 justify-center items-center p-4">
-          <Banner message="Failed to load notifications." type="error" />
-          <Button title="Retry" onPress={() => refetch()} className="mt-4" />
+      ) : isError && notifications.length === 0 ? (
+        <View style={styles.errorContainer}>
+          <StatusBadge status="[FETCH ERROR]" type="error" />
+          <Display style={styles.errorTitle}>FAILED TO LOAD</Display>
+          <Body style={styles.errorSub}>{(error as any)?.message || 'Unable to fetch notifications.'}</Body>
+          <Button title="RETRY FETCH" variant="secondary" onPress={() => refetch()} />
         </View>
       ) : (
         <FlatList
-          data={flatData}
+          data={notifications}
           keyExtractor={(item) => item.id}
           renderItem={renderItem}
-          contentContainerStyle={{ padding: 16 }}
+          ListEmptyComponent={renderEmptyState}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
           refreshControl={
-            <RefreshControl refreshing={isRefetching} onRefresh={async () => { await refetch(); }} />
+            <RefreshControl
+              refreshing={isRefetching}
+              onRefresh={refetch}
+              tintColor={theme.colors.primary}
+            />
           }
           onEndReached={() => {
             if (hasNextPage && !isFetchingNextPage) {
@@ -97,22 +259,15 @@ export default function NotificationsScreen() {
             }
           }}
           onEndReachedThreshold={0.5}
-          ListEmptyComponent={
-            <EmptyState 
-              icon="📭" 
-              title="No Notifications" 
-              message="You're all caught up!" 
-            />
-          }
           ListFooterComponent={
             isFetchingNextPage ? (
-              <View className="py-4" accessibilityRole="progressbar">
-                <Skeleton height={80} />
+              <View style={styles.footerLoader}>
+                <ActivityIndicator size="small" color={theme.colors.primary} />
               </View>
-            ) : undefined
+            ) : null
           }
         />
       )}
-    </View>
+    </MobileShell>
   );
 }

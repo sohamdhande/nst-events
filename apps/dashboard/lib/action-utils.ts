@@ -168,8 +168,6 @@ export function resolveManagementActions(source: ManagementActionSource): Manage
         
       case 'EVENT_APPROVED':
       case 'EVENT_REJECTED':
-      case 'TEAM_INVITATION_ACCEPTED':
-      case 'TEAM_INVITATION_DECLINED':
       case 'CLUB_ANNOUNCEMENT':
         priority = 'LOW';
         if (notif.type.startsWith('EVENT_')) label = 'View Event';

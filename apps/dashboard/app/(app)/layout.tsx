@@ -58,9 +58,8 @@ export default function AppLayout({ children }: { children: ReactNode }) {
   useEffect(() => {
     // If authenticated and user is loaded, check role
     if (isAuthenticated && user) {
-      const hasOrganizerClubRole = user.club_memberships?.some(m => m.role === 'CLUB_ADMIN' || m.role === 'CORE_MEMBER');
-      if (user.global_role === 'STUDENT' && !hasOrganizerClubRole && pathname !== '/student-access') {
-        router.replace('/student-access');
+      if (user.global_role === 'STUDENT' && !pathname.startsWith('/student')) {
+        router.replace('/student/profile');
       }
     }
   }, [isAuthenticated, user, router, pathname]);
@@ -73,8 +72,8 @@ export default function AppLayout({ children }: { children: ReactNode }) {
     );
   }
 
-  const isStrictStudent = user?.global_role === 'STUDENT' && !user?.club_memberships?.some(m => m.role === 'CLUB_ADMIN' || m.role === 'CORE_MEMBER');
-  if (!isAuthenticated || isStrictStudent) {
+  const isStudent = user?.global_role === 'STUDENT';
+  if (!isAuthenticated || isStudent) {
     return null;
   }
 

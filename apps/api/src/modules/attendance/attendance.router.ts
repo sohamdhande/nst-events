@@ -167,7 +167,7 @@ attendanceRouter.get(
 attendanceRouter.post(
   '/events/:id/attendance/manual',
   authenticate,
-  requireRole(['PLATFORM_ADMIN']),
+  canManageEvent((req) => req.params.id, ['CLUB_ADMIN']),
   validate(manualMarkSchema),
   async (req, res, next) => {
     try {

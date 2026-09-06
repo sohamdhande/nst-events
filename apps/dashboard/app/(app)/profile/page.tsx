@@ -75,14 +75,18 @@ export default function ProfilePage() {
               <Descriptions.Item label="Account Role">
                 <Tag color="blue">{user.global_role}</Tag>
               </Descriptions.Item>
-              {user.academic_profile && (
+              {user.academic_profile?.batch && (
                 <>
-                  <Descriptions.Item label="Academic Program">
-                    <Text strong>{user.academic_profile.batch.program.name}</Text>
-                  </Descriptions.Item>
-                  <Descriptions.Item label="Academic Batch">
-                    <Text strong>{user.academic_profile.batch.admission_year}–{user.academic_profile.batch.graduation_year}</Text>
-                  </Descriptions.Item>
+                  {user.academic_profile.batch.program?.name && (
+                    <Descriptions.Item label="Academic Program">
+                      <Text strong>{user.academic_profile.batch.program.name}</Text>
+                    </Descriptions.Item>
+                  )}
+                  {typeof user.academic_profile.batch.graduation_year === 'number' && (
+                    <Descriptions.Item label="Academic Batch">
+                      <Text strong>Batch of {user.academic_profile.batch.graduation_year}</Text>
+                    </Descriptions.Item>
+                  )}
                 </>
               )}
             </Descriptions>

@@ -82,36 +82,6 @@ router.post('/:id/transfer-leadership',
   }
 );
 
-const CancelInvitationSchema = z.object({
-  params: z.object({ id: z.string().uuid(), invitationId: z.string().uuid() }).passthrough(),
-}).passthrough();
 
-router.get('/:id/invitations',
-  authenticate,
-  validate(ParamTeamIdSchema),
-  canManageEvent(getEventIdFromTeam, ['CLUB_ADMIN']),
-  async (req, res, next) => {
-    try {
-      const result = await adminTeamsService.getSentTeamInvitations(req.user!.id, req.params.id);
-      res.status(200).json(result);
-    } catch (err) {
-      next(err);
-    }
-  }
-);
-
-router.delete('/:id/invitations/:invitationId',
-  authenticate,
-  validate(CancelInvitationSchema),
-  canManageEvent(getEventIdFromTeam, ['CLUB_ADMIN']),
-  async (req, res, next) => {
-    try {
-      await adminTeamsService.cancelInvitation(req.user!.id, req.params.id, req.params.invitationId);
-      res.status(204).send();
-    } catch (err) {
-      next(err);
-    }
-  }
-);
 
 export const adminTeamsRouter: Router = router;

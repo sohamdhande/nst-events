@@ -18,14 +18,6 @@ router.get('/me', authenticate, async (req, res, next) => {
   }
 });
 
-router.get('/me/team-invitations', authenticate, async (req, res, next) => {
-  try {
-    const invitations = await usersService.getPendingTeamInvitations(req.user!.id);
-    res.json(invitations);
-  } catch (err) {
-    next(err);
-  }
-});
 
 router.patch(
   '/me',

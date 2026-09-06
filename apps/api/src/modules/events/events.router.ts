@@ -222,19 +222,7 @@ router.post(
   }
 );
 
-router.get(
-  '/:id/teams/:teamId/invitations',
-  authenticate,
-  validate(ParamEventTeamIdSchema),
-  async (req, res, next) => {
-    try {
-      const invitations = await teamsService.getSentTeamInvitations(req.user!.id, req.params.id, req.params.teamId);
-      res.json(invitations);
-    } catch (err) {
-      next(err);
-    }
-  }
-);
+
 
 // ==========================================
 // Session Routes
