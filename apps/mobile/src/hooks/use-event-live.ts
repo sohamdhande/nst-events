@@ -23,7 +23,7 @@ export const useEventLive = (eventId: string) => {
       return;
     }
 
-    const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3001';
+    const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://192.168.6.254:3001';
     const sseUrl = `${API_BASE_URL}/v1/events/${eventId}/live?token=${token}`;
 
     let manager = sseManagers.get(eventId);

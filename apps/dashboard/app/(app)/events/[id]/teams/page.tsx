@@ -2,7 +2,7 @@
 
 import { use, useMemo } from 'react';
 import Link from 'next/link';
-import { Card, Button, Alert, Typography, Table, Breadcrumb, Space, Tag, Dropdown, Modal, message, Grid, Flex, Empty } from 'antd';
+import { Card, Button, Alert, Typography, Table, Breadcrumb, Space, Tag, Dropdown, App, Grid, Flex, Empty } from 'antd';
 import { LeftOutlined, MoreOutlined } from '@ant-design/icons';
 import { useEventDetail } from '../../../../../hooks/useEventDetail';
 import { useTeamsList, Team, TeamMember } from '../../../../../hooks/useTeams';
@@ -11,10 +11,12 @@ import { useAdminCancelTeam, useAdminRemoveMember, useAdminTransferLeadership, u
 import { resolveEventLockState } from '../../../../../lib/event-utils';
 
 const { Title, Text } = Typography;
-const { confirm } = Modal;
 const { useBreakpoint } = Grid;
 
 export default function TeamsManagementPage({ params }: { params: Promise<{ id: string }> }) {
+  const { modal, message } = App.useApp();
+  const { confirm } = modal;
+
   const unwrappedParams = use(params);
   const eventId = unwrappedParams.id;
   

@@ -232,3 +232,31 @@ No interstitial or forced modal on first login for pre-assigned club memberships
 - Onboarding checklist: academic profile → explore clubs → enable reminders, three dismissible cards.
 - Spoofing and geofence failures: identical student-facing copy; distinction kept backend-only.
 - Pre-assigned club memberships: silent inclusion, no first-login "welcome" interstitial.
+
+---
+
+## 8. Web Dashboard Exceptions
+
+While this document primarily covers the mobile App UX/IA, the following rules apply specifically to the student web dashboard (`apps/dashboard`):
+
+### 8.1 Desktop Home Composition
+The web dashboard Home page uses a **state-aware layout flow** rather than a fixed multi-column grid. It is built in a single vertical stack, constrained to a readable maximum width (`max-w-5xl`), adapting its contents based on the user's active/upcoming schedule:
+
+- **State A (Active / Starting Soon)**:
+  - Greeting ("Good morning, [Name]. Here's what's happening around you.")
+  - Priority Section (dominant surface-container with primary indicator, showing live event and ticket action)
+  - Your Next (single upcoming agenda row, if any)
+  - Your Progress (compact horizontal information)
+  - Explore Campus (subtle navigation row)
+- **State B (No Priority / Upcoming Event)**:
+  - Greeting
+  - Your Next (strong agenda row)
+  - Your Progress
+  - Explore Campus
+- **State C (Empty / No Upcoming Events)**:
+  - Greeting
+  - Intentional editorial empty state ("NOTHING SCHEDULED") with inline call-to-action
+  - Your Progress
+  - Explore Campus
+
+The goal is to maintain intentional composition and avoid forcing empty states into large left/right layout columns.

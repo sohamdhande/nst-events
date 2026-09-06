@@ -83,7 +83,7 @@ export function AttendanceDisputes({ eventId, clubId, canManageAttendance }: { e
                     {record.reviewNotes && <p><strong>Notes:</strong> {record.reviewNotes}</p>}
                   </div>
                 ),
-                maskClosable: true
+                mask: { closable: true }
               });
             }}>View Details</Button>
           )}

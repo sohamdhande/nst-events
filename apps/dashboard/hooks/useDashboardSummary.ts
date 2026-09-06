@@ -19,6 +19,8 @@ export interface MyClubSummary {
 }
 
 export interface DashboardSummaryResponse {
+  totalPoints: number;
+  eventsAttendedCount: number;
   upcoming_events: UpcomingEvent[];
   pending_approvals: PendingApproval[];
   my_clubs: MyClubSummary[];

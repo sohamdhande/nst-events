@@ -53,6 +53,7 @@ export const getMeAttendanceSchema = z.object({
   query: z.object({
     cursor: z.string().optional(),
     limit: z.coerce.number().min(1).max(100).default(20),
+    filter_event_id: z.string().uuid().optional(),
   }),
 });
 

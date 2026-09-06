@@ -41,17 +41,21 @@ export async function loginWithIdToken(
   const normalizedEmail = email.trim().toLowerCase();
   const domain = normalizedEmail.split('@')[1];
 
-  const ALLOWED_DOMAINS = env.ALLOWED_EMAIL_DOMAINS.split(',').map((d) => d.trim());
-  if (!ALLOWED_DOMAINS.includes(domain)) {
-    throw new ForbiddenError('INSTITUTIONAL_DOMAIN_NOT_ALLOWED');
-  }
+  // TEMP: testing bypass for personal email, remove before merging — see 2026-09-06
+  const allowedTestEmails = env.ALLOWED_TEST_EMAILS.split(',').map((e) => e.trim().toLowerCase()).filter(Boolean);
+  if (!allowedTestEmails.includes(normalizedEmail)) {
+    const ALLOWED_DOMAINS = env.ALLOWED_EMAIL_DOMAINS.split(',').map((d) => d.trim());
+    if (!ALLOWED_DOMAINS.includes(domain)) {
+      throw new ForbiddenError('INSTITUTIONAL_DOMAIN_NOT_ALLOWED');
+    }
 
-  if (domain === 'adypu.edu.in') {
-    const result = await prisma.$queryRaw<Array<{ status: string }>>`
-      SELECT * FROM lookup_authorized_student(${normalizedEmail})
-    `;
-    if (!result || result.length === 0 || result[0].status !== 'ACTIVE') {
-      throw new ForbiddenError('STUDENT_ACCESS_NOT_AUTHORIZED');
+    if (domain === 'adypu.edu.in') {
+      const result = await prisma.$queryRaw<Array<{ status: string }>>`
+        SELECT * FROM lookup_authorized_student(${normalizedEmail})
+      `;
+      if (!result || result.length === 0 || result[0].status !== 'ACTIVE') {
+        throw new ForbiddenError('STUDENT_ACCESS_NOT_AUTHORIZED');
+      }
     }
   }
 

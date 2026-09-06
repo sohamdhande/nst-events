@@ -1,5 +1,5 @@
 import { prisma, withUserContext } from '@nst/database';
-import { generateQrPayload, verifyQrPayload } from './totp.utils';
+import { generateQrPayload, verifyQrPayload, TOTP_WINDOW_SECONDS } from './totp.utils';
 import { UnprocessableEntityError, ConflictError, ForbiddenError, NotFoundError, BadRequestError } from '../../lib/errors';
 import { sanitizeOfflineError } from './attendance-error-mapper';
 import { mapDatabaseError } from '../../lib/errors/database-error-mapper';
@@ -33,8 +33,9 @@ export class AttendanceService {
       }
 
       const qr_payload = generateQrPayload(sessionId, session.qrSecret);
-      // Expires at the end of the current 15-second window.
-      const expires_at = new Date(Math.ceil(Date.now() / 15000) * 15000).toISOString();
+      // Expires at the end of the current TOTP window.
+      const windowMs = TOTP_WINDOW_SECONDS * 1000;
+      const expires_at = new Date(Math.ceil(Date.now() / windowMs) * windowMs).toISOString();
       return { qr_payload, expires_at };
     });
   }
@@ -80,24 +81,7 @@ export class AttendanceService {
         }
 
         // 2. Database RPC Invocation
-        // 2a. Guard against QR relay attacks by making the signature single-use.
-        // This MUST be the first operation after validation so we fail fast.
-        const parts = payload.totp_token.split(':');
-        const signature = parts[2];
 
-        try {
-          await tx.consumedQrSignature.create({
-            data: {
-              sessionId: payload.session_id,
-              signature,
-            },
-          });
-        } catch (e: any) {
-          if (e.code === 'P2002') {
-            throw new ConflictError('This QR code has already been used');
-          }
-          throw e;
-        }
 
         const result = await tx.$queryRaw<any[]>`
           WITH rpc AS (
@@ -128,6 +112,10 @@ export class AttendanceService {
         const points_awarded = SCORE_RULES.ATTENDANCE;
 
         const is_new = attendanceRecord.is_new === 'true';
+
+        if (!is_new) {
+          throw new ConflictError('ALREADY_RECORDED');
+        }
 
         return {
           attendance_id: attendanceRecord.id,
@@ -276,9 +264,12 @@ export class AttendanceService {
 
   async getMyAttendance(userId: string, query: any): Promise<{ data: any[]; nextCursor?: string }> {
     return withUserContext(userId, async (tx) => {
-      const { cursor, limit } = query;
+      const { cursor, limit, filter_event_id } = query;
       const records = await tx.attendanceRecord.findMany({
-        where: { userId },
+        where: { 
+          userId,
+          ...(filter_event_id && { session: { eventId: filter_event_id } })
+        },
         take: limit + 1,
         ...(cursor && { cursor: { id: cursor }, skip: 1 }),
         orderBy: { markedAt: 'desc' },
@@ -358,7 +349,7 @@ export class AttendanceService {
   async getAttendanceDisputes(userId: string, eventId: string | undefined, query: any): Promise<{ data: any[]; nextCursor?: string }> {
     return withUserContext(userId, async (tx) => {
       const { cursor, limit, filter_status, filter_club_id } = query;
-      const where: any = { deletedAt: null };
+      const where: any = {};
       if (eventId) where.eventId = eventId;
       if (filter_status) where.status = filter_status;
       

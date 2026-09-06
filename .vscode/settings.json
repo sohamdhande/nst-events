@@ -8,5 +8,7 @@
   "files.associations": {
     "*.sql": "sql",
     "*.prisma": "prisma"
-  }
+  },
+  "java.configuration.updateBuildConfiguration": "automatic",
+  "java.compile.nullAnalysis.mode": "disabled"
 }

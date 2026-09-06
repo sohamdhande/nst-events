@@ -1,7 +1,33 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../infrastructure/api';
 import { useToast } from './use-toast';
 import { useNetworkStatus } from '../infrastructure/network';
+
+export interface MyRegistrationItem {
+  id: string;
+  eventId: string;
+  userId: string;
+  teamId: string | null;
+  registrationStatus: 'REGISTERED' | 'WAITLISTED' | 'CANCELLED';
+  registeredAt: string;
+}
+
+export function useMyRegistrations() {
+  return useQuery<MyRegistrationItem[], Error>({
+    queryKey: ['my-registrations'],
+    queryFn: () => apiClient('/v1/users/me/registrations'),
+    staleTime: 60 * 1000,
+  });
+}
+
+export function useMyRegistrationStatus(eventId: string) {
+  return useQuery<{ status: 'REGISTERED' | 'WAITLISTED' | 'CANCELLED' | 'NOT_REGISTERED'; team_id?: string | null }, Error>({
+    queryKey: ['my-registration', eventId],
+    queryFn: () => apiClient(`/v1/events/${eventId}/my-registration`),
+    enabled: !!eventId,
+    staleTime: 60 * 1000,
+  });
+}
 
 export const useRegistration = (eventId: string) => {
   const queryClient = useQueryClient();

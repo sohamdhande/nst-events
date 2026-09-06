@@ -236,7 +236,7 @@ async function main() {
   async function upsertTeam(eventId: string, name: string, leaderId: string) {
     const existing = await prisma.team.findFirst({ where: { eventId, name, deletedAt: null } });
     if (!existing) {
-      return prisma.team.create({ data: { eventId, name, leaderId } });
+      return prisma.team.create({ data: { eventId, name, normalizedName: name.trim().toLowerCase(), leaderId } });
     }
     return existing;
   }

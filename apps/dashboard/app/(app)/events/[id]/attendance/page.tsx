@@ -8,9 +8,11 @@ import { QrcodeOutlined, DownloadOutlined, PlusOutlined, SyncOutlined, CloseOutl
 import { AttendanceDisputes } from './AttendanceDisputes';
 import { useEventDetail } from '../../../../../hooks/useEventDetail';
 import { useAttendance, useGenerateQr, useCreateSession, useUpdateSession, useManualAttendance, AttendanceRecord } from '../../../../../hooks/useAttendance';
+import { useAdminUsers } from '../../../../../hooks/useUserManagement';
 import { useCurrentUser } from '../../../../../hooks/useCurrentUser';
 import { getWebAuthStore } from '../../../../../lib/auth-store';
 import { resolveEventLockState } from '../../../../../lib/event-utils';
+import { canMarkAttendanceManually as checkCanMarkManually } from '../../../../../lib/auth-helpers';
 import dayjs from 'dayjs';
 
 const { Title, Text } = Typography;
@@ -40,7 +42,7 @@ export default function AttendancePage({ params }: { params: Promise<{ id: strin
 
   const sessions = useMemo(() => event?.attendanceSessions || [], [event?.attendanceSessions]);
   
-  const canMarkManually = currentUser?.global_role === 'PLATFORM_ADMIN';
+  const canMarkManually = checkCanMarkManually(currentUser, event);
   
   const [activeSessionId, setActiveSessionId] = useState<string | undefined>(undefined);
   
@@ -61,6 +63,9 @@ export default function AttendancePage({ params }: { params: Promise<{ id: strin
     hasNextPage, 
     isFetchingNextPage 
   } = useAttendance(eventId, activeSessionId ?? undefined);
+
+  const [searchQuery, setSearchQuery] = useState('');
+  const { data: searchData, isLoading: isSearchLoading } = useAdminUsers(searchQuery);
 
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [isCapturingLocation, setIsCapturingLocation] = useState(false);
@@ -815,13 +820,13 @@ export default function AttendancePage({ params }: { params: Promise<{ id: strin
 
           <div style={{ marginTop: 16 }}>
             {isCapturingLocation ? (
-              <Alert type="info" message="Detecting current location..." showIcon />
+              <Alert type="info" title="Detecting current location..." showIcon />
             ) : locationError ? (
-              <Alert type="error" message="Location required" description={locationError} showIcon />
+              <Alert type="error" title="Location required" description={locationError} showIcon />
             ) : sessionLocation ? (
               <Alert 
                 type="success" 
-                message="Location detected" 
+                title="Location detected" 
                 description={
                   <div style={{ fontSize: 13, marginTop: 4 }}>
                     <Text strong>Latitude:</Text> {sessionLocation.latitude.toFixed(6)} <br/>
@@ -849,11 +854,21 @@ export default function AttendancePage({ params }: { params: Promise<{ id: strin
         <Form form={manualForm} layout="vertical" onFinish={handleManualSubmit}>
           <Form.Item 
             name="user_id" 
-            label="User ID" 
-            rules={[{ required: true, message: 'Please enter a valid User UUID' }]}
-            extra="Enter the exact User ID (UUID) of the student to mark present."
+            label="User" 
+            rules={[{ required: true, message: 'Please select a student' }]}
+            extra="Search for a student by name or email."
           >
-            <Input placeholder="e.g., 123e4567-e89b-12d3-a456-426614174000" />
+            <Select 
+              showSearch 
+              placeholder="Search by name or email..." 
+              onSearch={setSearchQuery}
+              filterOption={false}
+              loading={isSearchLoading}
+              options={searchData?.pages.flatMap(p => p.data).map(u => ({ 
+                label: `${u.fullName || 'Unknown'} (${u.email})`, 
+                value: u.id 
+              })) || []}
+            />
           </Form.Item>
         </Form>
       </Modal>

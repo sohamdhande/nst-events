@@ -38,13 +38,14 @@ export const createEvent = async (callerId: string, data: CreateEventInput): Pro
     if (!user) throw new ForbiddenError('User not found');
 
     if (!['PLATFORM_ADMIN', 'FACULTY_ADMIN'].includes(user.globalRole)) {
-      for (const club of data.club_ids) {
+      const primaryClub = data.club_ids.find((c) => c.is_primary);
+      if (primaryClub) {
         const membership = await tx.clubMembership.findFirst({
-          where: { clubId: club.club_id, userId: callerId, deletedAt: null },
+          where: { clubId: primaryClub.club_id, userId: callerId, deletedAt: null },
           select: { role: true },
         });
         if (!membership || !['CLUB_ADMIN', 'CORE_MEMBER'].includes(membership.role)) {
-          throw new ForbiddenError(`Insufficient club role for club ${club.club_id}`);
+          throw new ForbiddenError(`Insufficient club role for primary club ${primaryClub.club_id}`);
         }
       }
     }

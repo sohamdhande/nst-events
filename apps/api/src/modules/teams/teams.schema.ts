@@ -4,16 +4,6 @@ export const ParamTeamIdSchema = z.object({
   params: z.object({ id: z.string().uuid() }).passthrough(),
 }).passthrough();
 
-export const CreateInvitationSchema = z.object({
-  params: z.object({ id: z.string().uuid() }).passthrough(),
-  body: z.object({
-    invitee_id: z.string().uuid()
-  })
-}).passthrough();
-
-export const ParamInvitationIdSchema = z.object({
-  params: z.object({ id: z.string().uuid(), invitationId: z.string().uuid() }).passthrough(),
-}).passthrough();
 
 export const TransferLeadershipSchema = z.object({
   params: z.object({ id: z.string().uuid() }).passthrough(),

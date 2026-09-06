@@ -1,6 +1,6 @@
 import crypto from 'crypto';
 
-const TOTP_WINDOW_SECONDS = 15;
+export const TOTP_WINDOW_SECONDS = 30;
 const HMAC_TRUNCATION_LENGTH = 16;
 const VERSION = 'v1';
 

@@ -66,6 +66,52 @@ export const listTeams = async (userId: string, eventId: string, limit: number =
   });
 };
 
+export const getTeamById = async (userId: string, teamId: string) => {
+  return withUserContext(userId, async (tx) => {
+    const team = await tx.team.findUnique({
+      where: { id: teamId, deletedAt: null },
+      include: {
+        leader: { select: { fullName: true } },
+        event: { select: { metadata: true } },
+        eventRegistrations: {
+          where: { deletedAt: null },
+          select: {
+            userId: true,
+            registrationStatus: true,
+            user: { select: { fullName: true } }
+          }
+        }
+      }
+    });
+
+    if (!team) {
+      throw new NotFoundError('Team not found');
+    }
+
+    let below_minimum = false;
+    const metadata = team.event.metadata as any;
+    if (team.status === 'REGISTERED' && metadata && typeof metadata.minimum_team_size === 'number') {
+      below_minimum = team.eventRegistrations.length < metadata.minimum_team_size;
+    }
+
+    return {
+      id: team.id,
+      event_id: team.eventId,
+      name: team.name,
+      leader_id: team.leaderId,
+      status: team.status,
+      below_minimum,
+      leader_name: team.leader?.fullName || 'Unknown',
+      member_count: team.eventRegistrations.length,
+      members: team.eventRegistrations.map((m) => ({
+        user_id: m.userId,
+        full_name: m.user?.fullName || 'Unknown',
+        registration_status: m.registrationStatus
+      }))
+    };
+  });
+};
+
 export const createTeam = async (userId: string, eventId: string, teamName: string) => {
   return withUserContext(userId, async (tx) => {
     try {
@@ -186,236 +232,7 @@ export const leaveTeam = async (userId: string, teamId: string) => {
   });
 };
 
-export const getSentTeamInvitations = async (userId: string, eventId: string, teamId: string) => {
-  return withUserContext(userId, async (tx) => {
-    const team = await tx.team.findUnique({ where: { id: teamId } });
-    if (!team || team.eventId !== eventId) throw new NotFoundError('Team not found for this event');
-    
-    // Ensure caller is the leader or has management roles via the router's middleware
-    if (team.leaderId !== userId) {
-      throw new ForbiddenError('Only the team leader can view sent invitations');
-    }
 
-    // Expire old ones cleanly inline
-    await tx.teamInvitation.updateMany({
-      where: {
-        teamId,
-        status: 'PENDING',
-        expiresAt: { lt: new Date() }
-      },
-      data: { status: 'EXPIRED' }
-    });
-
-    const invitations = await tx.teamInvitation.findMany({
-      where: { teamId },
-      orderBy: { createdAt: 'desc' }
-    });
-
-    if (invitations.length === 0) return [];
-
-    const inviteeIds = invitations.map((inv: any) => inv.inviteeId);
-    const publicProfiles = await tx.publicProfile.findMany({
-      where: { id: { in: inviteeIds } },
-      select: { id: true, fullName: true, avatarUrl: true }
-    });
-    
-    const profileMap = new Map(publicProfiles.map((p: any) => [p.id, p]));
-
-    return invitations.map((inv: any) => {
-      const profile = profileMap.get(inv.inviteeId);
-      return {
-        invitation_id: inv.id,
-        status: inv.status,
-        created_at: inv.createdAt,
-        expires_at: inv.expiresAt,
-        invitee: profile ? {
-          user_id: profile.id,
-          display_name: profile.fullName,
-          avatar_url: profile.avatarUrl
-        } : null
-      };
-    });
-  });
-};
-
-export const inviteMember = async (userId: string, teamId: string, inviteeId: string) => {
-  return withUserContext(userId, async (tx) => {
-    const team = await tx.team.findUnique({ where: { id: teamId }, include: { event: true } });
-    if (!team) throw new NotFoundError('Team not found');
-    if (team.leaderId !== userId) throw new BadRequestError('Only the leader can invite members');
-    
-    // SQL-authoritative event lock check
-    const [eventLockResult] = await tx.$queryRaw<any[]>`SELECT is_locked, (now() >= end_time + interval '24 hours') as is_expired FROM events WHERE id = ${team.eventId}::uuid`;
-    if (eventLockResult.is_locked || eventLockResult.is_expired) {
-      throw new BadRequestError('Event is locked');
-    }
-
-    if (team.status === 'CANCELLED') throw new BadRequestError('Team is cancelled');
-
-    // Advisory check: Team size (authoritative check occurs during accept_invitation)
-    const activeMembersCount = await tx.eventRegistration.count({
-      where: { teamId, deletedAt: null }
-    });
-    const maxSize = team.event.metadata ? (team.event.metadata as any).maximum_team_size : null;
-    if (maxSize && activeMembersCount >= maxSize) throw new BadRequestError('Team is full');
-
-    // Check invitee not already in a team
-    const existingReg = await tx.eventRegistration.findFirst({
-      where: { eventId: team.eventId, userId: inviteeId, deletedAt: null }
-    });
-    if (existingReg) throw new BadRequestError('User already in a team');
-
-    // Check no duplicate pending invitation
-    const existingInv = await tx.teamInvitation.findFirst({
-      where: { teamId, inviteeId, status: 'PENDING' }
-    });
-    if (existingInv) {
-      if (existingInv.expiresAt > new Date()) {
-        throw new BadRequestError('A pending invitation already exists');
-      } else {
-        // Expired, mark as EXPIRED
-        await tx.teamInvitation.update({ where: { id: existingInv.id }, data: { status: 'EXPIRED' } });
-      }
-    }
-
-    await checkAudienceEligibility(team.eventId, inviteeId, tx);
-
-    const expiresAt = new Date();
-    expiresAt.setHours(expiresAt.getHours() + 72);
-
-    const invitation = await tx.teamInvitation.create({
-      data: {
-        teamId,
-        inviteeId,
-        status: 'PENDING',
-        expiresAt
-      }
-    });
-
-    await enqueueNotification({
-      tx,
-      userId: inviteeId,
-      type: 'TEAM_INVITATION_RECEIVED',
-      title: 'Team Invitation',
-      body: `You have been invited to join team ${team.name}.`,
-      metadata: {
-        schema_version: 1,
-        routing: { target: 'event_details', fallback: '/events', params: { id: team.eventId } },
-        entity_ids: { event_id: team.eventId, team_id: teamId, invitation_id: invitation.id }
-      },
-      preferenceGate: 'push_enabled',
-      idempotencyString: `TEAM_INVITATION:${invitation.id}`
-    });
-
-    return invitation;
-  });
-};
-
-export const acceptInvitation = async (userId: string, teamId: string, invitationId: string) => {
-  return withUserContext(userId, async (tx) => {
-    try {
-      const team = await tx.team.findUnique({ where: { id: teamId } });
-      if (!team) throw new NotFoundError('Team not found');
-
-      const result = await tx.$queryRaw<{ accept_invitation: any }[]>`
-        SELECT accept_invitation(${team.eventId}::uuid, ${teamId}::uuid, ${invitationId}::uuid);
-      `;
-      const acceptResult = result[0].accept_invitation;
-
-      await enqueueNotification({
-        tx, userId: team.leaderId, type: 'TEAM_INVITATION_ACCEPTED', title: 'Invitation Accepted', body: 'A member accepted your team invitation.',
-        metadata: { schema_version: 1, routing: { target: 'event_details', fallback: '/events', params: { id: team.eventId } }, entity_ids: { event_id: team.eventId } },
-        preferenceGate: 'push_enabled', idempotencyString: `TEAM_INV_ACCEPT:${invitationId}`
-      });
-
-      if (acceptResult.status === 'REGISTERED') {
-        const resultMembers = await tx.$queryRaw<{ get_team_members: string[] }[]>`
-          SELECT get_team_members(${teamId}::uuid);
-        `;
-        const teamMembers = resultMembers[0].get_team_members;
-        for (const mId of teamMembers) {
-          await enqueueNotification({
-            tx, userId: mId, type: 'TEAM_REGISTERED', title: 'Team Registered', body: 'Your team is now registered.',
-            metadata: { schema_version: 1, routing: { target: 'event_details', fallback: '/events', params: { id: team.eventId } }, entity_ids: { event_id: team.eventId } },
-            preferenceGate: 'push_enabled', idempotencyString: `TEAM_REG:${teamId}:${mId}`
-          });
-        }
-      } else if (acceptResult.status === 'WAITLISTED') {
-        const resultMembers = await tx.$queryRaw<{ get_team_members: string[] }[]>`
-          SELECT get_team_members(${teamId}::uuid);
-        `;
-        const teamMembers = resultMembers[0].get_team_members;
-        for (const mId of teamMembers) {
-          await enqueueNotification({
-            tx, userId: mId, type: 'TEAM_WAITLISTED', title: 'Team Waitlisted', body: 'Your team has been waitlisted.',
-            metadata: { schema_version: 1, routing: { target: 'event_details', fallback: '/events', params: { id: team.eventId } }, entity_ids: { event_id: team.eventId } },
-            preferenceGate: 'push_enabled', idempotencyString: `TEAM_WAIT:${teamId}:${mId}`
-          });
-        }
-      }
-
-      return acceptResult;
-    } catch (err: any) {
-      mapDatabaseError(err);
-    }
-  });
-};
-
-export const declineInvitation = async (userId: string, teamId: string, invitationId: string) => {
-  return withUserContext(userId, async (tx) => {
-    const inv = await tx.teamInvitation.findFirst({
-      where: { id: invitationId, teamId, inviteeId: userId, status: 'PENDING' },
-      include: { team: { include: { event: true } } }
-    });
-    if (!inv) throw new NotFoundError('Invitation not found or invalid');
-    
-    const [eventLockResult] = await tx.$queryRaw<any[]>`SELECT is_locked, (now() >= end_time + interval '24 hours') as is_expired FROM events WHERE id = ${inv.team.eventId}::uuid`;
-    if (eventLockResult.is_locked || eventLockResult.is_expired) {
-      throw new BadRequestError('Event is locked');
-    }
-
-    if (inv.expiresAt < new Date()) {
-      await tx.teamInvitation.update({ where: { id: inv.id }, data: { status: 'EXPIRED' } });
-      throw new BadRequestError('Invitation expired');
-    }
-
-    await tx.teamInvitation.update({
-      where: { id: invitationId },
-      data: { status: 'DECLINED', respondedAt: new Date() }
-    });
-
-    await enqueueNotification({
-      tx, userId: inv.team.leaderId, type: 'TEAM_INVITATION_DECLINED', title: 'Invitation Declined', body: 'A member declined your team invitation.',
-      metadata: { schema_version: 1, routing: { target: 'event_details', fallback: '/events', params: { id: inv.team.eventId } }, entity_ids: { event_id: inv.team.eventId } },
-      preferenceGate: 'push_enabled', idempotencyString: `TEAM_INV_DEC:${invitationId}`
-    });
-
-    return { status: 'DECLINED' };
-  });
-};
-
-export const cancelInvitation = async (userId: string, teamId: string, invitationId: string) => {
-  return withUserContext(userId, async (tx) => {
-    const team = await tx.team.findUnique({ where: { id: teamId }, include: { event: true } });
-    if (!team) throw new NotFoundError('Team not found');
-    if (team.leaderId !== userId) throw new BadRequestError('Only the leader can cancel invitations');
-    
-    const [eventLockResult] = await tx.$queryRaw<any[]>`SELECT is_locked, (now() >= end_time + interval '24 hours') as is_expired FROM events WHERE id = ${team.eventId}::uuid`;
-    if (eventLockResult.is_locked || eventLockResult.is_expired) {
-      throw new BadRequestError('Event is locked');
-    }
-
-    const inv = await tx.teamInvitation.findFirst({
-      where: { id: invitationId, teamId, status: 'PENDING' }
-    });
-    if (!inv) throw new NotFoundError('Invitation not found or invalid');
-
-    await tx.teamInvitation.update({
-      where: { id: invitationId },
-      data: { status: 'CANCELLED', respondedAt: new Date() }
-    });
-  });
-};
 
 export const transferLeadership = async (userId: string, teamId: string, newLeaderId: string) => {
   return withUserContext(userId, async (tx) => {

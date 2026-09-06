@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, StatusBar, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
-import { theme } from '../../src/ui/theme';
+import { useAppTheme } from '../../src/store/theme-store';
 import { Button } from '../../src/ui/Button';
 import { useAuthStore } from '../../src/store/auth';
 import { apiClient } from '../../src/infrastructure/api';
@@ -16,6 +16,8 @@ GoogleSignin.configure({
 
 export default function LoginGatewayScreen() {
   const router = useRouter();
+  const theme = useAppTheme();
+  
   const setSession = useAuthStore((state) => state.setSession);
   const [domainError, setDomainError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -34,7 +36,8 @@ export default function LoginGatewayScreen() {
         return;
       }
 
-      console.log('[Auth] Attempting token exchange with id_token');
+      console.log('[Auth] Attempting token exchange with id_token...');
+      console.log('[Auth] ID Token Exchange Target Endpoint:', '/auth/mobile/login-id-token');
       // Send id_token directly to backend
       const exchangeRes: any = await apiClient('/auth/mobile/login-id-token', {
         method: 'POST',
@@ -47,7 +50,7 @@ export default function LoginGatewayScreen() {
       }
 
       // Fetch user profile to resolve user ID and global role
-      const userProfile: any = await apiClient('/v1/users/me', {
+      const userProfile: any = await apiClient('/users/me', {
         headers: { Authorization: `Bearer ${exchangeRes.access_token}` },
       });
 
@@ -77,9 +80,203 @@ export default function LoginGatewayScreen() {
     }
   };
 
+  const styles = useMemo(() => StyleSheet.create({
+    safeArea: {
+      flex: 1,
+      backgroundColor: theme.colors.surface,
+    },
+    container: {
+      flex: 1,
+      paddingHorizontal: theme.spacing.base,
+      justifyContent: 'space-between',
+      paddingVertical: theme.spacing.md,
+    },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingBottom: theme.spacing.md,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.colors.borderHairline,
+    },
+    badgeRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+    },
+    pingDot: {
+      width: 6,
+      height: 6,
+      borderRadius: 3,
+      backgroundColor: theme.colors.secondary,
+    },
+    headerMonoText: {
+      fontFamily: theme.typography.monoBold,
+      fontSize: 10,
+      letterSpacing: 0.8,
+      color: theme.colors.primary,
+      textTransform: 'uppercase',
+    },
+    statusPill: {
+      backgroundColor: theme.colors.surfaceContainerHigh,
+      paddingHorizontal: 8,
+      paddingVertical: 2,
+      borderRadius: 2,
+    },
+    statusPillText: {
+      fontFamily: theme.typography.monoBold,
+      fontSize: 10,
+      letterSpacing: 0.8,
+      color: theme.colors.primary,
+    },
+    bodySection: {
+      marginVertical: 'auto',
+      width: '100%',
+      gap: theme.spacing.md,
+    },
+    sectionTagRow: {
+      flexDirection: 'row',
+      gap: 6,
+      alignItems: 'center',
+    },
+    sectionTagText: {
+      fontFamily: theme.typography.monoBold,
+      fontSize: 10,
+      color: theme.colors.secondary,
+      letterSpacing: 0.8,
+    },
+    sectionTagCode: {
+      fontFamily: theme.typography.monoMedium,
+      fontSize: 10,
+      color: theme.colors.onSurfaceVariant,
+    },
+    headline: {
+      fontFamily: theme.typography.syneBold,
+      fontSize: 30,
+      lineHeight: 34,
+      color: theme.colors.primary,
+      letterSpacing: -0.5,
+    },
+    bodyText: {
+      fontFamily: theme.typography.interRegular,
+      fontSize: 14,
+      lineHeight: 20,
+      color: theme.colors.onSurfaceVariant,
+    },
+    monoHighlight: {
+      fontFamily: theme.typography.monoMedium,
+      color: theme.colors.primary,
+      backgroundColor: theme.colors.surfaceContainerHigh,
+    },
+    matrixCard: {
+      backgroundColor: theme.colors.surface,
+      borderWidth: 1,
+      borderColor: theme.colors.borderHairline,
+      padding: theme.spacing.base,
+      marginTop: 4,
+    },
+    matrixHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      borderBottomWidth: 1,
+      borderBottomColor: theme.colors.borderHairline,
+      paddingBottom: 6,
+      marginBottom: 10,
+    },
+    matrixHeaderTag: {
+      fontFamily: theme.typography.monoBold,
+      fontSize: 10,
+      color: theme.colors.onSurfaceVariant,
+    },
+    matrixHeaderStatus: {
+      fontFamily: theme.typography.monoBold,
+      fontSize: 10,
+      color: theme.colors.secondary,
+    },
+    matrixGrid: {
+      flexDirection: 'row',
+      gap: 8,
+    },
+    matrixItem: {
+      flex: 1,
+      backgroundColor: theme.colors.surfaceContainerLow,
+      padding: 8,
+      borderWidth: 1,
+      borderColor: theme.colors.outlineVariant,
+    },
+    matrixItemLabel: {
+      fontFamily: theme.typography.monoBold,
+      fontSize: 9,
+      color: theme.colors.onSurfaceVariant,
+    },
+    matrixItemValue: {
+      fontFamily: theme.typography.monoBold,
+      fontSize: 11,
+      color: theme.colors.primary,
+      marginTop: 2,
+    },
+    matrixItemValueActive: {
+      fontFamily: theme.typography.monoBold,
+      fontSize: 11,
+      color: theme.colors.secondary,
+      marginTop: 2,
+    },
+    errorBox: {
+      backgroundColor: theme.colors.errorContainer,
+      borderWidth: 1,
+      borderColor: theme.colors.error,
+      padding: theme.spacing.md,
+      marginTop: 8,
+    },
+    errorTitle: {
+      fontFamily: theme.typography.monoBold,
+      fontSize: 11,
+      color: theme.colors.onErrorContainer,
+    },
+    errorBody: {
+      fontFamily: theme.typography.interRegular,
+      fontSize: 12,
+      color: theme.colors.onErrorContainer,
+      marginTop: 4,
+    },
+    errorBtn: {
+      marginTop: 8,
+      backgroundColor: theme.colors.error,
+      paddingVertical: 8,
+      alignItems: 'center',
+    },
+    errorBtnText: {
+      fontFamily: theme.typography.interSemiBold,
+      fontSize: 11,
+      color: theme.colors.onError,
+    },
+    footer: {
+      gap: theme.spacing.md,
+    },
+    ctaButton: {
+      height: 56,
+    },
+    noticeBox: {
+      alignItems: 'center',
+      gap: 2,
+    },
+    noticeText: {
+      fontFamily: theme.typography.monoBold,
+      fontSize: 10,
+      color: theme.colors.onSurfaceVariant,
+      textTransform: 'uppercase',
+    },
+    noticeSub: {
+      fontFamily: theme.typography.monoMedium,
+      fontSize: 9,
+      color: theme.colors.outline,
+      textTransform: 'uppercase',
+    },
+  }), [theme]);
+
   return (
     <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle="dark-content" backgroundColor={theme.colors.surface} />
+      <StatusBar barStyle={theme.mode === 'dark' ? 'light-content' : 'dark-content'} backgroundColor={theme.colors.surface} />
       <View style={styles.container}>
         {/* Header Metadata */}
         <View style={styles.header}>
@@ -158,197 +355,3 @@ export default function LoginGatewayScreen() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: theme.colors.surface,
-  },
-  container: {
-    flex: 1,
-    paddingHorizontal: theme.spacing.base,
-    justifyContent: 'space-between',
-    paddingVertical: theme.spacing.md,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingBottom: theme.spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.borderHairline,
-  },
-  badgeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  pingDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: theme.colors.secondary,
-  },
-  headerMonoText: {
-    fontFamily: theme.typography.monoBold,
-    fontSize: 10,
-    letterSpacing: 0.8,
-    color: theme.colors.primary,
-    textTransform: 'uppercase',
-  },
-  statusPill: {
-    backgroundColor: theme.colors.surfaceContainerHigh,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 2,
-  },
-  statusPillText: {
-    fontFamily: theme.typography.monoBold,
-    fontSize: 10,
-    letterSpacing: 0.8,
-    color: theme.colors.primary,
-  },
-  bodySection: {
-    marginVertical: 'auto',
-    width: '100%',
-    gap: theme.spacing.md,
-  },
-  sectionTagRow: {
-    flexDirection: 'row',
-    gap: 6,
-    alignItems: 'center',
-  },
-  sectionTagText: {
-    fontFamily: theme.typography.monoBold,
-    fontSize: 10,
-    color: theme.colors.secondary,
-    letterSpacing: 0.8,
-  },
-  sectionTagCode: {
-    fontFamily: theme.typography.monoMedium,
-    fontSize: 10,
-    color: theme.colors.onSurfaceVariant,
-  },
-  headline: {
-    fontFamily: theme.typography.syneBold,
-    fontSize: 30,
-    lineHeight: 34,
-    color: theme.colors.primary,
-    letterSpacing: -0.5,
-  },
-  bodyText: {
-    fontFamily: theme.typography.interRegular,
-    fontSize: 14,
-    lineHeight: 20,
-    color: theme.colors.onSurfaceVariant,
-  },
-  monoHighlight: {
-    fontFamily: theme.typography.monoMedium,
-    color: theme.colors.primary,
-    backgroundColor: theme.colors.surfaceContainerHigh,
-  },
-  matrixCard: {
-    backgroundColor: theme.colors.surface,
-    borderWidth: 1,
-    borderColor: theme.colors.borderHairline,
-    padding: theme.spacing.base,
-    marginTop: 4,
-  },
-  matrixHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.borderHairline,
-    paddingBottom: 6,
-    marginBottom: 10,
-  },
-  matrixHeaderTag: {
-    fontFamily: theme.typography.monoBold,
-    fontSize: 10,
-    color: theme.colors.onSurfaceVariant,
-  },
-  matrixHeaderStatus: {
-    fontFamily: theme.typography.monoBold,
-    fontSize: 10,
-    color: theme.colors.secondary,
-  },
-  matrixGrid: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  matrixItem: {
-    flex: 1,
-    backgroundColor: theme.colors.surfaceContainerLow,
-    padding: 8,
-    borderWidth: 1,
-    borderColor: theme.colors.outlineVariant,
-  },
-  matrixItemLabel: {
-    fontFamily: theme.typography.monoBold,
-    fontSize: 9,
-    color: theme.colors.onSurfaceVariant,
-  },
-  matrixItemValue: {
-    fontFamily: theme.typography.monoBold,
-    fontSize: 11,
-    color: theme.colors.primary,
-    marginTop: 2,
-  },
-  matrixItemValueActive: {
-    fontFamily: theme.typography.monoBold,
-    fontSize: 11,
-    color: theme.colors.secondary,
-    marginTop: 2,
-  },
-  errorBox: {
-    backgroundColor: theme.colors.errorContainer,
-    borderWidth: 1,
-    borderColor: theme.colors.error,
-    padding: theme.spacing.md,
-    marginTop: 8,
-  },
-  errorTitle: {
-    fontFamily: theme.typography.monoBold,
-    fontSize: 11,
-    color: theme.colors.onErrorContainer,
-  },
-  errorBody: {
-    fontFamily: theme.typography.interRegular,
-    fontSize: 12,
-    color: theme.colors.onErrorContainer,
-    marginTop: 4,
-  },
-  errorBtn: {
-    marginTop: 8,
-    backgroundColor: theme.colors.error,
-    paddingVertical: 8,
-    alignItems: 'center',
-  },
-  errorBtnText: {
-    fontFamily: theme.typography.interSemiBold,
-    fontSize: 11,
-    color: theme.colors.onError,
-  },
-  footer: {
-    gap: theme.spacing.md,
-  },
-  ctaButton: {
-    height: 56,
-  },
-  noticeBox: {
-    alignItems: 'center',
-    gap: 2,
-  },
-  noticeText: {
-    fontFamily: theme.typography.monoBold,
-    fontSize: 10,
-    color: theme.colors.onSurfaceVariant,
-    textTransform: 'uppercase',
-  },
-  noticeSub: {
-    fontFamily: theme.typography.monoMedium,
-    fontSize: 9,
-    color: theme.colors.outline,
-    textTransform: 'uppercase',
-  },
-});

@@ -14,15 +14,19 @@ export class LeaderboardService {
     }
 
     const records = await prisma.$queryRaw<any[]>`
-      SELECT 
-        user_id, 
-        display_name, 
-        total_points, 
-        attendance_points, 
-        contribution_points, 
-        competition_points, 
-        last_refreshed_at 
-      FROM student_leaderboard_mv
+      WITH Ranked AS (
+        SELECT 
+          user_id, 
+          display_name, 
+          total_points, 
+          attendance_points, 
+          contribution_points, 
+          competition_points, 
+          last_refreshed_at,
+          RANK() OVER (ORDER BY total_points DESC)::integer as rank
+        FROM student_leaderboard_mv
+      )
+      SELECT * FROM Ranked
       ORDER BY total_points DESC, user_id ASC
       LIMIT ${limit + 1}::integer OFFSET ${offset}::integer
     `;
@@ -49,14 +53,18 @@ export class LeaderboardService {
     }
 
     const records = await prisma.$queryRaw<any[]>`
-      SELECT 
-        club_id, 
-        club_name, 
-        total_points, 
-        event_count, 
-        member_count, 
-        last_refreshed_at 
-      FROM club_leaderboard_mv
+      WITH Ranked AS (
+        SELECT 
+          club_id, 
+          club_name, 
+          total_points, 
+          event_count, 
+          member_count, 
+          last_refreshed_at,
+          RANK() OVER (ORDER BY total_points DESC)::integer as rank
+        FROM club_leaderboard_mv
+      )
+      SELECT * FROM Ranked
       ORDER BY total_points DESC, club_id ASC
       LIMIT ${limit + 1}::integer OFFSET ${offset}::integer
     `;
@@ -79,20 +87,45 @@ export class LeaderboardService {
   async getClubScopedStudentLeaderboard(callerId: string, clubId: string, query: { limit: number }): Promise<{ data: any[] }> {
     return withUserContext(callerId, async (tx) => {
       const records = await tx.$queryRaw<any[]>`
-        SELECT 
-          u.id as user_id, 
-          u.full_name as display_name, 
-          COALESCE(SUM(ls.points), 0)::integer as total_points
-        FROM leaderboard_scores ls
-        JOIN users u ON u.id = ls.user_id
-        WHERE ls.club_id = ${clubId}::uuid
-        GROUP BY u.id, u.full_name
-        ORDER BY total_points DESC, u.id ASC
+        WITH Scored AS (
+          SELECT 
+            u.id as user_id, 
+            u.full_name as display_name, 
+            COALESCE(SUM(ls.points), 0)::integer as total_points
+          FROM leaderboard_scores ls
+          JOIN users u ON u.id = ls.user_id
+          WHERE ls.club_id = ${clubId}::uuid
+          GROUP BY u.id, u.full_name
+        ), Ranked AS (
+          SELECT *, RANK() OVER (ORDER BY total_points DESC)::integer as rank
+          FROM Scored
+        )
+        SELECT * FROM Ranked
+        ORDER BY total_points DESC, user_id ASC
         LIMIT ${query.limit}::integer
       `;
 
       return { data: records };
     });
+  }
+
+  async getStudentRank(userId: string): Promise<{ rank: number | null; total_points: number }> {
+    const records = await prisma.$queryRaw<any[]>`
+      WITH Ranked AS (
+        SELECT 
+          user_id, 
+          total_points, 
+          RANK() OVER (ORDER BY total_points DESC)::integer as rank
+        FROM student_leaderboard_mv
+      )
+      SELECT rank, total_points FROM Ranked WHERE user_id = ${userId}::uuid
+    `;
+
+    if (records.length === 0) {
+      return { rank: null, total_points: 0 };
+    }
+
+    return { rank: records[0].rank, total_points: records[0].total_points };
   }
 }
 

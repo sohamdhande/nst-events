@@ -93,10 +93,27 @@ export const dashboardService = {
         member_count: m.club._count.memberships,
       }));
 
+      // 4. Points & Attendance
+      const scores = await tx.leaderboardScore.aggregate({
+        where: { userId },
+        _sum: { points: true }
+      });
+      const totalPoints = scores._sum.points || 0;
+
+      const attendedEvents = await tx.$queryRaw<{ count: bigint }[]>`
+        SELECT COUNT(DISTINCT s.event_id) as count
+        FROM attendance_records ar
+        JOIN attendance_sessions s ON s.id = ar.session_id
+        WHERE ar.user_id = ${userId}::uuid AND ar.status = 'PRESENT'
+      `;
+      const eventsAttendedCount = Number(attendedEvents[0]?.count || 0);
+
       return {
         upcoming_events,
         pending_approvals,
         my_clubs,
+        totalPoints,
+        eventsAttendedCount,
       };
     });
   }

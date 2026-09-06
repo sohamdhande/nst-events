@@ -27,7 +27,8 @@ const ROLE_OPTIONS = [
 ];
 
 export default function UserManagementPage() {
-  const { message } = App.useApp();
+  const { message, modal } = App.useApp();
+  const { confirm } = modal;
   const router = useRouter();
   const searchParams = useSearchParams();
   const pathname = usePathname();
@@ -114,7 +115,7 @@ export default function UserManagementPage() {
     
     // Explicit confirmation for PLATFORM_ADMIN
     if (roleModalUser.globalRole === 'PLATFORM_ADMIN' && selectedRole !== 'PLATFORM_ADMIN') {
-      Modal.confirm({
+      confirm({
         title: 'Demote Platform Admin?',
         icon: <ExclamationCircleOutlined className="text-red-500" />,
         content: 'This changes the user\'s platform-wide permissions. It does not change their Club memberships or Club roles.',
@@ -219,7 +220,7 @@ export default function UserManagementPage() {
   };
 
   const handleRevokeStudent = (id: string) => {
-    Modal.confirm({
+    confirm({
       title: 'Remove from Student Directory?',
       icon: <ExclamationCircleOutlined className="text-red-500" />,
       content: 'This revokes this student\'s NST Events eligibility. Their account, academic history, Club memberships, registrations, and attendance are not deleted.',
@@ -236,7 +237,7 @@ export default function UserManagementPage() {
   };
 
   const handleRevokeSessions = (user: AdminUser) => {
-    Modal.confirm({
+    confirm({
       title: 'Force Logout User?',
       icon: <ExclamationCircleOutlined className="text-red-500" />,
       content: `This will immediately revoke all active refresh sessions for ${user.fullName || user.email}. They will be forced to log in again on all their devices.`,

@@ -19,8 +19,19 @@ export interface EventResponse {
   metadata: any;
   isLocked?: boolean;
   lockDeadline?: string;
-  eventClubs?: Array<{ club: { id: string; name: string } }>;
+  eventClubs?: Array<{ eventId: string; clubId: string; isPrimary: boolean; club: { id: string; name: string } }>;
   audienceBatchIds?: string[];
+}
+
+export interface AttendanceSessionItem {
+  id: string;
+  eventId: string;
+  title: string;
+  startTime: string;
+  endTime: string;
+  openAt: string;
+  closeAt: string;
+  geofenceRadius: number;
 }
 
 export interface EventsResponse {
@@ -50,5 +61,14 @@ export function useEvent(id: string) {
     queryFn: () => apiClient(`/v1/events/${id}`),
     enabled: !!id,
     staleTime: 5 * 60 * 1000,
+  });
+}
+
+export function useEventSessions(eventId: string) {
+  return useQuery<AttendanceSessionItem[], Error>({
+    queryKey: ['events', eventId, 'sessions'],
+    queryFn: () => apiClient(`/v1/events/${eventId}/sessions`),
+    enabled: !!eventId,
+    staleTime: 60 * 1000,
   });
 }

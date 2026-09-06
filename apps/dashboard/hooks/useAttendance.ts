@@ -35,6 +35,19 @@ export function useAttendance(eventId: string, sessionId?: string) {
   });
 }
 
+export function useMyAttendance(eventId?: string) {
+  return useInfiniteQuery<AttendanceResponse>({
+    queryKey: ['my-attendance', eventId],
+    queryFn: async ({ pageParam = undefined }) => {
+      const cursorParam = pageParam ? `&cursor=${pageParam}` : '';
+      const eventParam = eventId ? `&filter_event_id=${eventId}` : '';
+      return apiClient<AttendanceResponse>(`/v1/users/me/attendance?limit=20${cursorParam}${eventParam}`);
+    },
+    getNextPageParam: (lastPage) => lastPage.nextCursor || undefined,
+    initialPageParam: undefined,
+  });
+}
+
 export function useGenerateQr() {
   return useMutation({
     retry: false, // We handle retries manually with 429-aware backoff in the page
@@ -155,6 +168,22 @@ export function useResolveAttendanceDispute(eventId?: string, clubId?: string) {
         queryClient.invalidateQueries({ queryKey: ['club-analytics', clubId] });
         queryClient.invalidateQueries({ queryKey: ['club-leaderboard', 'students', clubId] });
       }
+    }
+  });
+}
+
+export function useSubmitAttendanceDispute(eventId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: { session_id: string; reason: string; evidence_urls?: string[] }) => {
+      return apiClient(`/v1/attendance/disputes`, {
+        method: 'POST',
+        body: JSON.stringify(payload)
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['attendance-disputes', eventId] });
+      queryClient.invalidateQueries({ queryKey: ['event', eventId] });
     }
   });
 }

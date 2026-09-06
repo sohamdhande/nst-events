@@ -22,7 +22,7 @@ export default function RegistrationPage({ params }: { params: Promise<{ id: str
 
   useEffect(() => {
     // UX Guard: Redirect back to Event Detail if already registered or waitlisted or cancelled
-    if (registration && registration.status !== 'UNREGISTERED') {
+    if (registration && registration.status !== 'NOT_REGISTERED') {
       router.replace(`/events/${eventId}`);
     }
   }, [registration, router, eventId]);
@@ -66,7 +66,7 @@ export default function RegistrationPage({ params }: { params: Promise<{ id: str
   };
 
   // If the guard is firing, don't render the form
-  if (registration && registration.status !== 'UNREGISTERED') {
+  if (registration && registration.status !== 'NOT_REGISTERED') {
     return null; 
   }
 

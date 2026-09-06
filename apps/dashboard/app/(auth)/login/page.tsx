@@ -2,9 +2,8 @@
 
 import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import Link from 'next/link';
 import { getWebAuthStore } from '../../../lib/auth-store';
-import { Button, Typography, Alert, Spin, Divider, theme } from 'antd';
+import { Button, Typography, Alert, Spin, theme } from 'antd';
 import { GoogleOutlined } from '@ant-design/icons';
 
 const { Title, Text } = Typography;
@@ -21,14 +20,31 @@ function LoginContent() {
   const errorParam = searchParams.get('error');
 
   useEffect(() => {
-    // If the user already has a token in memory, send them to the app
+    // If the user already has a token in memory, send them to their intended destination or home
     if (store.accessToken) {
-      router.push('/dashboard');
+      let returnTo = searchParams.get('return_to');
+      if (!returnTo && typeof window !== 'undefined') {
+        returnTo = window.sessionStorage.getItem('return_to');
+      }
+      
+      // Validate internal relative path to prevent open redirect vulnerabilities
+      if (returnTo && returnTo.startsWith('/') && !returnTo.startsWith('//')) {
+        if (typeof window !== 'undefined') {
+          window.sessionStorage.removeItem('return_to');
+        }
+        router.push(returnTo);
+      } else {
+        router.push('/student/home');
+      }
     }
-  }, [store.accessToken, router]);
+  }, [store.accessToken, router, searchParams]);
 
   const handleLogin = () => {
     setIsLoading(true);
+    const returnTo = searchParams.get('return_to');
+    if (returnTo && typeof window !== 'undefined') {
+      window.sessionStorage.setItem('return_to', returnTo);
+    }
     // Let the browser redirect to the OAuth endpoint
     window.location.href = `${API_BASE_URL}/auth/google`;
   };
@@ -98,21 +114,6 @@ function LoginContent() {
         Sign in with Google
       </Button>
 
-      {/* @ts-expect-error Ant Design types missing suppressHydrationWarning */}
-      <Divider suppressHydrationWarning style={{ margin: '24px 0', borderColor: token.colorBorderSecondary }}>
-        <Text type="secondary" suppressHydrationWarning style={{ fontSize: 12 }}>STUDENT ACCESS</Text>
-      </Divider>
-
-      <Text type="secondary" style={{ fontSize: 13, display: 'block' }}>
-        Are you a student? {' '}
-        <Link 
-          suppressHydrationWarning
-          href="/student-access" 
-          style={{ color: '#1677ff', fontWeight: 500, transition: 'color 0.2s' }}
-        >
-          Download the app
-        </Link>
-      </Text>
     </div>
   );
 }

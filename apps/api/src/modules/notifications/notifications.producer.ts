@@ -16,7 +16,6 @@ export const NotificationMetadataSchema = z.object({
     attendance_id: z.string().uuid().optional(),
     announcement_id: z.string().uuid().optional(),
     team_id: z.string().uuid().optional(),
-    invitation_id: z.string().uuid().optional(),
   }),
   action_payload: z.object({
     role: z.string().optional(),
@@ -28,9 +27,8 @@ export const ValidNotificationTypesSchema = z.enum([
   'WAITLIST_PROMOTED', 'APPROVAL_REQUEST', 'EVENT_APPROVED', 'EVENT_REJECTED',
   'ATTENDANCE_DISPUTE_RESOLVED', 'ROLE_CHANGED', 'CLUB_ANNOUNCEMENT',
   'SYSTEM_ALERT', 'EVENT_REMINDER', 'ATTENDANCE_ALERT',
-  'TEAM_REGISTERED', 'TEAM_WAITLISTED', 'TEAM_CANCELLED', 'TEAM_INVITATION_RECEIVED',
-  'TEAM_INVITATION_ACCEPTED', 'TEAM_INVITATION_DECLINED', 'TEAM_LEADERSHIP_TRANSFERRED',
-  'TEAM_MEMBER_REMOVED', 'TEAM_WAITLIST_PROMOTED'
+  'TEAM_REGISTERED', 'TEAM_WAITLISTED', 'TEAM_CANCELLED',
+  'TEAM_LEADERSHIP_TRANSFERRED', 'TEAM_MEMBER_REMOVED', 'TEAM_WAITLIST_PROMOTED'
 ]);
 
 export type NotificationMetadata = {
@@ -47,7 +45,6 @@ export type NotificationMetadata = {
     attendance_id?: string;
     announcement_id?: string;
     team_id?: string;
-    invitation_id?: string;
   };
   action_payload?: {
     role?: string;

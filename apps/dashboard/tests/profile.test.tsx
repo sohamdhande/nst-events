@@ -106,7 +106,7 @@ test('Web Profile: Displays Academic Program and Batch when available', () => {
   render(<ProfilePage />);
 
   expect(screen.getByText('B.Tech CSE AI/ML')).toBeInTheDocument();
-  expect(screen.getByText('2025–2029')).toBeInTheDocument();
+  expect(screen.getByText('Batch of 2029')).toBeInTheDocument();
 });
 
 test('Web Profile: Does not crash if academic_profile is missing', () => {

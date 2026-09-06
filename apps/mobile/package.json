@@ -3,6 +3,10 @@
   "version": "1.0.0",
   "main": "expo-router/entry",
   "dependencies": {
+    "@expo-google-fonts/inter": "^0.4.2",
+    "@expo-google-fonts/jetbrains-mono": "^0.4.1",
+    "@expo-google-fonts/syne": "^0.4.2",
+    "@expo/vector-icons": "^15.1.1",
     "@nst/shared": "workspace:*",
     "@react-native-google-signin/google-signin": "^16.1.5",
     "@tanstack/react-query": "5.101.4",
@@ -12,6 +16,7 @@
     "expo-crypto": "^57.0.2",
     "expo-dev-client": "^57.0.18",
     "expo-device": "57.0.1",
+    "expo-font": "^57.0.3",
     "expo-linking": "^57.0.9",
     "expo-location": "^57.0.16",
     "expo-notifications": "57.0.17",
@@ -22,6 +27,7 @@
     "nativewind": "4.2.6",
     "react": "19.2.3",
     "react-native": "0.86.3",
+    "react-native-safe-area-context": "^5.9.1",
     "react-native-sse": "1.2.1",
     "tailwindcss": "4.3.3",
     "zustand": "5.0.15"

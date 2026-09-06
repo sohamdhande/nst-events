@@ -409,14 +409,29 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
               </Col>
               <Col xs={24} md={12}>
                 <Form.Item
-                  name="max_capacity"
-                  label="Maximum Capacity"
-                  extra="Maximum number of participants allowed for the event. Leave empty for unlimited spots."
-                  rules={[{ type: 'number', min: 1 }]}
+                  noStyle
+                  shouldUpdate={(prev, curr) => prev.registration_type !== curr.registration_type}
                 >
-                  <InputNumber style={{ width: '100%' }} placeholder="e.g. 100" />
+                  {({ getFieldValue }) => {
+                    const isTeam = getFieldValue('registration_type') === 'TEAM';
+                    return (
+                      <Form.Item
+                        name="max_capacity"
+                        label={isTeam ? "Maximum Teams" : "Maximum Participants"}
+                        extra={
+                          isTeam
+                            ? "Maximum number of registered teams allowed. Leave empty for unlimited."
+                            : "Maximum number of individual students allowed. Leave empty for unlimited."
+                        }
+                        rules={[{ type: 'number', min: 1 }]}
+                      >
+                        <InputNumber style={{ width: '100%' }} placeholder={isTeam ? "e.g. 10" : "e.g. 100"} />
+                      </Form.Item>
+                    );
+                  }}
                 </Form.Item>
               </Col>
+
             </Row>
           </Card>
 

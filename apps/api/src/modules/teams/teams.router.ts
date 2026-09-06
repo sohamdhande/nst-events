@@ -3,14 +3,25 @@ import { authenticate } from '../../middleware/authenticate';
 import { validate } from '../../middleware/validate';
 import * as teamsService from './teams.service';
 import { 
-  ParamTeamIdSchema, 
-  CreateInvitationSchema, 
-  ParamInvitationIdSchema, 
+  ParamTeamIdSchema,
   TransferLeadershipSchema, 
   RemoveMemberSchema 
 } from './teams.schema';
 
 const router = Router();
+
+router.get('/:id',
+  authenticate,
+  validate(ParamTeamIdSchema),
+  async (req, res, next) => {
+    try {
+      const result = await teamsService.getTeamById(req.user!.id, req.params.id);
+      res.status(200).json(result);
+    } catch (err) {
+      next(err);
+    }
+  }
+);
 
 router.post('/:id/join',
   authenticate,
@@ -38,58 +49,7 @@ router.delete('/:id/leave',
   }
 );
 
-router.post('/:id/invitations',
-  authenticate,
-  validate(ParamTeamIdSchema),
-  validate(CreateInvitationSchema),
-  async (req, res, next) => {
-    try {
-      const result = await teamsService.inviteMember(req.user!.id, req.params.id, req.body.invitee_id);
-      res.status(201).json(result);
-    } catch (err) {
-      next(err);
-    }
-  }
-);
 
-router.post('/:id/invitations/:invitationId/accept',
-  authenticate,
-  validate(ParamInvitationIdSchema),
-  async (req, res, next) => {
-    try {
-      const result = await teamsService.acceptInvitation(req.user!.id, req.params.id, req.params.invitationId);
-      res.status(200).json(result);
-    } catch (err) {
-      next(err);
-    }
-  }
-);
-
-router.post('/:id/invitations/:invitationId/decline',
-  authenticate,
-  validate(ParamInvitationIdSchema),
-  async (req, res, next) => {
-    try {
-      const result = await teamsService.declineInvitation(req.user!.id, req.params.id, req.params.invitationId);
-      res.status(200).json(result);
-    } catch (err) {
-      next(err);
-    }
-  }
-);
-
-router.delete('/:id/invitations/:invitationId',
-  authenticate,
-  validate(ParamInvitationIdSchema),
-  async (req, res, next) => {
-    try {
-      await teamsService.cancelInvitation(req.user!.id, req.params.id, req.params.invitationId);
-      res.status(204).send();
-    } catch (err) {
-      next(err);
-    }
-  }
-);
 
 router.post('/:id/transfer-leadership',
   authenticate,
